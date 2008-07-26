@@ -1,0 +1,380 @@
+--- epan/dissectors/packet-stun2.c.old	2008-07-24 17:41:40.000000000 +0200
++++ epan/dissectors/packet-stun2.c	2008-07-24 18:01:43.000000000 +0200
+@@ -3,6 +3,7 @@
+  * Copyright 2003, Shiang-Ming Huang <smhuang@pcs.csie.nctu.edu.tw>
+  * Copyright 2006, Marc Petit-Huguenin <marc@petit-huguenin.org>
+  * Copyright 2007, 8x8 Inc. <petithug@8x8.com>
++ * Copyright 2008, Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+  *
+  * $Id: packet-stun2.c 23791 2007-12-07 13:26:15Z martinm $
+  *
+@@ -24,7 +25,8 @@
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+  *
+- * Please refer to draft-ietf-behave-rfc3489bis-07 for protocol detail.
++ * Please refer to draft-ietf-behave-rfc3489bis-17 for STUN protocol detail.
++ * Please refer to draft-ietf-behave-turn-09 for TURN protocol detail.
+  */
+ 
+ #ifdef HAVE_CONFIG_H
+@@ -69,7 +71,21 @@
+ static int stun2_att_xor_ipv4 = -1;
+ static int stun2_att_xor_ipv6 = -1;
+ static int stun2_att_xor_port = -1;
+-static int stun2_att_server = -1;
++static int stun2_att_software = -1;
++
++/* TURN */
++static int stun2_att_channel_number = -1;
++static int stun2_att_channel_number_rffu = -1;
++static int stun2_att_lifetime = -1;
++static int stun2_att_data = -1;
++static int stun2_att_requested_props_e_flag = -1;
++static int stun2_att_requested_props_r_flag = -1;
++static int stun2_att_requested_props_p_flag = -1;
++static int stun2_att_requested_transport_protocol = -1;
++static int stun2_att_requested_transport_reserved = -1;
++static int stun2_att_reservation_token = -1;
++static int stun2_att_icmp_type = -1;
++static int stun2_att_icmp_code = -1;
+ static int stun2_att_value = -1;
+ 
+ /* Message classes */
+@@ -81,20 +97,40 @@
+ 
+ /* Request/Response Transactions */
+ #define METHOD_MASK		0xCEEF
+-#define BINDING			0x0001	/* draft-ietf-behave-rfc3489bis-07 */
++#define BINDING			0x0001	/* draft-ietf-behave-rfc3489bis-17 */
++
++/* TURN Request/Response Transactions */
++#define ALLOCATE    0x0003 /* draft-ietf-behave-turn-09 */
++#define REFRESH     0x0004 /* draft-ietf-behave-turn-09 */
++#define CHANNELBIND 0x0009 /* draft-ietf-behave-turn-09 */
++
++/* TURN Indications */
++#define SEND        0x0006 /* draft-ietf-behave-turn-09 */
++#define DATA_INDICATION        0x0007 /* draft-ietf-behave-turn-09 */
+ 
+ /* Attribute Types */
+-#define MAPPED_ADDRESS		0x0001	/* draft-ietf-behave-rfc3489bis-07 */
+-#define USERNAME		0x0006	/* draft-ietf-behave-rfc3489bis-07 */
+-#define MESSAGE_INTEGRITY	0x0008	/* draft-ietf-behave-rfc3489bis-07 */
+-#define ERROR_CODE		0x0009	/* draft-ietf-behave-rfc3489bis-07 */
+-#define UNKNOWN_ATTRIBUTES	0x000a	/* draft-ietf-behave-rfc3489bis-07 */
+-#define REALM			0x0014	/* draft-ietf-behave-rfc3489bis-07 */
+-#define NONCE			0x0015	/* draft-ietf-behave-rfc3489bis-07 */
+-#define XOR_MAPPED_ADDRESS	0x0020	/* draft-ietf-behave-rfc3489bis-07 */
+-#define SERVER			0x8022	/* draft-ietf-behave-rfc3489bis-07 */
+-#define ALTERNATE_SERVER	0x8023	/* draft-ietf-behave-rfc3489bis-07 */
+-#define FINGERPRINT		0x8028	/* draft-ietf-behave-rfc3489bis-07 */
++#define MAPPED_ADDRESS		0x0001	/* draft-ietf-behave-rfc3489bis-17 */
++#define USERNAME		0x0006	/* draft-ietf-behave-rfc3489bis-17 */
++#define MESSAGE_INTEGRITY	0x0008	/* draft-ietf-behave-rfc3489bis-17 */
++#define ERROR_CODE		0x0009	/* draft-ietf-behave-rfc3489bis-17 */
++#define UNKNOWN_ATTRIBUTES	0x000a	/* draft-ietf-behave-rfc3489bis-17 */
++#define REALM			0x0014	/* draft-ietf-behave-rfc3489bis-17 */
++#define NONCE			0x0015	/* draft-ietf-behave-rfc3489bis-17 */
++#define XOR_MAPPED_ADDRESS	0x0020	/* draft-ietf-behave-rfc3489bis-17 */
++#define SOFTWARE			0x8022	/* draft-ietf-behave-rfc3489bis-17 */
++#define ALTERNATE_SERVER	0x8023	/* draft-ietf-behave-rfc3489bis-17 */
++#define FINGERPRINT		0x8028	/* draft-ietf-behave-rfc3489bis-17 */
++
++/* TURN attribute types */
++#define CHANNEL_NUMBER        0x000c /* draft-ietf-behave-turn-09 */
++#define LIFETIME              0x000d /* draft-ietf-behave-turn-09 */
++#define PEER_ADDRESS          0x0012 /* draft-ietf-behave-turn-09 */
++#define DATA                  0x0013 /* draft-ietf-behave-turn-09 */
++#define RELAYED_ADDRESS       0x0016 /* draft-ietf-behave-turn-09 */
++#define REQUESTED_PROPS       0x0018 /* draft-ietf-behave-turn-09 */
++#define REQUESTED_TRANSPORT   0x0019 /* draft-ietf-behave-turn-09 */
++#define RESERVATION_TOKEN     0x0022 /* draft-ietf-behave-turn-09 */
++#define ICMP                  0x0030 /* draft-ietf-behave-turn-09 */
+ 
+ /* Initialize the subtree pointers */
+ static gint ett_stun2 = -1;
+@@ -118,6 +154,11 @@
+ 
+ static const value_string methods[] = {
+ 	{BINDING, "Binding"},
++  {ALLOCATE, "Allocate"},
++  {REFRESH, "Refresh"},
++  {CHANNELBIND, "ChannelBind"},
++  {SEND, "Send"},
++  {DATA_INDICATION, "Data"}, 
+ 	{0x00, NULL}
+ };
+ 
+@@ -130,9 +171,18 @@
+ 	{REALM, "REALM"},
+ 	{NONCE, "NONCE"},
+ 	{XOR_MAPPED_ADDRESS, "XOR-MAPPED-ADDRESS"},
+-	{SERVER, "SERVER"},
++	{SOFTWARE, "SOFTWARE"},
+ 	{ALTERNATE_SERVER, "ALTERNATE-SERVER"},
+ 	{FINGERPRINT, "FINGERPRINT"},
++  {CHANNEL_NUMBER, "CHANNEL-NUMBER"},
++  {LIFETIME, "LIFETIME"},
++  {PEER_ADDRESS, "PEER-ADDRESS"},
++  {DATA, "DATA"},
++  {RELAYED_ADDRESS, "RELAYED-ADDRESS"},
++  {REQUESTED_PROPS, "REQUESTED-PROPS"},
++  {REQUESTED_TRANSPORT, "REQUESTED-TRANSPORT"},
++  {RESERVATION_TOKEN, "RESERVATION-TOKEN"},
++  {ICMP, "ICMP"},
+ 	{0x00, NULL}
+ };
+ 
+@@ -142,6 +192,12 @@
+ 	{0x00, NULL}
+ };
+ 
++static const value_string transport_protocol[] = {
++  {0x11, "UDP"},
++  {0x06, "TCP"},
++  {0x00, NULL}
++};
++
+ static guint
+ get_stun2_message_len(packet_info *pinfo _U_, tvbuff_t *tvb, int offset)
+ {
+@@ -164,7 +220,7 @@
+ 	guint16 att_length;
+ 	guint16 offset;
+ 	guint i;
+-	guint transaction_id_first_word;
++	char transaction_id[12];
+ 	guint   len;
+ 
+ 	/*
+@@ -214,9 +270,8 @@
+ 	proto_tree_add_item(stun2_tree, hf_stun2_cookie, tvb, 4, 4, FALSE);
+ 	proto_tree_add_item(stun2_tree, hf_stun2_id, tvb, 8, 12, FALSE);
+ 
+-	/* Remember this (in host order) so we can show clear xor'd addresses */
+-	/* TODO IPv6 support */
+-	transaction_id_first_word = tvb_get_ntohl(tvb, 4);
++	/* Remember this (in network byte order) so we can show clear xor'd addresses */
++	tvb_memcpy(tvb, transaction_id, 8, 12);
+ 
+ 	if (msg_length > 0) {
+ 	    ta = proto_tree_add_item(stun2_tree, hf_stun2_att, tvb, STUN2_HDR_LEN, msg_length, FALSE);
+@@ -317,6 +372,8 @@
+ 					proto_tree_add_uint(att_tree, stun2_att_padding, tvb, offset+att_length, 4-(att_length % 4), 4-(att_length % 4));
+ 				break;
+ 
++      case PEER_ADDRESS:
++      case RELAYED_ADDRESS:
+ 			case XOR_MAPPED_ADDRESS:
+ 				if (att_length < 2)
+ 					break;
+@@ -330,7 +387,8 @@
+ 				   Add host-order port into tree. */
+ 				ti = proto_tree_add_uint(att_tree, stun2_att_port, tvb, offset+2, 2,
+ 										 tvb_get_ntohs(tvb, offset+2) ^
+-										 (transaction_id_first_word >> 16));
++										  (g_htonl(0x2112A442) >> 16));
++                      /* (transaction_id_first_word >> 16)); */
+ 				PROTO_ITEM_SET_GENERATED(ti);
+ 
+ 				if (att_length < 8)
+@@ -346,21 +404,42 @@
+ 						   Add in network order tree. */
+ 						ti = proto_tree_add_ipv4(att_tree, stun2_att_ipv4, tvb, offset+4, 4,
+ 												 g_htonl(tvb_get_ntohl(tvb, offset+4) ^
+-												 transaction_id_first_word));
++										     0x2112A442));
++												 /* transaction_id_first_word)); */
+ 						PROTO_ITEM_SET_GENERATED(ti);
+ 						break;
+ 
+ 					case 2:
+-						if (att_length < 20)
+-							break;
+-						/* TODO add IPv6 */
+-						proto_tree_add_item(att_tree, stun2_att_xor_ipv6, tvb, offset+4, 16, FALSE);
++            {
++              char ipv6[16];
++              guint32 cookie = g_htonl(0x2112A442);
++              guint8* ptr = (guint8*)&cookie;
++              unsigned int i = 0;
++          
++              tvb_memcpy(tvb, ipv6, offset+4, 16);
++
++              /* XOR with cookie */
++              for(i = 0 ; i < 4 ; i++)
++              {
++                ipv6[i] ^= ptr[i];
++              }
++
++              /* XOR with the transaction ID */
++              for(i = 4 ; i < 16 ; i++)
++              {
++                ipv6[i] ^= transaction_id[i - 4];
++              }
++
++  						if (att_length < 20)
++  							break;
++  						proto_tree_add_ipv6(att_tree, stun2_att_xor_ipv6, tvb, offset+4, 16, ipv6);
++            }
+ 						break;
+ 					}
+ 				break;
+ 
+-			case SERVER:
+-				proto_tree_add_item(att_tree, stun2_att_server, tvb, offset, att_length, FALSE);
++			case SOFTWARE:
++				proto_tree_add_item(att_tree, stun2_att_software, tvb, offset, att_length, FALSE);
+ 				if (att_length % 4 != 0)
+ 					proto_tree_add_uint(att_tree, stun2_att_padding, tvb, offset+att_length, 4-(att_length % 4), 4-(att_length % 4));
+ 				break;
+@@ -371,6 +450,73 @@
+ 				proto_tree_add_item(att_tree, stun2_att_crc32, tvb, offset, att_length, FALSE);
+ 				break;
+ 
++      case CHANNEL_NUMBER:
++        if (att_length < 4)
++          break;
++        {
++          guint32 number = 0;
++          /* number */
++          tvb_memcpy(tvb, (guint8*)&number, offset, sizeof(guint16));
++          proto_tree_add_uint(att_tree, stun2_att_channel_number, tvb, offset, 2, g_ntohs(number));
++
++          /* RFFU */
++          tvb_memcpy(tvb, (guint8*)&number, offset+2, sizeof(guint16));
++          proto_tree_add_uint(att_tree, stun2_att_channel_number_rffu, tvb, offset+2, 2, number);
++        }
++        break;
++
++      case LIFETIME:
++        if (att_length < 4)
++          break;
++        {
++          guint32 lifetime = 0;
++          tvb_memcpy(tvb, (guint8*)&lifetime, offset, sizeof(guint32));
++          proto_tree_add_uint(att_tree, stun2_att_lifetime, tvb, offset, 4, g_ntohl(lifetime));
++        }
++        break;
++
++      case DATA:
++        if (att_length > 0)
++          proto_tree_add_item(att_tree, stun2_att_value, tvb, offset, att_length, FALSE);
++        if (att_length % 4 != 0)
++          proto_tree_add_uint(att_tree, stun2_att_padding, tvb, offset+att_length, 4-(att_length % 4), 4-(att_length % 4));
++        break;
++
++     case REQUESTED_PROPS:
++        if (att_length < 4)
++          break;
++        {
++          guint32 flags = 0;
++          tvb_memcpy(tvb, (guint8*)&flags, offset, sizeof(guint32));
++          proto_tree_add_uint(att_tree, stun2_att_requested_props_e_flag, tvb, offset, 4, g_ntohl(flags));
++          proto_tree_add_uint(att_tree, stun2_att_requested_props_r_flag, tvb, offset, 4, g_ntohl(flags));
++          proto_tree_add_uint(att_tree, stun2_att_requested_props_p_flag, tvb, offset, 4, g_ntohl(flags));
++        }
++
++        break;
++     case REQUESTED_TRANSPORT:
++        if (att_length < 4)
++          break;
++        /* protocol */
++        proto_tree_add_item(att_tree, stun2_att_requested_transport_protocol, tvb, offset, 1, FALSE);
++
++        /* reserved */
++        proto_tree_add_item(att_tree, stun2_att_requested_transport_reserved, tvb, offset+1, 3, FALSE);
++        break;
++
++     case RESERVATION_TOKEN:
++        if (att_length < 8)
++          break;
++        proto_tree_add_item(att_tree, stun2_att_reservation_token, tvb, offset, att_length, FALSE);
++        break;
++
++     case ICMP:
++        if (att_length < 4)
++          break;
++        proto_tree_add_item(att_tree, stun2_att_icmp_type, tvb, offset, 1, FALSE);
++        proto_tree_add_item(att_tree, stun2_att_icmp_code, tvb, offset + 1, 1, FALSE);
++        break;
++
+ 			default:
+ 				if (att_length > 0)
+ 					proto_tree_add_item(att_tree, stun2_att_value, tvb, offset, att_length, FALSE);
+@@ -526,21 +672,70 @@
+ 			BASE_HEX, 	NULL,	0x0,	"",	HFILL}
+ 		},
+ 		{ &stun2_att_xor_ipv4,
+-			{ "IP (XOR-d)",		"stun2.att.ipv4-xord",	FT_IPv4,
++			{ "IPv4 (XOR-d)",		"stun2.att.ipv4-xord",	FT_IPv4,
+ 			BASE_NONE,	NULL,	0x0, 	"",	HFILL }
+ 		},
+ 		{ &stun2_att_xor_ipv6,
+-			{ "IP (XOR-d)",		"stun2.att.ipv6-xord",	FT_IPv6,
++			{ "IPv6 (XOR-d)",		"stun2.att.ipv6-xord",	FT_IPv6,
+ 			BASE_NONE,	NULL,	0x0, 	"",	HFILL }
+ 		},
+ 		{ &stun2_att_xor_port,
+ 			{ "Port (XOR-d)",	"stun2.att.port-xord",	FT_UINT16,
+ 			BASE_DEC,	NULL,	0x0, 	"",	HFILL }
+ 		},
+-		{ &stun2_att_server,
+-			{ "Server software","stun2.att.server",	FT_STRING,
++		{ &stun2_att_software,
++			{ "Software","stun2.att.software",	FT_STRING,
+ 			BASE_NONE, 	NULL,	0x0,	"",	HFILL}
+  		},
++    /* TURN */
++    { &stun2_att_channel_number, 
++      {"Channel", "stun2.att.channel_number", FT_UINT16, 
++      BASE_DEC, NULL, 0x00, "", HFILL }
++    },
++    { &stun2_att_channel_number_rffu, 
++      {"RFFU", "stun2.att.channel_number_rffu", FT_UINT16, 
++      BASE_DEC, NULL, 0x00, "", HFILL }
++    },
++    { &stun2_att_lifetime, 
++      {"Lifetime", "stun2.att.lifetime", FT_UINT32, 
++      BASE_DEC, NULL, 0x00, "", HFILL }
++    },
++    { &stun2_att_data, 
++      {"Data", "stun2.att.data", FT_BYTES, 
++      BASE_HEX, NULL, 0x00, "", HFILL }
++    },
++    { &stun2_att_requested_props_e_flag, 
++      { "E flag", "stun2.att.requested_props.e_flag", FT_UINT32,
++      BASE_HEX, NULL, 0x80000000, "", HFILL}
++    },
++    { &stun2_att_requested_props_r_flag, 
++      { "R flag", "stun2.att.requested_props.r_flag", FT_UINT32,
++      BASE_HEX, NULL, 0x40000000, "", HFILL}
++    },
++    { &stun2_att_requested_props_p_flag,
++      { "P flag", "stun2.att.requested_props.p_flag", FT_UINT32,
++      BASE_HEX, NULL, 0x20000000, "", HFILL}
++    },
++    { &stun2_att_requested_transport_protocol,
++      { "Requested transport protocol", "stun2.att.requested_transport.protocol", FT_UINT8,
++      BASE_HEX, VALS(transport_protocol), 0x00, "", HFILL}
++    },
++    { &stun2_att_requested_transport_reserved,
++      { "Reserved", "stun2.att.requested_transport.reserved", FT_BYTES,
++      BASE_HEX, NULL, 0x00, "", HFILL}
++    },
++    { &stun2_att_reservation_token,
++      { "Reservation token", "stun2.att.reservation_token", FT_BYTES,
++        BASE_HEX, NULL, 0x0, "", HFILL}
++    },
++    { &stun2_att_icmp_type,
++      { "Type", "stun2.att.icmp.type", FT_UINT8,
++        BASE_DEC, NULL, 0x0, "", HFILL}
++    },
++    { &stun2_att_icmp_code,
++      { "Code", "stun2.att.icmp.code", FT_BYTES,
++        BASE_HEX, NULL, 0x0, "", HFILL}
++    },
+ 		{ &stun2_att_value,
+ 			{ "Value",	"stun2.value",	FT_BYTES,
+ 			BASE_HEX,	NULL,	0x0, 	"",	HFILL }

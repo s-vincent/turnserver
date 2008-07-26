@@ -1,0 +1,47 @@
+## 
+# TurnServer configuration file.
+#
+
+## public IPv4 address of any relayed address (if not set, no relay for IPv4)
+listen_address = "127.0.0.1"
+
+## listening IPv6 address
+## public IPv6 address of any relayed address (if not set, no relay for IPv6)
+listen_addressv6 = "::1"
+
+## UDP listening port.
+udp_port = 3478
+
+## TCP listening port.
+tcp_port = 3478
+
+## TLS support.
+tls = false
+
+## Daemon mode.
+daemon = false
+
+## Max client.
+max_client = 10
+
+## Max relay per client.
+max_relay_per_client = 2
+
+## Allocation lifetime.
+allocation_lifetime = 1800
+
+## Certification Authority file.
+ca_file = "./ca.crt"
+
+## Server certificate  file.
+cert_file = "./server.crt"
+
+## Private key file.
+private_key_file = "./server.key"
+
+## Account method.
+account_method = "file"
+
+## Account file (fi account_method = file).
+account_file = "./turnusers.txt"
+

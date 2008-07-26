@@ -1,0 +1,94 @@
+.TH turnserver.conf 5 "July 23, 2008" "TurnServer Configuration"
+
+.SH NAME
+turnserver.conf \- TurnServer configuration file
+
+.SH SYNOPSIS
+.B %etc%/turnserver.conf
+.sp
+
+.SH DESCRIPTION
+This is the TurnServer configuration file. 
+.br
+Here are the configuration options supported.
+
+.SH OPTIONS
+
+The file contains the following definitions:
+
+.TP
+.BR "listen_address " "=  IPv4 address"
+The public IPv4 address of any relayed address (if not set, no relay for IPv4).
+
+.TP
+.BR "listen_addressv6 " "= IPv6 address"
+The public IPv6 address of any relayed address (if not set, no relay for IPv6).
+
+.TP
+.BR "udp_port " "= number"
+The UDP port of the server to listen for incoming connection.
+
+.TP 
+.BR "tcp_port " "= number"
+The TCP port of the server to listen for incoming connection.
+
+.TP
+.BR "tls " "= boolean"
+Wheter or not activate TLS over TCP connection.
+
+.TP
+.BR "daemon " "= boolean"
+Wheter or not to run the program as daemon.
+
+.TP
+.BR "ca_file " "= string"
+The pathname of the Certification Authority certificate (required when tls=true).
+
+.TP
+.BR "cert_file " "= string"
+The pathname of the server certificate (required when tls=true).
+
+.TP
+.BR "private_key_file " "= string"
+The pathname of the server private key (required when tls=true).
+
+.TP
+.BR "account_method " "= [file | db | ldap ...]"
+The method to retrieve account data.
+Note that only the "file" method is implemented.
+
+.TP
+.BR "account_file " "= string"
+The pathname of the account file (required when account_method=file).
+
+.SH EXAMPLE
+
+listen_address = "172"
+
+listen_addressv6 = "2001:db8::1"
+
+udp_port = 3478
+
+tcp_port = 3478
+
+tls = true
+
+daemon = false
+
+ca_file = "/etc/ca.crt"
+
+cert_file = "/etc/server.crt"
+
+private_key_file = "/etc/server.key"
+
+account_method = "file"
+
+account_file = "/etc/turnusers.tx
+
+.SH AUTHOR
+
+Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+.SH "SEE ALSO"
+.BR turnserver (1)
+
