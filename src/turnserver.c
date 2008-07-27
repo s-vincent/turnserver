@@ -2315,7 +2315,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   sigaddset(&mask, SIGRT_EXPIRE_CHANNEL);
   sigaddset(&mask, SIGRT_EXPIRE_TOKEN);
 
-  ret = pselect(nsock, (fd_set*)&fdsr, NULL, NULL, &tv, &mask);
+  ret = pselect(nsock, (fd_set*)(void*)&fdsr, NULL, NULL, &tv, &mask);
 
   if(ret > 0)
   {
