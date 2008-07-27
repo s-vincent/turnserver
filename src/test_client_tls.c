@@ -86,7 +86,7 @@ int main(int argc, char** argv)
   ssize_t nb2 = -1;
   size_t n_len = 0;
   struct tls_peer* speer = NULL;
-  socklen_t server_addr_size = sizeof(struct sockaddr_storage);
+  socklen_t server_addr_size = 0; 
   char peer_port[8];
   struct addrinfo hints;
   struct addrinfo* res = NULL;
@@ -110,6 +110,7 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
   memcpy(&server_addr, res->ai_addr, res->ai_addrlen);
+  server_addr_size = res->ai_addrlen;
   freeaddrinfo(res);
 
   /* get address for peer_addr */
@@ -146,14 +147,14 @@ int main(int argc, char** argv)
 
   sock = speer->sock;
 
-  if(connect(speer->sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
+  if(connect(speer->sock, (struct sockaddr*)&server_addr, server_addr_size) == -1)
   {
     perror("connect");
     exit(EXIT_FAILURE);
   }
   printf("connected\n");
 
-  if(tls_peer_do_handshake(speer, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
+  if(tls_peer_do_handshake(speer, (struct sockaddr*)&server_addr, server_addr_size) == -1)
   {
     printf("Handshake failed!\n");
     tls_peer_free(&speer);
@@ -171,7 +172,7 @@ int main(int argc, char** argv)
 
   printf("Send allocate request\n");
 
-  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, sizeof(server_addr), sizeof(*hdr), iov, index);
+  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, sizeof(*hdr), iov, index);
 
   if(nb == -1)
   {
@@ -272,7 +273,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send allocate request\n");
-  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, sizeof(server_addr), ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
+  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
 
   iovec_free_data(iov, index);
 
@@ -387,7 +388,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send refresh request\n");
-  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, sizeof(server_addr), ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
+  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
 
   iovec_free_data(iov, index);
   index = 0;
@@ -461,7 +462,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send ChannelBind request\n");
-  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, sizeof(server_addr), ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
+  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
 
   iovec_free_data(iov, index);
   index = 0;
@@ -482,7 +483,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   printf("Send Send indication request\n");
-  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, sizeof(server_addr), ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
+  nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
 
   iovec_free_data(iov, index);
   index = 0;

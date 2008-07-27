@@ -583,7 +583,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     }
 
     debug(DBG_ATTR, "Send ChannelDatata to peer\n");
-    nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sizeof(struct sockaddr_storage));
+    nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, desc->relayed_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
   }
   else /* TCP */
   {
@@ -713,7 +713,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
       }
 
       debug(DBG_ATTR, "Send data to peer\n");
-      nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sizeof(struct sockaddr_storage));
+      nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, desc->relayed_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
     }
     else /* TCP */
     {

@@ -81,8 +81,15 @@
 #include <arpa/inet.h>
 
 #include <netinet/in.h>
-
 #include <netdb.h>
+
+#if defined(__FreeBSD__) || defined(__OpenBSD) || defined(__NetBSD__)
+#ifndef IPPROTO_IPV6
+/* This macro should be declared in netinet/in.h even in POSIX compilation */
+#define IPPROTO_IPV6 41	
+#endif
+#endif
+
 #endif
 
 #include <openssl/evp.h>
@@ -718,6 +725,10 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port)
     }
 
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
+   
+    /* accept IPv6 and IPv4 on the same socket */ 
+    on = 0;
+    setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on));
 
     if(bind(sock, p->ai_addr, p->ai_addrlen) == -1)
     {

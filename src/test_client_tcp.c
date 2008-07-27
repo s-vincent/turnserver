@@ -70,6 +70,7 @@ int main(int argc, char** argv)
   struct turn_attr_hdr* attr = NULL;
   struct turn_attr_hdr* attr2 = NULL;
   struct sockaddr_storage server_addr;
+  socklen_t server_addr_size = 0; 
   struct sockaddr_storage peer_addr;
   struct addrinfo hints;
   struct addrinfo* res = NULL;
@@ -104,6 +105,7 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
   memcpy(&server_addr, res->ai_addr, res->ai_addrlen);
+  server_addr_size = res->ai_addrlen;
   freeaddrinfo(res);
 
   /* get address for peer_addr */
@@ -132,7 +134,7 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-  if(connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
+  if(connect(sock, (struct sockaddr*)&server_addr, server_addr_size) == -1)
   {
     perror("connect");
     close(sock);

@@ -70,6 +70,7 @@ int main(int argc, char** argv)
   struct turn_attr_hdr* attr = NULL;
   struct turn_attr_hdr* attr2 = NULL;
   struct sockaddr_storage server_addr;
+  socklen_t server_addr_size = 0;
   struct sockaddr_storage peer_addr;
   struct sockaddr_storage daddr;
   socklen_t daddr_size = sizeof(struct sockaddr_in);
@@ -107,6 +108,7 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
   memcpy(&server_addr, res->ai_addr, res->ai_addrlen);
+  server_addr_size = res->ai_addrlen;
   freeaddrinfo(res);
 
   /* get address for peer_addr */
@@ -140,7 +142,7 @@ int main(int argc, char** argv)
   index++;
 
   printf("Send allocate request\n");
-  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
 
   if(nb == -1)
   {
@@ -236,7 +238,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send allocate request\n");
-  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
 
   nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
 
@@ -361,7 +363,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send refresh request\n");
-  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
 
   iovec_free_data(iov, index);
   index = 0;
@@ -433,7 +435,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send ChannelBind request\n");
-  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
   nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
 
   iovec_free_data(iov, index);
@@ -453,7 +455,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   printf("Send Send indication request\n");
-  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
 
   iovec_free_data(iov, index);
   index = 0;
@@ -475,7 +477,7 @@ int main(int argc, char** argv)
     index++;
 
     printf("ChannelData\n");
-    turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+    turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
   }
 
   sleep(1);
@@ -568,7 +570,7 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send allocate request\n");
-  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, sizeof(server_addr), iov, index);
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
 
   close(sock);
 
