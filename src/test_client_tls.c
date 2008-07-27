@@ -142,6 +142,11 @@ int main(int argc, char** argv)
   if(!speer)
   {
     perror("speer");
+    /* cleanup SSL lib */
+    EVP_cleanup();
+    ERR_remove_state(0);
+    ERR_free_strings();
+    CRYPTO_cleanup_all_ex_data();
     exit(EXIT_FAILURE);
   }
 
@@ -150,6 +155,11 @@ int main(int argc, char** argv)
   if(connect(speer->sock, (struct sockaddr*)&server_addr, server_addr_size) == -1)
   {
     perror("connect");
+    /* cleanup SSL lib */
+    EVP_cleanup();
+    ERR_remove_state(0);
+    ERR_free_strings();
+    CRYPTO_cleanup_all_ex_data();
     exit(EXIT_FAILURE);
   }
   printf("connected\n");
@@ -158,6 +168,11 @@ int main(int argc, char** argv)
   {
     printf("Handshake failed!\n");
     tls_peer_free(&speer);
+    /* cleanup SSL lib */
+    EVP_cleanup();
+    ERR_remove_state(0);
+    ERR_free_strings();
+    CRYPTO_cleanup_all_ex_data();
     exit(EXIT_FAILURE);
   }
   else
@@ -178,6 +193,11 @@ int main(int argc, char** argv)
   {
     perror("sendto\n");
     tls_peer_free(&speer);
+    /* cleanup SSL lib */
+    EVP_cleanup();
+    ERR_remove_state(0);
+    ERR_free_strings();
+    CRYPTO_cleanup_all_ex_data();
     exit(EXIT_FAILURE);
   }
   memset(&message, 0x00, sizeof(message));
@@ -192,6 +212,11 @@ int main(int argc, char** argv)
   {
     perror("tls_peer_tcp_read");
     tls_peer_free(&speer);
+    /* cleanup SSL lib */
+    EVP_cleanup();
+    ERR_remove_state(0);
+    ERR_free_strings();
+    CRYPTO_cleanup_all_ex_data();
     exit(EXIT_FAILURE);
   }
 

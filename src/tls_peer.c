@@ -451,7 +451,7 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
   char buf[8192];
   char bufout[8192];
   struct ssl_peer* speer = NULL;
-  struct sockaddr daddr2;
+  struct sockaddr_storage daddr2;
 
   tls_peer_write(peer, NULL, 0, daddr, daddr_size);
   speer = tls_peer_find_connection(peer, daddr, daddr_size);
@@ -492,12 +492,10 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
         {
           nb = recvfrom(peer->sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr2, &daddr_size);
         }
-        /*
-           else
-           {
-           nb = recv(peer->sock, buf, sizeof(buf), 0);
-           }
-           */
+        else /* TCP */
+        {
+          nb = recv(peer->sock, buf, sizeof(buf), 0);
+        }
 
         if(nb > 0)
         {
@@ -505,7 +503,7 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
           {
             tls_peer_tcp_read(peer, buf, nb, bufout, sizeof(bufout), daddr, daddr_size, peer->sock);
           }
-          else
+          else /* UDP */
           {
             tls_peer_udp_read(peer, buf, nb, bufout, sizeof(bufout), daddr, daddr_size);
           }
@@ -539,6 +537,12 @@ int tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
   {
     /* printf("new peer\n"); */
     SSL* ssl = SSL_new(peer->ctx_server);
+
+    if(!ssl)
+    {
+      return -1;
+    }
+
     SSL_set_accept_state(ssl);
 
     /* associate the SSL pointer with the socket descriptor */
@@ -574,6 +578,12 @@ int tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
     /* printf("new peer\n"); */
     BIO* bio_write = NULL;
     SSL* ssl = SSL_new(peer->ctx_server);
+
+    if(!ssl)
+    {
+      return -1;
+    }
+
     SSL_set_accept_state(ssl);
 
     if(peer->type != TCP)
@@ -660,6 +670,7 @@ int tls_peer_is_encrypted(const char* buf, size_t len)
   uint8_t c = 0; 
   uint8_t v = 0;
   uint8_t v2 = 0;
+
   if(len < 3)
   {
     return 0;
@@ -725,7 +736,7 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port)
     }
 
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
-   
+
     /* accept IPv6 and IPv4 on the same socket */ 
     on = 0;
     setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on));

@@ -572,6 +572,7 @@ int main(int argc, char** argv)
   printf("Send allocate request\n");
   nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
 
+  iovec_free_data(iov, index);
   close(sock);
 
   return EXIT_SUCCESS;

@@ -585,6 +585,7 @@ int main(int argc, char** argv)
   printf("Send allocate request\n");
   nb = turn_tcp_send(sock, iov, index);
 
+  iovec_free_data(iov, index);
   close(sock);
 
   return EXIT_SUCCESS;
