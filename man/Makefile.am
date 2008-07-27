@@ -7,10 +7,10 @@ EXTRA_DIST=turnserver.tmpl turnserver.conf.tmpl
 turnserver.man: turnserver.tmpl
 	$(SED) -e 's#%DATE%#@PACKAGE_DATE@#' \
 		-e 's#%VERSION%#@PACKAGE_VERSION@#' \
-		-e 's#%etc%#@sysconfdir@#' $< > $@
+		-e 's#%etc%#@sysconfdir@#' turnserver.tmpl > $@
 
 turnserver.conf.man: turnserver.conf.tmpl
 	$(SED) -e 's#%DATE%#@PACKAGE_DATE@#' \
 		-e 's#%VERSION%#@PACKAGE_VERSION@#' \
-		-e 's#%etc%#@sysconfdir@#' $< > $@
+		-e 's#%etc%#@sysconfdir@#' turnserver.conf.tmpl > $@
 

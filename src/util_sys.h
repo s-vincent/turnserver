@@ -132,6 +132,8 @@ typedef struct sfd_set
 #else
   fd_mask fds_bits[SFD_SETSIZE]; /**< bitmask */
 #endif
+/* For *BSD */
+#define __fds_bits fds_bits
 }sfd_set;
 
 /**
