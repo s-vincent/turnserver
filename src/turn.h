@@ -74,8 +74,8 @@ typedef unsigned __int64 uint64_t;
 #define STUN_GET_CLASS(msg_type)        ((msg_type) & 0x0110)
 
 /* macros to determine if an attribute is comprehension-required or comprehension-optional */
-#define STUN_IS_COMPREHENSION_REQUIRED (!((attr_type) & 0x8000))
-#define STUN_IS_COMPREHENSION_OPTIONAL (((attr_type) & 0x8000))
+#define STUN_IS_COMPREHENSION_REQUIRED(attr_type) (!((attr_type) & 0x8000))
+#define STUN_IS_COMPREHENSION_OPTIONAL(attr_type) (((attr_type) & 0x8000))
 
 /* Request/Response transactions */
 

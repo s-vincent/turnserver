@@ -137,11 +137,24 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
       len = 4;
       break;
     case AF_INET6:
-      memcpy(&storage, address, sizeof(struct sockaddr_in6));
-      ptr = (uint8_t*)&((struct sockaddr_in6*)&storage)->sin6_addr;
-      port = ntohs(((struct sockaddr_in6*)&storage)->sin6_port);
-      family = STUN_ATTR_FAMILY_IPV6;
-      len = 16;
+      if(IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)address)->sin6_addr))
+      {
+        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
+        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, &((struct sockaddr_in6*)address)->sin6_addr.s6_addr[12], 4);
+        ptr = (uint8_t*)&((struct sockaddr_in*)&storage)->sin_addr;
+        ((struct sockaddr_in*)&storage)->sin_port = ((struct sockaddr_in6*)address)->sin6_port;
+        memset(((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof(((struct sockaddr_in*)&storage)->sin_zero));
+        family = STUN_ATTR_FAMILY_IPV4;
+        len = 4;
+      }
+      else
+      {
+        memcpy(&storage, address, sizeof(struct sockaddr_in6));
+        ptr = (uint8_t*)&((struct sockaddr_in6*)&storage)->sin6_addr;
+        port = ntohs(((struct sockaddr_in6*)&storage)->sin6_port);
+        family = STUN_ATTR_FAMILY_IPV6;
+        len = 16;
+      }
       break;
     default:
       return NULL;
