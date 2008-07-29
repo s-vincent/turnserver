@@ -636,7 +636,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
   /* host order port XOR most-significant 16 bits of the cookie */
   peer_port = ntohs( message->peer_addr->turn_attr_port);
-  peer_port = peer_port ^ (htonl(STUN_MAGIC_COOKIE) >> 16);
+  peer_port ^= ((p[0] << 8) | (p[1]));
 
   /* copy peer address */
   switch(message->peer_addr->turn_attr_family)
@@ -799,7 +799,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   /* host order port XOR most-significant 16 bits of the cookie */
   peer_port = ntohs(message->peer_addr->turn_attr_port);
-  peer_port ^= (htonl(STUN_MAGIC_COOKIE) >> 16);
+  peer_port ^= ((p[0] << 8) | (p[1]));
 
   switch(family)
   {

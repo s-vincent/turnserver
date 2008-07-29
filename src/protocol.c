@@ -136,6 +136,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   struct sockaddr_storage storage;
   uint16_t port = 0;
   uint8_t family = 0;
+  uint16_t msb_cookie = 0;
 
   switch(address->sa_family)
   {
@@ -180,9 +181,9 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   /* XOR the address and port */
 
   /* host order port XOR most-significant 16 bits of the cookie */
-  port ^= (htonl(cookie) >> 16);
-
   cookie = htonl(cookie);
+  msb_cookie = ((uint8_t*)&cookie)[0] << 8 | ((uint8_t*)&cookie)[1];
+  port ^= msb_cookie;
 
   /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */ 
   for(i = 0 ; i < 4 ; i++)
