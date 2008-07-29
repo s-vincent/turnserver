@@ -1,5 +1,5 @@
 --- epan/dissectors/packet-stun2.c.old	2008-07-24 17:41:40.000000000 +0200
-+++ epan/dissectors/packet-stun2.c	2008-07-24 18:01:43.000000000 +0200
++++ epan/dissectors/packet-stun2.c	2008-07-29 14:34:25.000000000 +0200
 @@ -3,6 +3,7 @@
   * Copyright 2003, Shiang-Ming Huang <smhuang@pcs.csie.nctu.edu.tw>
   * Copyright 2006, Marc Petit-Huguenin <marc@petit-huguenin.org>
@@ -41,7 +41,7 @@
  static int stun2_att_value = -1;
  
  /* Message classes */
-@@ -81,20 +97,40 @@
+@@ -81,20 +97,42 @@
  
  /* Request/Response Transactions */
  #define METHOD_MASK		0xCEEF
@@ -91,10 +91,12 @@
 +#define REQUESTED_TRANSPORT   0x0019 /* draft-ietf-behave-turn-09 */
 +#define RESERVATION_TOKEN     0x0022 /* draft-ietf-behave-turn-09 */
 +#define ICMP                  0x0030 /* draft-ietf-behave-turn-09 */
++
++#define MAGIC_COOKIE 0x2112A442
  
  /* Initialize the subtree pointers */
  static gint ett_stun2 = -1;
-@@ -118,6 +154,11 @@
+@@ -118,6 +156,11 @@
  
  static const value_string methods[] = {
  	{BINDING, "Binding"},
@@ -106,7 +108,7 @@
  	{0x00, NULL}
  };
  
-@@ -130,9 +171,18 @@
+@@ -130,9 +173,18 @@
  	{REALM, "REALM"},
  	{NONCE, "NONCE"},
  	{XOR_MAPPED_ADDRESS, "XOR-MAPPED-ADDRESS"},
@@ -126,7 +128,7 @@
  	{0x00, NULL}
  };
  
-@@ -142,6 +192,12 @@
+@@ -142,6 +194,12 @@
  	{0x00, NULL}
  };
  
@@ -139,16 +141,26 @@
  static guint
  get_stun2_message_len(packet_info *pinfo _U_, tvbuff_t *tvb, int offset)
  {
-@@ -164,7 +220,7 @@
+@@ -164,7 +222,8 @@
  	guint16 att_length;
  	guint16 offset;
  	guint i;
 -	guint transaction_id_first_word;
 +	char transaction_id[12];
++  uint32_t magic_cookie = g_htonl(MAGIC_COOKIE);
  	guint   len;
  
  	/*
-@@ -214,9 +270,8 @@
+@@ -180,7 +239,7 @@
+ 	msg_length = tvb_get_ntohs(tvb, 2);
+ 
+ 	/* Check if it is really a STUN2 message */
+-	if (msg_type & 0xC000 || tvb_get_ntohl(tvb, 4) != 0x2112a442)
++	if (msg_type & 0xC000 || tvb_get_ntohl(tvb, 4) != MAGIC_COOKIE)
+ 		return FALSE;
+ 
+ 	/* check if payload enough */
+@@ -214,9 +273,8 @@
  	proto_tree_add_item(stun2_tree, hf_stun2_cookie, tvb, 4, 4, FALSE);
  	proto_tree_add_item(stun2_tree, hf_stun2_id, tvb, 8, 12, FALSE);
  
@@ -160,7 +172,7 @@
  
  	if (msg_length > 0) {
  	    ta = proto_tree_add_item(stun2_tree, hf_stun2_att, tvb, STUN2_HDR_LEN, msg_length, FALSE);
-@@ -317,6 +372,8 @@
+@@ -317,6 +375,8 @@
  					proto_tree_add_uint(att_tree, stun2_att_padding, tvb, offset+att_length, 4-(att_length % 4), 4-(att_length % 4));
  				break;
  
@@ -169,22 +181,29 @@
  			case XOR_MAPPED_ADDRESS:
  				if (att_length < 2)
  					break;
-@@ -330,7 +387,8 @@
+@@ -326,11 +386,12 @@
+ 				proto_tree_add_item(att_tree, stun2_att_xor_port, tvb, offset+2, 2, FALSE);
+ 
+ 				/* Show the port 'in the clear'
+-				   XOR (host order) transid with (host order) xor-port.
++				   XOR most significant 16 bit of the cookie with (host order) xor-port.
  				   Add host-order port into tree. */
  				ti = proto_tree_add_uint(att_tree, stun2_att_port, tvb, offset+2, 2,
  										 tvb_get_ntohs(tvb, offset+2) ^
 -										 (transaction_id_first_word >> 16));
-+										  (g_htonl(0x2112A442) >> 16));
++										 ((((guint8*)&magic_cookie)[0] << 8) | ((guint8*)&magic_cookie)[1]));
 +                      /* (transaction_id_first_word >> 16)); */
  				PROTO_ITEM_SET_GENERATED(ti);
  
  				if (att_length < 8)
-@@ -346,21 +404,42 @@
+@@ -345,22 +406,43 @@
+ 						   XOR (host order) transid with (host order) xor-address.
  						   Add in network order tree. */
  						ti = proto_tree_add_ipv4(att_tree, stun2_att_ipv4, tvb, offset+4, 4,
- 												 g_htonl(tvb_get_ntohl(tvb, offset+4) ^
+-												 g_htonl(tvb_get_ntohl(tvb, offset+4) ^
 -												 transaction_id_first_word));
-+										     0x2112A442));
++												 g_htonl(tvb_get_ntohl(tvb, offset+4) ^ 
++                         MAGIC_COOKIE));
 +												 /* transaction_id_first_word)); */
  						PROTO_ITEM_SET_GENERATED(ti);
  						break;
@@ -196,7 +215,7 @@
 -						proto_tree_add_item(att_tree, stun2_att_xor_ipv6, tvb, offset+4, 16, FALSE);
 +            {
 +              char ipv6[16];
-+              guint32 cookie = g_htonl(0x2112A442);
++              guint32 cookie = g_htonl(MAGIC_COOKIE);
 +              guint8* ptr = (guint8*)&cookie;
 +              unsigned int i = 0;
 +          
@@ -229,7 +248,7 @@
  				if (att_length % 4 != 0)
  					proto_tree_add_uint(att_tree, stun2_att_padding, tvb, offset+att_length, 4-(att_length % 4), 4-(att_length % 4));
  				break;
-@@ -371,6 +450,73 @@
+@@ -371,6 +453,73 @@
  				proto_tree_add_item(att_tree, stun2_att_crc32, tvb, offset, att_length, FALSE);
  				break;
  
@@ -303,7 +322,16 @@
  			default:
  				if (att_length > 0)
  					proto_tree_add_item(att_tree, stun2_att_value, tvb, offset, att_length, FALSE);
-@@ -526,21 +672,70 @@
+@@ -421,7 +570,7 @@
+ 	msg_length = tvb_get_ntohs(tvb, 2);
+ 
+ 	/* Check if it is really a STUN2 message */
+-	if (msg_type & 0xC000 || tvb_get_ntohl(tvb, 4) != 0x2112a442)
++	if (msg_type & 0xC000 || tvb_get_ntohl(tvb, 4) != MAGIC_COOKIE)
+ 		return FALSE;
+ 
+ 	/* check if payload enough */
+@@ -526,21 +675,70 @@
  			BASE_HEX, 	NULL,	0x0,	"",	HFILL}
  		},
  		{ &stun2_att_xor_ipv4,
