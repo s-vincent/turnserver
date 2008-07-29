@@ -78,11 +78,21 @@ static struct turn_attr_hdr* turn_attr_address_create(uint16_t type, const struc
       len = 4;
       break;
     case AF_INET6:
-      ptr = (uint8_t*)&((struct sockaddr_in6*)address)->sin6_addr;
-      port = ntohs(((struct sockaddr_in6*)address)->sin6_port);
-      family = STUN_ATTR_FAMILY_IPV6;
-      len = 16;
-      break;
+      if(IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)address)->sin6_addr))
+      {
+        ptr = &((struct sockaddr_in6*)address)->sin6_addr.s6_addr[12];
+        port = ((struct sockaddr_in6*)&address)->sin6_port;
+        family = STUN_ATTR_FAMILY_IPV4;
+        len = 4;
+      }
+      else
+      {
+        ptr = (uint8_t*)&((struct sockaddr_in6*)address)->sin6_addr;
+        port = ntohs(((struct sockaddr_in6*)address)->sin6_port);
+        family = STUN_ATTR_FAMILY_IPV6;
+        len = 16;
+        break;
+      }
     default:
       return NULL;
       break;
@@ -144,6 +154,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
         ptr = (uint8_t*)&((struct sockaddr_in*)&storage)->sin_addr;
         ((struct sockaddr_in*)&storage)->sin_port = ((struct sockaddr_in6*)address)->sin6_port;
         memset(((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof(((struct sockaddr_in*)&storage)->sin_zero));
+        port = ntohs(((struct sockaddr_in*)&storage)->sin_port);
         family = STUN_ATTR_FAMILY_IPV4;
         len = 4;
       }
@@ -169,7 +180,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   /* XOR the address and port */
 
   /* host order port XOR most-significant 16 bits of the cookie */
-  port ^= (htonl(cookie) >> 16) ;
+  port ^= (htonl(cookie) >> 16);
 
   cookie = htonl(cookie);
 
@@ -1257,7 +1268,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 
   if(sizeof(time_t) == 4) /* 32 bits */
   {
-   uint32_convert(nonce, sizeof(time_t) * 2, &ct);
+    uint32_convert(nonce, sizeof(time_t) * 2, &ct);
     memcpy(&t, &ct, 4);
   }
   else
@@ -1267,7 +1278,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
     memcpy(&t, &ct64, 8);
     return 1;
   }
-  
+
   MD5_Init(&ctx);
   MD5_Update(&ctx, nonce, 16); /* time */
   MD5_Update(&ctx, &c, 1);
@@ -1280,14 +1291,12 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 
   if(memcmp(md_txt, nonce + 16, MD5_DIGEST_LENGTH) != 0)
   {
-    printf("Bad checksum\n");
     return 1;
   }
 
   if(time(NULL) > t)
   {
     /* stale */
-    printf("time(0) > t\n");
     return 1;
   }
 
