@@ -341,6 +341,7 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
   {
     return -1;
   }
+
   peer->ctx_server = SSL_CTX_new(method_server);
   if(!peer->ctx_server)
   {
@@ -526,7 +527,7 @@ int tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
 
   /* printf("tls_peer_tcp_read\n"); */
 
-  if(!addr)
+  if(!addr || peer->type != TCP)
   {
     return -1;
   }
@@ -566,7 +567,7 @@ int tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
 
   /* printf("tls_peer_udp_read\n"); */
 
-  if(!addr)
+  if(!addr || peer->type != UDP)
   {
     return -1;
   }
@@ -586,14 +587,11 @@ int tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
 
     SSL_set_accept_state(ssl);
 
-    if(peer->type != TCP)
-    {
-      bio_write = BIO_new_dgram(peer->sock, BIO_NOCLOSE);
-      (void)BIO_dgram_set_peer(bio_write, addr);
+    bio_write = BIO_new_dgram(peer->sock, BIO_NOCLOSE);
+    (void)BIO_dgram_set_peer(bio_write, addr);
 
-      SSL_set_bio(ssl, NULL, bio_write);
-      /*    SSL_set_mtu(ssl, SSL3_RT_MAX_PLAIN_LENGTH); */
-    }
+    SSL_set_bio(ssl, NULL, bio_write);
+    /* SSL_set_mtu(ssl, SSL3_RT_MAX_PLAIN_LENGTH); */
 
     speer = ssl_peer_new((struct sockaddr*)addr, addrlen, ssl);
     if(!speer)
@@ -629,7 +627,7 @@ int tls_peer_write(struct tls_peer* peer, const char* buf, size_t buflen, const 
       bio_write = BIO_new_dgram(peer->sock, BIO_NOCLOSE);
       (void)BIO_dgram_set_peer(bio_write, addr);
       SSL_set_bio(ssl, peer->bio_fake, bio_write);
-      /*    SSL_set_mtu(ssl, SSL3_RT_MAX_PLAIN_LENGTH); */
+      /* SSL_set_mtu(ssl, SSL3_RT_MAX_PLAIN_LENGTH); */
     }
     else
     {

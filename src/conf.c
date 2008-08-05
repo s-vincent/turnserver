@@ -44,6 +44,8 @@
 
 #include "conf.h"
 
+/* remove extern function because this does not compile on some libconfuse version (< 2.6) */
+#if 0 
 /**
  * \brief Free the resources used by the lex parser.
  *
@@ -52,6 +54,7 @@
  * \return 0
  */
 extern int cfg_yylex_destroy(void);
+#endif
 
 /**
  * \var opts
@@ -120,7 +123,9 @@ void turnserver_cfg_free(void)
   {
     cfg_free(cfg);
     cfg = NULL;
+#if 0 
     cfg_yylex_destroy();
+#endif
   }
 }
 
