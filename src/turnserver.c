@@ -444,6 +444,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
 
   /* do not take in count the attribute itself */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
   if(speer)
   {
@@ -930,6 +931,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   /* do not take in count the attribute itself */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
   debug(DBG_ATTR, "ChannelBind successfull, send success ChannelBind response\n");
 
@@ -1089,6 +1091,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   /* do not take in count the attribute itself */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
   debug(DBG_ATTR, "Refresh successfull, send success refresh response\n");
 
@@ -1498,6 +1501,7 @@ send_success_response:
 
     /* do not take in count the attribute itself */
     ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
     debug(DBG_ATTR, "Allocation successfull, send success allocate response\n");
 
@@ -1682,13 +1686,13 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   total_len = ntohs(message.msg->turn_msg_len) + sizeof(struct turn_msg_hdr);
 
   /* check that the two first bit of the STUN header are set to 0 */
-  /*
+/*
      if((hdr_msg_type & 0xC000) != 0)
      {
      debug(DBG_ATTR, "Not a STUN-formated packet\n");
      return -1;
      }
-     */
+*/
 
   /* check if it is a known class */
   if(!STUN_IS_REQUEST(hdr_msg_type) &&
@@ -1729,7 +1733,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
     crc = crc32_generate((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint), 0);
 
-    if(htonl(crc) != message.fingerprint->turn_attr_crc)
+    if(htonl(crc) != (message.fingerprint->turn_attr_crc ^ htonl(0x5354554e)))
     {
       debug(DBG_ATTR, "Fingerprint mismatch\n");
       return -1;

@@ -295,6 +295,7 @@ int main(int argc, char** argv)
   /* calculate fingerprint */
   /* index -1, we do not take count FINGER attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 #endif
 
   printf("Send allocate request\n");
@@ -410,6 +411,7 @@ int main(int argc, char** argv)
   /* calculate fingerprint */
   /* index -1, we do not take count FINGER attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 #endif
 
   printf("Send refresh request\n");
@@ -484,6 +486,7 @@ int main(int argc, char** argv)
   /* calculate fingerprint */
   /* index -1, we do not take count FINGER attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 #endif
 
   printf("Send ChannelBind request\n");
