@@ -1447,7 +1447,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
           /* comprehension-required attribute but server does not understand it */
           if(!(*unknown_size))
           {
-            continue;
+            break;
           }
           unknown[unknown_index] = attr->turn_attr_type;
           (*unknown_size)--;
