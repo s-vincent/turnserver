@@ -1,3 +1,8 @@
+2008-09-02	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+	* version 0.1.2 : - Fix bug (infinite loop) when receiving unknown
+											comprehension-required attribute.
+
 2008-08-16	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
 	* version 0.1.1 : - Fix IPv6 problem;
