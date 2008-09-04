@@ -185,7 +185,7 @@ extern "C"
     }
 
     max = sysconf(_SC_OPEN_MAX);
-    for(i = 0 ;i < max ; i++)
+    for(i = STDIN_FILENO + 1 ; i  < max ; i++)
     {
       close(i);
     }
@@ -209,6 +209,7 @@ extern "C"
     if((fd = open("/dev/null", O_RDWR, 0)) != -1)
     {
       /* redirect stdin, stdout and stderr to /dev/null */
+      close(STDIN_FILENO);
       dup2(fd, STDIN_FILENO);
       dup2(fd, STDOUT_FILENO);
       dup2(fd, STDERR_FILENO);
