@@ -1,11 +1,15 @@
+2008-09-24	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+	* Version 0.1.2.1	:	- Fix bug in go_daemon().
+
 2008-09-02	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* version 0.1.2 : - Fix bug (infinite loop) when receiving unknown
+	* Version 0.1.2 : - Fix bug (infinite loop) when receiving unknown
 											comprehension-required attribute.
 
 2008-08-16	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* version 0.1.1 : - Fix IPv6 problem;
+	* Version 0.1.1 : - Fix IPv6 problem;
 										- Add missing XOR for FINGERPRINT mechanism;
 										- Fix minors bugs.
 
