@@ -18,6 +18,9 @@ tcp_port = 3478
 ## TLS support.
 tls = false
 
+## Realm value
+realm = "domain.org"
+
 ## Daemon mode.
 daemon = false
 
