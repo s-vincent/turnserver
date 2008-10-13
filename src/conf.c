@@ -154,7 +154,6 @@ int turnserver_cfg_tls(void)
   return cfg_getbool(cfg, "tls");
 }
 
-
 int turnserver_cfg_daemon(void)
 {
   return cfg_getbool(cfg, "daemon");

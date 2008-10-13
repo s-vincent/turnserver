@@ -439,17 +439,28 @@ extern "C"
 
     for (i = 0; i < bin_len && (i * 2) < hex_len ; i++) 
     {
-      j = (bin[i] >> 4) & 0xf;
+      j = (bin[i] >> 4) & 0x0f;
+      
       if (j <= 9)
+      {
         hex[i*2] = (j + '0');
+      }
       else
+      {
         hex[i*2] = (j + 'a' - 10);
-      j = bin[i] & 0xf;
+      }
+      
+      j = bin[i] & 0x0f;
+
       if (j <= 9)
+      {
         hex[i*2+1] = (j + '0');
+      }
       else
+      {
         hex[i*2+1] = (j + 'a' - 10);
-    };
+      }
+    }
   }
 
   void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t)

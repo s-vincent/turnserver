@@ -70,7 +70,6 @@
 #include "util_crypto.h"
 #include "dbg.h"
 
-
 /**
  * \var software_description
  * \brief Textual description of the server.

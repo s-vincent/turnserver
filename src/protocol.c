@@ -1264,7 +1264,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 
   if(len != (16 + MD5_DIGEST_LENGTH))
   {
-    return 1; /* bad nonce */
+    return 1; /* bad nonce length */
   }
 
   if(sizeof(time_t) == 4) /* 32 bits */
@@ -1277,7 +1277,6 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
     /* TODO support 64 bit */
     uint64_convert(nonce, sizeof(time_t) * 2, &ct64);
     memcpy(&t, &ct64, 8);
-    return 1;
   }
 
   MD5_Init(&ctx);
@@ -1292,13 +1291,12 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 
   if(memcmp(md_txt, nonce + 16, MD5_DIGEST_LENGTH) != 0)
   {
-    return 1;
+    return 1; /* MD5 hash mismatch */
   }
 
   if(time(NULL) > t)
   {
-    /* stale */
-    return 1;
+    return 1; /* nonce stale */
   }
 
   return 0;
