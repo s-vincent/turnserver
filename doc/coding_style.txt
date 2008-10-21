@@ -3,10 +3,10 @@ TurnServer coding style
 
 I) Code layout
 
-The software uses the ANSI coding standard layout. For indentation use 2 space indentation instead 
+The software uses the ANSI coding standard layout. Use 2 space indentation instead 
 of tabs.
 
-void foo(int barrc, char** barv
+void foo(int barc, char** barv)
 {
   int test = 0;
 
@@ -51,7 +51,7 @@ The code has to follow these recommandations :
 - Put "static" keyword when functions / global variables is not used outside the file;
 - Try to avoid static variables in functions (try to make reentrant things).
 
-Each file, function, structure, global variables MUST be documented using doxygen. Here is a
+Each file, function, structure and global variable MUST be documented using doxygen. Here is a
 complete example :
 
 /**
@@ -66,7 +66,7 @@ complete example :
 
 /**
  * \struct my_struct
- * \brief short description.
+ * \brief Short description.
  */
 struct my_struct
 {
@@ -76,7 +76,7 @@ struct my_struct
 
 /**
  * \var my_var
- * \brief Describes something.
+ * \brief Description of this global variable.
  */
 struct my_struct* my_var = NULL;
 
