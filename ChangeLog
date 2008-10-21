@@ -1,3 +1,7 @@
+2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+	* Version 0.1.2.2	:	- Fix nonce validation for 64-bit platform.
+
 2008-09-24	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
 	* Version 0.1.2.1	:	- Fix bug in go_daemon().
