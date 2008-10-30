@@ -113,7 +113,7 @@ int turnserver_cfg_parse(const char* file)
 
 void turnserver_cfg_print(void)
 {
-  fprintf(stdin, "Configuration :\n");
+  fprintf(stdin, "Configuration:\n");
   cfg_print(cfg, stderr);
 }
 

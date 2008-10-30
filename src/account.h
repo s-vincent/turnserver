@@ -126,7 +126,7 @@ void account_list_remove(struct list_head* list, struct account_desc* desc);
 /**
  * \brief Parse account file and fill up a list.
  *
- * Each lines of file MUST be : login:password:domain.org
+ * Each lines of file MUST be: login:password:domain.org
  * In other words, the value is separated with a ':'
  * \param list list of accounts
  * \param file account file

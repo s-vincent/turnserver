@@ -436,7 +436,7 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
   }
   else /* big endian */
   {
-    /* XXX : test it on PowerPC */
+    /* XXX test it on PowerPC */
     ret->turn_attr_reserved_class = class; 
   }
 

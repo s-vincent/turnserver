@@ -440,7 +440,7 @@ void tls_peer_print_connection(struct tls_peer* peer)
       continue;
     }
 
-    fprintf(stdout, "Network address : %s handshake_completed : %u\n", buf, tmp->handshake_complete);
+    fprintf(stdout, "Network address: %s handshake_completed: %u\n", buf, tmp->handshake_complete);
   }
 }
 

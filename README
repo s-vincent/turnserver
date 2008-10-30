@@ -7,7 +7,7 @@ The connection to the server can be  UDP, TCP or TLS over TCP. It also supports 
 1) Build / install
 ------------------
 
-TurnServer requires some libraries : 
+TurnServer requires some libraries: 
 - libconfuse development files;
 - libssl development files;
 - librt (normally included with Linux and *BSD).
@@ -16,7 +16,7 @@ TurnServer is written in pure C according to the C99 and POSIX + XSI standards. 
 
 Note for *BSD users : install the required libconfuse ports in /usr/ prefix, otherwise you have to set the PKG_CONFIG_PATH variable or make symlinks before running ./configure  
 
-Type the following commands : 
+Type the following commands: 
 $ aclocal
 $ autoheader
 $ autoconf 
@@ -27,10 +27,10 @@ $ make
 
 You have to set a configuration file (see next section) before launching the server
 
-Now you can launch the server : 
+Now you can launch the server: 
 $ turnserver -c /path/to/config/file
 
-TurnServer is known to work on the following systems :
+TurnServer is known to work on the following systems:
 - GNU/Linux 2.6;
 - FreeBSD 7.0.
 
@@ -42,7 +42,7 @@ In extra/ directory you will find a configuratin template file (turnserver.conf.
 To authenticate the users, TurnServer uses (for the moment) a basic text file. The pathname can be configured with "account_file" parameter
 in turnserver.conf file.
 
-The format of each line is :
+The format of each line is:
 login:password:domain.org
 
 If you want to use TLS over TCP you have to set "tls = true" in the configuration file as well as the pathnames of the certificates and private keys.

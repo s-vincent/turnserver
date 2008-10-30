@@ -128,7 +128,7 @@ static struct list_head token_list;
  * \var supported_requested_flags
  * \brief Requested flags supported.
  *
- * For the moment the following flag are  supported :
+ * For the moment the following flag are  supported:
  * - E : even port requested.
  * - R : reserve couple of ports (one pair, one impair), this imply E flag;
  *
@@ -201,7 +201,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
       return;
     }
 
-    debug(DBG_ATTR, "Allocation %p expire\n", desc);
+    debug(DBG_ATTR, "Allocation expires: %p\n", desc);
 
     /* add it to the expired list 
      * note if the descriptor is expired, the next loop will
@@ -219,7 +219,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
       return;
     }
 
-    debug(DBG_ATTR, "Permission expire : %p\n", desc);
+    debug(DBG_ATTR, "Permission expires: %p\n", desc);
     /* add it to the expired list */
     LIST_ADD(&desc->list2, &expired_permission_list);
   }
@@ -232,7 +232,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
       return;
     }
 
-    debug(DBG_ATTR, "Channel expire : %p\n", desc);
+    debug(DBG_ATTR, "Channel expires: %p\n", desc);
     /* add it to the expired list */
     LIST_ADD(&desc->list2, &expired_channel_list);
   }
@@ -245,7 +245,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
       return;
     }
 
-    debug(DBG_ATTR, "Token expire : %p\n", desc);
+    debug(DBG_ATTR, "Token expires: %p\n", desc);
     LIST_ADD(&desc->list2, &expired_token_list);
   }
 }
@@ -257,7 +257,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 static void turnserver_print_help(char* name)
 {
   fprintf(stdout, "%s %s - TURN Server\n", name, PACKAGE_VERSION);
-  fprintf(stdout, "Usage : %s [-c file] [-h]\n", name);
+  fprintf(stdout, "Usage: %s [-c file] [-h]\n", name);
 }
 
 /**
@@ -573,11 +573,11 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   allocation_channel_set_timer(alloc_channel, TURN_DEFAULT_CHANNEL_LIFETIME);
 
   /* refresh permission */
-  alloc_permission = allocation_desc_find_permission(desc, alloc_channel->family, (char*)alloc_channel->peer_addr);
+  alloc_permission = allocation_desc_find_permission(desc, alloc_channel->family, alloc_channel->peer_addr);
 
   if(!alloc_permission)
   {
-    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, alloc_channel->family, (char*)alloc_channel->peer_addr);
+    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, alloc_channel->family, alloc_channel->peer_addr);
   }
   else
   {
@@ -587,7 +587,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   if(desc->relayed_transport_protocol == IPPROTO_UDP)
   {
     struct sockaddr_storage storage;
-    char* peer_addr = (char*)alloc_channel->peer_addr;
+    uint8_t* peer_addr = alloc_channel->peer_addr;
     uint16_t peer_port = alloc_channel->peer_port;
 
     switch(desc->relayed_addr.ss_family)
@@ -645,7 +645,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   size_t msg_len = 0;
   struct allocation_permission* alloc_permission = NULL;
   uint16_t peer_port = 0;
-  char peer_addr[16];
+  uint8_t peer_addr[16];
   size_t len = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
@@ -698,12 +698,12 @@ static int turnserver_process_send_indication(const struct turn_message* message
   }
 
   /* find a permission */
-  alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, (char*)peer_addr);
+  alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
 
   /* update or create allocation permission on that peer */
   if(!alloc_permission)
   {
-    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, desc->relayed_addr.ss_family, (char*)peer_addr);
+    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, desc->relayed_addr.ss_family, peer_addr);
   }
   else
   {
@@ -884,19 +884,19 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     /* allocate new channel */
 
-    if(allocation_desc_add_channel(desc, channel, TURN_DEFAULT_CHANNEL_LIFETIME, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, (char*)peer_addr, peer_port) == -1)
+    if(allocation_desc_add_channel(desc, channel, TURN_DEFAULT_CHANNEL_LIFETIME, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr, peer_port) == -1)
     {
       return -1;
     }
   }
 
   /* find a permission */
-  alloc_permission = allocation_desc_find_permission(desc, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, (char*)peer_addr);
+  alloc_permission = allocation_desc_find_permission(desc, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr);
 
   /* update or create allocation permission on that peer */
   if(!alloc_permission)
   {
-    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, (char*)peer_addr);
+    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr);
   }
   else
   {
@@ -942,6 +942,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   }
 
   /* NOTE: maybe add a configuration flag to enable/disable fingerprint in output message */
+
   /* add a fingerprint */
   /* revert to host endianness */
   hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
@@ -2114,7 +2115,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list)
 {
   struct allocation_desc* desc = NULL;
-  char peer_addr[16];
+  uint8_t peer_addr[16];
   uint16_t peer_port;
   uint32_t channel = 0;
   struct iovec iov[8]; /* header, peer-address, data */
@@ -2158,6 +2159,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 
   /* see if a channel is bound to the peer */
   channel = allocation_desc_find_channel(desc, saddr->sa_family, peer_addr, peer_port);
+  
   if(channel != 0)
   {
     /* send it with ChannelData */
@@ -2663,6 +2665,7 @@ int main(int argc, char** argv)
   }
 
 #if 0 
+  /* print account information */
   list_iterate_safe(get, n, &account_list)
   {
     struct account_desc* tmp = list_get(get, struct account_desc, list);
@@ -2755,7 +2758,7 @@ int main(int argc, char** argv)
       {
         struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
-        /* two cases here : 
+        /* two cases here: 
          * - the entry has expired but it must be remaining for 2 minutes;
          * - the entry has expired its last 2 minutes.
          */
@@ -2827,7 +2830,7 @@ int main(int argc, char** argv)
   fprintf(stderr, "\n");
   debug(DBG_ATTR,"Exiting\n");
 
-  /* free the expired allocation list (warning : special version use ->list2) 
+  /* free the expired allocation list (warning: special version use ->list2) 
    * no need to free the other lists since if they contains some objects, these objects is
    * yet in the allocation list 
    */

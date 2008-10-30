@@ -92,17 +92,29 @@ typedef unsigned int size_t;
 typedef int socklen_t;
 #endif
 
+#ifdef _WIN32
+/**
+ * \struct iovec
+ * \brief iovector structure for win32
+ */
+typedef struct iovec
+{
+  void* iov_base; /**< Pointer on data */
+  size_t iov_len; /**< Size of data */
+}iovec;
+#endif
+
 /**
  * \def MAX
  * \brief Maximum number of the two arguments.
  */
-#define	MAX(a, b) ((a)>(b)?(a):(b));
+#define	MAX(a, b) ((a) > (b) ? (a) : (b));
 
 /**
  * \def MIN
  * \brief Minimum number of the two arguments.
  */
-#define	MIN(a, b) ((a)<(b)?(a):(b))
+#define	MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #ifdef _POSIX_C_SOURCE
 typedef long int fd_mask;
@@ -160,42 +172,6 @@ typedef struct sfd_set
  */
 #define SFD_CLR(fd, set) FD_CLR((fd), (set))
 
-#ifdef _WIN32
-/**
- * \struct iovec
- * \brief iovector structure for win32
- */
-typedef struct iovec
-{
-  void* iov_base; /**< Pointer on data */
-  size_t iov_len; /**< Size of data */
-}iovec;
-
-/**
- * \brief The writev() function for win32 socket.
- * \param fd the socket descriptor to write the data
- * \param iov the iovector which contains the data
- * \param iovcnt number of element that should be written
- * \param addr source address to send with UDP, set to NULL if you want to send with TCP
- * \param addr_size sizeof addr
- * \return number of bytes written or -1 if error
- * \warning this function work only with socket!
- */
-ssize_t sock_writev(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t addr_size);
-
-/**
- * \brief The readv() function for win32 socket.
- * \param fd the socket descriptor to read the data
- * \param iov the iovector to store the data
- * \param iovcnt number of element that should be filled
- * \param addr if not NULL it considers using a UDP socket, otherwise it considers using a TCP one
- * \param addr_size pointer on address size, will be filled by this function
- * \return number of bytes read or -1 if error
- * \warning this function work only with socket!
- */
-ssize_t sock_readv(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t* addr_size);
-#endif
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -240,7 +216,7 @@ extern "C"
   /**
    * \brief Go in daemon mode.
    * \param dir change directory to this, default is /.
-   * \param mask to fix permission : mask & 0777, default is 0.
+   * \param mask to fix permission: mask & 0777, default is 0.
    * \param cleanup cleanup function, if not NULL it is executed before father _exit()
    * \return -1 if error\n
    * In case of father, this function never returns (_exit)\n
@@ -379,6 +355,32 @@ extern "C"
    * \param t a 64 bit unsigned integer
    */
   void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t);
+
+#ifdef _WIN32
+  /**
+   * \brief The writev() function for win32 socket.
+   * \param fd the socket descriptor to write the data
+   * \param iov the iovector which contains the data
+   * \param iovcnt number of element that should be written
+   * \param addr source address to send with UDP, set to NULL if you want to send with TCP
+   * \param addr_size sizeof addr
+   * \return number of bytes written or -1 if error
+   * \warning this function work only with socket!
+   */
+  ssize_t sock_writev(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t addr_size);
+
+  /**
+   * \brief The readv() function for win32 socket.
+   * \param fd the socket descriptor to read the data
+   * \param iov the iovector to store the data
+   * \param iovcnt number of element that should be filled
+   * \param addr if not NULL it considers using a UDP socket, otherwise it considers using a TCP one
+   * \param addr_size pointer on address size, will be filled by this function
+   * \return number of bytes read or -1 if error
+   * \warning this function work only with socket!
+   */
+  ssize_t sock_readv(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t* addr_size);
+#endif
 
 #ifdef __cplusplus
 }

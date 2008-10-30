@@ -259,7 +259,7 @@ struct turn_attr_mapped_address
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
   uint8_t turn_attr_reserved; /**< Ignored */
-  uint8_t turn_attr_family; /**< Family : 0x01 = IPv4, 0x02 = IPv6 */
+  uint8_t turn_attr_family; /**< Family: 0x01 = IPv4, 0x02 = IPv6 */
   uint16_t turn_attr_port; /**< Port in network byte order */
   uint8_t turn_attr_address[]; /**< Variable-size address */
 }__attribute__((packed));
@@ -341,7 +341,7 @@ struct turn_attr_xor_mapped_address
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
   uint8_t turn_attr_reserved; /**< Ignored */
-  uint8_t turn_attr_family; /**< Family : 0x01 = IPv4, 0x02 = IPv6 */
+  uint8_t turn_attr_family; /**< Family: 0x01 = IPv4, 0x02 = IPv6 */
   uint16_t turn_attr_port; /**< Port in network byte order */
   uint8_t turn_attr_address[]; /**< Variable-size address */
 }__attribute__((packed));
@@ -366,7 +366,7 @@ struct turn_attr_alternate_server
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
   uint8_t turn_attr_reserved; /**< Ignored */
-  uint8_t turn_attr_family; /**< Family : 0x01 = IPv4, 0x02 = IPv6 */
+  uint8_t turn_attr_family; /**< Family: 0x01 = IPv4, 0x02 = IPv6 */
   uint16_t turn_attr_port; /**< Port in network byte order */
   uint8_t turn_attr_address[]; /**< Variable-size address */
 }__attribute__((packed));
@@ -414,7 +414,7 @@ struct turn_attr_peer_address
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
   uint8_t turn_attr_reserved; /**< Ignored */
-  uint8_t turn_attr_family; /**< Family : 0x01 = IPv4, 0x02 = IPv6 */
+  uint8_t turn_attr_family; /**< Family: 0x01 = IPv4, 0x02 = IPv6 */
   uint16_t turn_attr_port; /**< Port in network byte order */
   uint8_t turn_attr_address[]; /**< Variable-size address */
 }__attribute__((packed));
@@ -439,7 +439,7 @@ struct turn_attr_relayed_address
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
   uint8_t turn_attr_reserved; /**< Ignored */
-  uint8_t turn_attr_family; /**< Family : 0x01 = IPv4, 0x02 = IPv6 */
+  uint8_t turn_attr_family; /**< Family: 0x01 = IPv4, 0x02 = IPv6 */
   uint16_t turn_attr_port; /**< Port in network byte order */
   uint8_t turn_attr_address[]; /**< Variable-size address */
 }__attribute__((packed));

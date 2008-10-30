@@ -190,7 +190,7 @@ void allocation_desc_set_last_timer(struct allocation_desc* desc, uint32_t lifet
   desc->expired = 1;
 }
 
-struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const char* peer_addr)
+struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const uint8_t* peer_addr)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -261,7 +261,7 @@ struct allocation_permission* allocation_desc_find_permission_sockaddr(struct al
   return NULL;
 }
 
-int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family, const char* peer_addr)
+int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family, const uint8_t* peer_addr)
 {
   struct allocation_permission* ret = NULL;
   struct sigevent event;
@@ -294,7 +294,7 @@ int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifeti
   return 0;
 }
 
-uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const char* peer_addr, uint16_t peer_port)
+uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -332,7 +332,7 @@ struct allocation_channel* allocation_desc_find_channel_number(struct allocation
   return 0;
 }
 
-int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const char* peer_addr, uint16_t peer_port)
+int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const uint8_t* peer_addr, uint16_t peer_port)
 {
   struct allocation_channel* ret = NULL;
   struct sigevent event;

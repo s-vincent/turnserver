@@ -17,7 +17,7 @@
  *
  * \section section-modules Modules
  *
- * The API is decomposed in several modules : 
+ * The API is decomposed in several modules: 
  * - STUN / TURN headers and attributes (turn.h);
  * -  Header / attribute generation (protocol.c, protocol.h);
  * - Allocation management (allocation.c, allocation.h);
@@ -36,13 +36,13 @@
  *
  * \section section-standard Standards
  *
- * TurnServer is written in C language which respects the following standards :
+ * TurnServer is written in C language which respects the following standards:
  * - ISO/IEC 9899 (C99);
  * - IEEE 1003.1 (POSIX).
  *
  * It also uses some realtime capabilities of POSIX.1b. Thus systems have to support these standards and capabilities to support TurnServer.
  *
- * TurnServer is known to run on the following systems : 
+ * TurnServer is known to run on the following systems: 
  * - GNU/Linux 2.6;
  * - FreeBSD 7.0.
  */

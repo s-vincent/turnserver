@@ -167,7 +167,7 @@ void allocation_desc_set_last_timer(struct allocation_desc* desc, uint32_t lifet
  * \param peer_addr network address
  * \return pointer on allocation_permission or NULL if not found
  */
-struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const char* peer_addr);
+struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const uint8_t* peer_addr);
 
 /**
  * \brief Find if a peer (network address only) has a permissions installed.
@@ -185,7 +185,7 @@ struct allocation_permission* allocation_desc_find_permission_sockaddr(struct al
  * \param peer_addr network address
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family, const char* peer_addr);
+int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family, const uint8_t* peer_addr);
 
 /**
  * \brief Find if a peer (transport address) has a channel bound.
@@ -195,7 +195,7 @@ int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifeti
  * \param peer_port peer port
  * \return the channel if the peer has already a channel bound, 0 otherwise
  */
-uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const char* peer_addr, uint16_t peer_port);
+uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port);
 
 /**
  * \brief Find if a channel number has a peer (transport address).
@@ -215,7 +215,7 @@ struct allocation_channel* allocation_desc_find_channel_number(struct allocation
  * \param peer_port peer port
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const char* peer_addr, uint16_t peer_port);
+int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const uint8_t* peer_addr, uint16_t peer_port);
 
 /**
  * \brief Reset the timer of the channel.

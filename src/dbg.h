@@ -117,16 +117,16 @@ extern "C"
   /**
    * \def debug
    * \brief Print a debug message.
-   * Use similary like a variadic macro : debug(DBG_ATTR, format, ...).
-   * \warning Respect the use : debug(DBG_ATTR, format, ...).
+   * Use similary like a variadic macro: debug(DBG_ATTR, format, ...).
+   * \warning Respect the use: debug(DBG_ATTR, format, ...).
    */
 #define debug dbg_print
 
   /**
    * \def debug_hexa
    * \brief Print the content of a buffer in hexadecimal.
-   * Use similary like a variadic macro : debug_print_hexa(DBG_ATTR, buf, buflen, format, ...).
-   * \warning Respect the use : debug_hexa(DBG_ATTR, buf, buflen, ...).
+   * Use similary like a variadic macro: debug_print_hexa(DBG_ATTR, buf, buflen, format, ...).
+   * \warning Respect the use: debug_hexa(DBG_ATTR, buf, buflen, ...).
    */
 #define debug_hexa dbg_print_hexa
 
@@ -139,7 +139,7 @@ extern "C"
    * \return 0 if success, a non nul value otherwise
    */
 #define pthread_mutex_lock(x) \
-  do{ dbg_print(DBG_ATTR, "MUTEX LOCK : [%x]\n", pthread_self()); pthread_mutex_lock((x));}while(0)
+  do{ dbg_print(DBG_ATTR, "MUTEX LOCK: [%x]\n", pthread_self()); pthread_mutex_lock((x));}while(0)
 
   /**
    * \def pthread_mutex_unlock
@@ -148,7 +148,7 @@ extern "C"
    * \return 0 if success, a non nul value otherwise
    */
 #define pthread_mutex_unlock(x) \
-  do{ dbg_print(DBG_ATTR, "MUTEX UNLOCK : [%x]\n", pthread_self()); pthread_mutex_unlock((x));}while(0)
+  do{ dbg_print(DBG_ATTR, "MUTEX UNLOCK: [%x]\n", pthread_self()); pthread_mutex_unlock((x));}while(0)
 
   /**
    * \def pthread_join
