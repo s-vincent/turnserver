@@ -56,6 +56,7 @@ struct turnserver_cfg
   char listen_addressv6[256]; /**< Listening address (IPv6 address or FQDN) */
   uint16_t udp_port; /**< UDP listening port */
   uint16_t tcp_port; /**< TCP listening port */
+  uint16_t tls_port; /**< TLS listening port */
   int tls;/**< TLS socket support */
   int daemon; /**< Daemon state */
   char realm[256]; /**< Realm */
@@ -115,6 +116,12 @@ uint16_t turnserver_cfg_udp_port(void);
  * \return TCP port
  */
 uint16_t turnserver_cfg_tcp_port(void);
+
+/**
+ * \brief Get the TLS listening port.
+ * \return TLS port
+ */
+uint16_t turnserver_cfg_tls_port(void);
 
 /**
  * \brief Run with TLS socket.

@@ -104,7 +104,7 @@ int main(int argc, char** argv)
   hints.ai_protocol = IPPROTO_UDP;
   hints.ai_flags = 0;
 
-  if(getaddrinfo(argv[2], "3478", &hints, &res) != 0)
+  if(getaddrinfo(argv[2], "5349", &hints, &res) != 0)
   {
     perror("getaddrinfo");
     exit(EXIT_FAILURE);
@@ -257,8 +257,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0x00000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x00, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -295,7 +295,7 @@ int main(int argc, char** argv)
   /* calculate fingerprint */
   /* index -1, we do not take count FINGER attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
   printf("Send allocate request\n");
@@ -378,8 +378,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0x00000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x00, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -411,7 +411,7 @@ int main(int argc, char** argv)
   /* calculate fingerprint */
   /* index -1, we do not take count FINGER attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
   printf("Send refresh request\n");
@@ -454,7 +454,7 @@ int main(int argc, char** argv)
   /* PEER-ADDRESS */
   /*  peer_addr.sin_addr.s_addr = inet_addr("10.168.0.1"); */
   /*  peer_addr.sin_port = htons(445); */
-  attr = turn_attr_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -486,7 +486,7 @@ int main(int argc, char** argv)
   /* calculate fingerprint */
   /* index -1, we do not take count FINGER attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
   printf("Send ChannelBind request\n");
@@ -500,7 +500,7 @@ int main(int argc, char** argv)
   hdr = turn_msg_send_indication_create(0, id, &iov[index]);
   index++;
 
-  attr = turn_attr_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 

@@ -110,17 +110,19 @@ struct allocation_channel
 struct allocation_desc
 {
   char* username; /**< Username obtained by the TURN client */
+  unsigned char key[16]; /**< MD5 hash over username, realm and password */
+  char realm[256]; /**< Realm of user */
+  unsigned char nonce[32]; /**< Nonce of user */
   int relayed_transport_protocol; /**< Relayed transport protocol used */
   struct sockaddr_storage relayed_addr; /**< Relayed transport address */
   struct allocation_tuple tuple; /**< 5-tuple */
   struct list_head peers_channels; /**< List of channel to peer bindings */
   struct list_head peers_permissions; /**< List of peers permissions */
   int relayed_sock; /**< Socket for the allocated transport address */
+  int relayed_tls; /**< If allocation has been set in TLS */
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
   uint8_t transaction_id[12]; /**< Transaction ID of the Allocate Request */
   timer_t expire_timer; /**< Expire timer */
-  int preserving_flag; /**< Allocation preserving flag */
-  int expired; /**< Expired flag, indicates that the descriptor will be removed  lately */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };
@@ -129,16 +131,18 @@ struct allocation_desc
  * \brief Create a new allocation descriptor.
  * \param id transaction ID of the Allocate request
  * \param transport_protocol transport protocol (i.e. TCP, UDP, ...)
- * \param username one-time login
+ * \param username login of the user
+ * \param key MD5 hash over username, realm and password
+ * \param realm realm of the user
+ * \param nonce nonce of the user
  * \param relayed_addr relayed address and port
  * \param server_addr server network address and port
  * \param client_addr client network address and port
  * \param addr_size sizeof address
- * \param preserving_flag preserving flag
  * \param lifetime expire of the allocation
  * \return pointer on struct allocation_desc, or NULL if problem
  */
-struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, int preserving_flag, uint32_t lifetime);
+struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime);
 
 /**
  * \brief Free a allocation descriptor.
@@ -152,13 +156,6 @@ void allocation_desc_free(struct allocation_desc** desc);
  * \param lifetime lifetime timer
  */
 void allocation_desc_set_timer(struct allocation_desc* desc, uint32_t lifetime);
-
-/**
- * \brief Set the last minutes timer to prevent allocate the same relayed address.
- * \param desc allocation descriptor
- * \param lifetime lifetime timer
- */
-void allocation_desc_set_last_timer(struct allocation_desc* desc, uint32_t lifetime);
 
 /**
  * \brief Find if a peer (network address only) has a permissions installed.

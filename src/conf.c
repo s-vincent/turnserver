@@ -66,6 +66,7 @@ static cfg_opt_t opts[]=
   CFG_STR("listen_addressv6", NULL, CFGF_NONE),
   CFG_INT("udp_port", 3478, CFGF_NONE),
   CFG_INT("tcp_port", 3478, CFGF_NONE),
+  CFG_INT("tls_port", 5349, CFGF_NONE),
   CFG_BOOL("tls", cfg_false, CFGF_NONE),
   CFG_BOOL("daemon", cfg_false, CFGF_NONE),
   CFG_INT("max_client", 50, CFGF_NONE),
@@ -147,6 +148,11 @@ uint16_t turnserver_cfg_udp_port(void)
 uint16_t turnserver_cfg_tcp_port(void)
 {
   return cfg_getint(cfg, "tcp_port");
+}
+
+uint16_t turnserver_cfg_tls_port(void)
+{
+  return cfg_getint(cfg, "tls_port");
 }
 
 int turnserver_cfg_tls(void)

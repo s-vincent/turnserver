@@ -1,3 +1,13 @@
+20xx-xx-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+  * Version 0.2-draft-11 :  - Add attributes from turn-11 draft;
+                            - Add authentication on all TURN responses when possible;
+                            - Pre-calculate account MD5 hash;
+                            - Re-organize some code (message-integrity calculation, ...);
+                            - Alternate behavior for DF flag;
+                            - Separate TCP and TLS sockets;
+                            - Correctly relayed data from peer to client in TLS.
+
 2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
 	* Version 0.1.2.2	:	- Fix nonce validation for 64-bit platform.
