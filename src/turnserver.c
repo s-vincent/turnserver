@@ -2398,7 +2398,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 
   if(speer)
   {
-    nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), iov, index);
+    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), ntohs(hdr->turn_msg_len), iov, index);
   }
   else if(desc->tuple.transport_protocol == IPPROTO_UDP)
   {
