@@ -81,6 +81,14 @@
  */
 #define SIGRT_EXPIRE_TOKEN (SIGRTMIN + 3)
 
+#ifndef XOR_PEER_ADDRESS_MAX
+/**
+ * \def XOR_PEER_ADDRESS_MAX
+ * \brief Maximum number of XOR-PEER-ADDRESS attributes in a request.
+ */
+#define XOR_PEER_ADDRESS_MAX 5
+#endif
+
 /**
  * \struct turn_message
  * \brief Structure containing pointers on STUN / TURN header and attributes.
@@ -101,7 +109,7 @@ struct turn_message
   struct turn_attr_software* software; /**< SOFTWARE attribute */
   struct turn_attr_channel_number* channel_number; /**< CHANNEL-NUMBER attribute*/
   struct turn_attr_lifetime* lifetime; /** LIFETIME attribute */
-  struct turn_attr_xor_peer_address* peer_addr; /**< XOR-PEER-ADDRESS attribute */
+  struct turn_attr_xor_peer_address* peer_addr[XOR_PEER_ADDRESS_MAX]; /**< XOR-PEER-ADDRESS attribute */
   struct turn_attr_data* data; /**< DATA attribute */
   struct turn_attr_xor_relayed_address* relayed_addr; /**< XOR-RELAYED-ADDRESS attribute */
   struct turn_attr_even_port* even_port; /**< REQUESTED-PROPS attribute*/
@@ -112,6 +120,7 @@ struct turn_message
   struct turn_attr_icmp* icmp; /**< ICMP attribute*/
 #endif
   struct turn_attr_requested_address_type* requested_addr_type; /**< REQUETED-ADDRESS-TYPE (ietf-draft-behave-turn-ipv6-05) */
+  size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure. */
 };
 
 /**
@@ -703,6 +712,17 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen);
  * \note This function set turn_msg_len field of TURN message to big endian (as MESSAGE-INTEGRITY / FINGERPRINT are normally the last attributes) added).
  */
 int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint);
+
+/**
+ * \brief (Address and port) XOR cookie.
+ * \param family address famiily
+ * \param peer_addr peer address (which contains already XORed address), it will be filled with de-XORed address
+ * \param peer_port peer port (which contains already XORed port), it will be filled with de-XORed port
+ * \param cookie cookie
+ * \param msg_id ID of the message
+ * \return 0 if success, -1 otherwise
+ */
+int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id);
 
 /**
  * \brief Parse a TURN / STUN message.

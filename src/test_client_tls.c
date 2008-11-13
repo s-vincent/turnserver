@@ -451,7 +451,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
+  /* XOR-PEER-ADDRESS */
   /*  peer_addr.sin_addr.s_addr = inet_addr("10.168.0.1"); */
   /*  peer_addr.sin_port = htons(445); */
   attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);

@@ -185,7 +185,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   msb_cookie = ((uint8_t*)&cookie)[0] << 8 | ((uint8_t*)&cookie)[1];
   port ^= msb_cookie;
 
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */ 
+  /* IPv4/IPv6 XOR cookie (just the first four bytes of IPv6 address) */ 
   for(i = 0 ; i < 4 ; i++)
   {
     ptr[i] ^= p[i];
@@ -1403,6 +1403,40 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   return 0;
 }
 
+int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id)
+{
+  size_t i = 0;
+  size_t len = 0;
+  
+  switch(family)
+  {
+    case STUN_ATTR_FAMILY_IPV4:
+      len = 4;
+      break;
+    case STUN_ATTR_FAMILY_IPV6:
+      len = 16;
+      break;
+    default:
+      return -1;
+  }
+
+  /* XOR port */
+  *peer_port ^= ((cookie[0] << 8) | (cookie[1]));
+
+  /* IPv4/IPv6 XOR cookie (just the first four bytes of IPv6 address) */
+  for(i = 0 ; i < 4 ; i++)
+  {
+    peer_addr[i] ^= cookie[i];
+  }
+
+  /* end of IPv6 address XOR transaction ID */
+  for(i = 4 ; i < len ; i++)
+  {
+    peer_addr[i] ^= msg_id[i - 4];
+  }
+
+  return 0;
+}
 
 int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown, size_t* unknown_size)
 {
@@ -1411,6 +1445,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   const char* ptr = msg;
   int ret = 0;
   size_t unknown_index = 0;
+  size_t xor_peer_address_nb = 0; /* count of XOR-PEER-ADDRESS attribute */
 
   /* zeroed structure */
   memset(message, 0x00, sizeof(struct turn_message));
@@ -1504,7 +1539,20 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         message->lifetime = (struct turn_attr_lifetime*)ptr;
         break;
       case TURN_ATTR_XOR_PEER_ADDRESS:
-        message->peer_addr = (struct turn_attr_xor_peer_address*)ptr;
+        if(xor_peer_address_nb < XOR_PEER_ADDRESS_MAX)
+        {
+          message->peer_addr[xor_peer_address_nb] = (struct turn_attr_xor_peer_address*)ptr;
+          xor_peer_address_nb++;
+        }
+        else
+        {
+          /* too many XOR-PEER-ADDRESS attribute, 
+           * this will inform process_createpermission() to reject the 
+           * request with a 508 error.
+           */
+          message->xor_peer_addr_overflow = 1; 
+        }
+        
         break;
       case TURN_ATTR_DATA:
         message->data =  (struct turn_attr_data*)ptr;

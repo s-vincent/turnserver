@@ -72,6 +72,7 @@ int main(int argc, char** argv)
   struct sockaddr_storage server_addr;
   socklen_t server_addr_size = 0;
   struct sockaddr_storage peer_addr;
+  struct sockaddr_storage peer_addr2;
   struct sockaddr_storage daddr;
   socklen_t daddr_size = sizeof(struct sockaddr_in);
   struct addrinfo hints;
@@ -125,6 +126,22 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
   memcpy(&peer_addr, res->ai_addr, res->ai_addrlen);
+  freeaddrinfo(res);
+
+  /* get address for peer_addr2 */
+  snprintf(peer_port, sizeof(peer_port), "%s", argv[4]);
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol =  IPPROTO_UDP;
+  hints.ai_flags = 0;
+
+  if(getaddrinfo("10.1.0.3", peer_port, &hints, &res) != 0)
+  {
+    perror("getaddrinfo");
+    exit(EXIT_FAILURE);
+  }
+  memcpy(&peer_addr2, res->ai_addr, res->ai_addrlen);
   freeaddrinfo(res);
 
   nb = turn_generate_transaction_id(id);
@@ -401,7 +418,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
+  /* XOR-PEER-ADDRESS */
   attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -437,7 +454,7 @@ int main(int argc, char** argv)
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
-#if 0
+#if 1 
   printf("Send ChannelBind request\n");
   nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
   nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
@@ -469,8 +486,13 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
+  /* XOR-PEER-ADDRESS */
   attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 

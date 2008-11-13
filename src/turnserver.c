@@ -367,20 +367,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
   index++;
 
-#if 0
-  if(error == 508)
-  {
-    /* add it supported flags */
-    if(!(attr = turn_attr_even_port_create(supported_even_port_flags, &iov[index])))
-    {
-      iovec_free_data(iov, index);
-      return -1;
-    }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
-  }
-#endif
-
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
   {
@@ -611,7 +597,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 #ifdef SIN6_LEN
         ((struct sockaddr_in6*)storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-        
+
         /* prepare value for setsockopt : set DF flag to 0 */
         level = IPPROTO_IPV6;
         optname = IPV6_MTU_DISCOVER;
@@ -682,7 +668,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
   size_t len = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
-  size_t i = 0;
   ssize_t nb = -1;
   /* for get/setsockopt */
   int level = 0;
@@ -693,25 +678,21 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
   debug(DBG_ATTR, "Send Indication received!\n");
 
-  if(!message->peer_addr || !message->data)
+  if(!message->peer_addr[0] || !message->data)
   {
     /* no peer address, indication ignored */
     debug(DBG_ATTR, "No peer address\n");
     return -1;
   }
 
-  if(desc->relayed_addr.ss_family != (message->peer_addr->turn_attr_family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6))
+  if(desc->relayed_addr.ss_family != (message->peer_addr[0]->turn_attr_family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6))
   {
     debug(DBG_ATTR, "Could not relayed from a different family\n");
     return -1;
   }
 
-  /* host order port XOR most-significant 16 bits of the cookie */
-  peer_port = ntohs( message->peer_addr->turn_attr_port);
-  peer_port ^= ((p[0] << 8) | (p[1]));
-
   /* copy peer address */
-  switch(message->peer_addr->turn_attr_family)
+  switch(message->peer_addr[0]->turn_attr_family)
   {
     case STUN_ATTR_FAMILY_IPV4:
       len = 4;
@@ -722,20 +703,13 @@ static int turnserver_process_send_indication(const struct turn_message* message
     default:
       return -1;
   }
-  memcpy(peer_addr, message->peer_addr->turn_attr_address, len);
 
-  /* XOR the address */
+  memcpy(peer_addr, message->peer_addr[0]->turn_attr_address, len);
+  peer_port = ntohs( message->peer_addr[0]->turn_attr_port);
 
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */
-  for(i = 0 ; i < 4 ; i++)
+  if(turn_xor_address_cookie(message->peer_addr[0]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
-    peer_addr[i] ^= p[i];
-  }
-
-  /* end of IPv6 address XOR transaction ID */
-  for(i = 4 ;i < len ; i++)
-  {
-    peer_addr[i] ^= message->msg->turn_msg_id[i - 4];
+    return -1;
   }
 
   /* find a permission */
@@ -873,6 +847,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
   size_t i = 0;
+  size_t j = 0;
   struct allocation_permission* alloc_permission = NULL;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -880,63 +855,68 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   size_t index = 0;
   ssize_t nb = -1;
 
-  if(!message->peer_addr || (desc->relayed_addr.ss_family != (message->peer_addr->turn_attr_family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6)))
+  if(message->xor_peer_addr_overflow)
   {
-    /* attribute missing or invalid ones => error 400 */
-    debug(DBG_ATTR, "No peer address or invalid ones\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    /* too many XOR-PEER-ADDRESS attributes => error 508 */
+    debug(DBG_ATTR, "Too many XOR-PEER-ADDRESS attributes\n");
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
- /* TODO manage more than one XOR-PEER-ADDRESS for this message */
-
-  /* host order port XOR most-significant 16 bits of the cookie */
-  peer_port = ntohs( message->peer_addr->turn_attr_port);
-  peer_port ^= ((p[0] << 8) | (p[1]));
-
-  /* copy peer address */
-  switch(message->peer_addr->turn_attr_family)
+  /* check address family for all XOR-PEER-ADDRESS attributes against the relayed ones */
+  for(i = 0 ; i < XOR_PEER_ADDRESS_MAX && message->peer_addr[i] ; i++)
   {
-    case STUN_ATTR_FAMILY_IPV4:
-      len = 4;
-      break;
-    case STUN_ATTR_FAMILY_IPV6:
-      len = 16;
-      break;
-    default:
+    if(!message->peer_addr[i] || (desc->relayed_addr.ss_family != (message->peer_addr[i]->turn_attr_family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6)))
+    {
+      /* attribute missing or invalid ones => error 400 */
+      debug(DBG_ATTR, "No peer address or invalid ones\n");
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
       return -1;
+    }
   }
-  memcpy(peer_addr, message->peer_addr->turn_attr_address, len);
 
-  /* XOR the address */
-
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */
-  for(i = 0 ; i < 4 ; i++)
+  /* TODO manage more than one XOR-PEER-ADDRESS for this message */
+  for(j = 0 ; j < XOR_PEER_ADDRESS_MAX && message->peer_addr[j] ; j++)
   {
-    peer_addr[i] ^= p[i];
+    /* copy peer address */
+    switch(message->peer_addr[j]->turn_attr_family)
+    {
+      case STUN_ATTR_FAMILY_IPV4:
+        len = 4;
+        break;
+      case STUN_ATTR_FAMILY_IPV6:
+        len = 16;
+        break;
+      default:
+        return -1;
+    }
+
+    memcpy(peer_addr, message->peer_addr[j]->turn_attr_address, len);
+    peer_port = ntohs( message->peer_addr[j]->turn_attr_port);
+
+    if(turn_xor_address_cookie(message->peer_addr[j]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
+    {
+      return -1;
+    }
+
+    /* TODO server may restrict IP address */
+
+    /* find a permission */
+    alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
+
+    /* update or create allocation permission on that peer */
+    if(!alloc_permission)
+    {
+      char str[INET6_ADDRSTRLEN];
+      debug(DBG_ATTR, "Install permission for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
+      allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, desc->relayed_addr.ss_family, peer_addr);
+    }
+    else
+    {
+      debug(DBG_ATTR, "Refresh permission\n");
+      allocation_permission_set_timer(alloc_permission, TURN_DEFAULT_PERMISSION_LIFETIME);
+    }
   }
-
-  /* end of IPv6 address XOR transaction ID */
-  for(i = 4 ;i < len ; i++)
-  {
-    peer_addr[i] ^= message->msg->turn_msg_id[i - 4];
-  }
-
-  /* TODO server may restrict IP address */
-
-  /* find a permission */
-  alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
-
-  /* update or create allocation permission on that peer */
-  if(!alloc_permission)
-  {
-    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, desc->relayed_addr.ss_family, peer_addr);
-  }
-  else
-  {
-    allocation_permission_set_timer(alloc_permission, TURN_DEFAULT_PERMISSION_LIFETIME);
-  }
-
   /* send a CreatePermission success response */
   if(!(hdr = turn_msg_createpermission_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
@@ -1014,13 +994,12 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   size_t len = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
-  size_t i = 0;
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
 
   memset(peer_addr, 0x00, 16);
 
-  if(!message->channel_number || !message->peer_addr)
+  if(!message->channel_number || !message->peer_addr[0])
   {
     /* attributes missing => error 400 */
     debug(DBG_ATTR, "Channel number or peer address attributes missing\n");
@@ -1038,7 +1017,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     return 0;
   }
 
-  family = message->peer_addr->turn_attr_family;
+  family = message->peer_addr[0]->turn_attr_family;
 
   /* check if the client has allocated a family address that match the peer family address */
   if(desc->relayed_addr.ss_family != (family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6))
@@ -1049,10 +1028,6 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     return -1;
 
   }
-
-  /* host order port XOR most-significant 16 bits of the cookie */
-  peer_port = ntohs(message->peer_addr->turn_attr_port);
-  peer_port ^= ((p[0] << 8) | (p[1]));
 
   switch(family)
   {
@@ -1066,24 +1041,15 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
       return -1;
       break;
   }
-  memcpy(&peer_addr, message->peer_addr->turn_attr_address, len);
 
-  /* XOR the address */
+  memcpy(&peer_addr, message->peer_addr[0]->turn_attr_address, len);
+  peer_port = ntohs(message->peer_addr[0]->turn_attr_port);
 
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */
-  for(i = 0 ; i < 4 ; i++)
+  if(turn_xor_address_cookie(family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
-    peer_addr[i] ^= p[i];
+    return -1;
   }
-
-  /* end of IPv6 address XOR transaction ID */
-  for(i = 4 ;i < len ; i++)
-  {
-    peer_addr[i] ^= message->msg->turn_msg_id[i - 4];
-  }
-
-  inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
-
+  
   debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
 
   /* check that the transport address is not currently bound to another channel */
@@ -1365,7 +1331,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(!message->requested_transport)
   {
     /* bad request => error 400 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
     return 0;
   }
 
@@ -1389,7 +1355,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     if(!(error = turn_error_response_420(method, message->msg->turn_msg_id, unknown, 1, iov, &index)))
     {
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
       return -1;
     }
 
@@ -1403,7 +1369,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
       return -1;
     }
 
@@ -1432,7 +1398,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP) 
   {
     /* unsupported transport protocol => error 442 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, NULL);
     return 0;
   }
 
@@ -1444,7 +1410,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(message->even_port->turn_attr_flags & (~supported_even_port_flags)) 
     {
       /* unsupported flags => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, NULL);
       return 0;
     }
   }
@@ -1454,12 +1420,11 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   {
     struct allocation_token* token = NULL;
 
-
 #if 0 /* not sure it is the case in draft-ietf-behave-turn-11 */
     if(r_flag)
     {
       /* reservation-token present but E and R are not set to 0 => error 400 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
       return 0;
     }
 #endif
@@ -1508,7 +1473,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(!family_address)
     {
       /* family not supported */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, NULL);
       return -1;
     }
 
@@ -1577,7 +1542,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(relayed_sock == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
   }
 
@@ -1597,17 +1562,17 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm, message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
 
-  if(speer)
-  {
-    desc->relayed_tls = 1;
-  }
-
   if(!desc)
   {
     /* send error response with code 500 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     close(relayed_sock);
     return -1;
+  }
+  
+  if(speer)
+  {
+    desc->relayed_tls = 1;
   }
 
   /* assign the sockets to the allocation */
@@ -2692,7 +2657,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     {
       struct socket_desc* sdesc = NULL;
       int sock = accept(sock_tcp, (struct sockaddr*)&saddr, &saddr_size);
-      
+
       debug(DBG_ATTR, "Received TCP on listening address\n");
 
       if(sock > 0)

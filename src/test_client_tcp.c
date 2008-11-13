@@ -405,7 +405,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
+  /* XOR-PEER-ADDRESS */
   attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
