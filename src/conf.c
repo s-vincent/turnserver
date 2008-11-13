@@ -70,7 +70,7 @@ static cfg_opt_t opts[]=
   CFG_BOOL("tls", cfg_false, CFGF_NONE),
   CFG_BOOL("daemon", cfg_false, CFGF_NONE),
   CFG_INT("max_client", 50, CFGF_NONE),
-  CFG_INT("max_relay_per_client", 10, CFGF_NONE),
+  CFG_INT("max_relay_per_username", 10, CFGF_NONE),
   CFG_INT("allocation_lifetime", 1800, CFGF_NONE),
   CFG_STR("nonce_key", "toto", CFGF_NONE),
   CFG_STR("ca_file", "./ca.crt", CFGF_NONE),
@@ -170,9 +170,9 @@ uint16_t turnserver_cfg_max_client(void)
   return cfg_getint(cfg, "max_client");
 }
 
-uint16_t turnserver_cfg_max_relay_per_client(void)
+uint16_t turnserver_cfg_max_relay_per_username(void)
 {
-  return cfg_getint(cfg, "max_relay_per_client");
+  return cfg_getint(cfg, "max_relay_per_username");
 }
 
 uint16_t turnserver_cfg_allocation_lifetime(void)

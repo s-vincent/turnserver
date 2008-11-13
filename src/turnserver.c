@@ -70,6 +70,20 @@
 #include "util_crypto.h"
 #include "dbg.h"
 
+
+/* TODO test with other OS to see if they
+ * support setting DF flag.
+ */
+#if defined(__linux__)
+
+/**
+ * \def OS_SET_DF_SUPPORT
+ * \brief Current operating system can set the DF flag.
+ */
+#define OS_SET_DF_SUPPORT 
+
+#endif
+
 /**
  * \var software_description
  * \brief Textual description of the server.
@@ -583,10 +597,12 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
         ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
         memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
 
+#ifdef OS_SET_DF_SUPPORT
         /* prepare value for setsockopt : set DF flag to 0 */
         level = IPPROTO_IP;
         optname = IP_MTU_DISCOVER;
         optval = IP_PMTUDISC_DONT;
+#endif
         break;
       case AF_INET6:
         ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
@@ -598,10 +614,12 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
         ((struct sockaddr_in6*)storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 
+#ifdef OS_SET_DF_SUPPORT
         /* prepare value for setsockopt : set DF flag to 0 */
         level = IPPROTO_IPV6;
         optname = IPV6_MTU_DISCOVER;
         optval = IPV6_PMTUDISC_DONT;
+#endif
         break;
       default:
         return -1;
@@ -609,7 +627,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     }
 
     /* list OS that support or not setting the DF flag */
-#ifdef __linux__
+#ifdef OS_SET_DF_SUPPORT 
     if(!getsockopt(desc->relayed_sock, level, optname, &save_val, &optlen))
     {
       setsockopt(desc->relayed_sock, level, optname, &optval, sizeof(int));
@@ -622,6 +640,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
       optlen = 0;
     }
 #else
+    optval = 0; /* avoid compilation warning */
     optlen = 0;
 #endif
 
@@ -740,9 +759,11 @@ static int turnserver_process_send_indication(const struct turn_message* message
           ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
           memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
 
+#ifdef OS_SET_DF_SUPPORT
           /* DF flag */
           level = IPPROTO_IP;
           optname = IP_MTU_DISCOVER;
+#endif
           break;
         case AF_INET6:
           ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
@@ -754,9 +775,11 @@ static int turnserver_process_send_indication(const struct turn_message* message
           ((struct sockaddr_in6*)storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 
+#ifdef OS_SET_DF_SUPPORT
           /* DF flag */
           level = IPPROTO_IPV6;
           optname = IPV6_MTU_DISCOVER;
+#endif
           break;
         default:
           return -1;
@@ -765,12 +788,9 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
       if(message->dont_fragment)
       {
+#ifdef OS_SET_DF_SUPPORT 
         optval = desc->relayed_addr.ss_family == AF_INET6 ? IPV6_PMTUDISC_DO : IP_PMTUDISC_DO;
-
-        /* TODO check for OS that support DONT-FRAGMENT attribute 
-         * otherwise ignore message
-         */
-#ifndef __linux__
+#else
         /* ignore message */
         debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
         return -1;
@@ -779,12 +799,14 @@ static int turnserver_process_send_indication(const struct turn_message* message
       }
       else
       {
+#ifdef OS_SET_DF_SUPPORT 
         /* alternate behavior, set DF to 0 */
         optval = desc->relayed_addr.ss_family == AF_INET6 ? IPV6_PMTUDISC_DONT : IP_PMTUDISC_DONT;
         debug(DBG_ATTR, "Will not set DF flag\n");
+#endif
       }
 
-#ifdef __linux__ 
+#ifdef OS_SET_DF_SUPORT
       if(!getsockopt(desc->relayed_sock, level, optname, &save_val, &optlen))
       {
         setsockopt(desc->relayed_sock, level, optname, &optval, sizeof(int));
@@ -797,6 +819,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
         optlen = 0;
       }
 #else
+      optval = 0; /* avoid compilation warning */
       optlen = 0;
 #endif
 
@@ -875,7 +898,6 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     }
   }
 
-  /* TODO manage more than one XOR-PEER-ADDRESS for this message */
   for(j = 0 ; j < XOR_PEER_ADDRESS_MAX && message->peer_addr[j] ; j++)
   {
     /* copy peer address */
@@ -1341,11 +1363,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return 0;
   }
 
-  /* TODO list OS that cannot set the DF bit and uncomment 
-   * following piece of code for them.
-   * For the moment all EXCEPT Linux
-   */
-#ifndef __linux__ 
+#ifndef OS_SET_DF_SUPPORT 
   /* check if DONT-FRAGMENT attribute is supported */
   if(message->dont_fragment)
   {
@@ -1564,8 +1582,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
-  /* TODO quota on number allocation / bandwidth per user */
-  if(account->allocations > turnserver_cfg_max_relay_per_client())
+  /* TODO quota on bandwidth per username */
+  if(account->allocations > turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded, => error 486 */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
@@ -2389,8 +2407,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     int save_val = 0;
     socklen_t optlen = sizeof(int);
 
+#ifdef OS_SET_DF_SUPPORT
     /* alternate behavior, set DF to 0 */
-
     if(desc->tuple.client_addr.ss_family == AF_INET)
     {
       level = IPPROTO_IP;
@@ -2409,8 +2427,6 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
       return -1;
     }
 
-    /* TODO list OS that support or not setting DF flag */
-#ifdef __linux__
     if(!getsockopt(desc->tuple_sock, level, optname, &save_val, &optlen))
     {
       setsockopt(desc->tuple_sock, level, optname, &optval, sizeof(int));
@@ -2424,6 +2440,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     }
 #else
     optlen = 0;
+    optval = 0;
 #endif
 
     nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), iov, index);

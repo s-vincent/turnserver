@@ -14,7 +14,7 @@ TurnServer requires some libraries:
 
 TurnServer is written in pure C according to the C99 and POSIX + XSI standards. Thus it should be compiled on all POSIX systems which have realtime signals support.
 
-Note for *BSD users : install the required libconfuse ports in /usr/ prefix, otherwise you have to set the PKG_CONFIG_PATH variable or make symlinks before running ./configure  
+Note for *BSD users, install the required libconfuse ports in /usr/ prefix, otherwise you have to set the PKG_CONFIG_PATH variable or make symlinks before running ./configure (i.e. ln -sf /usr/local/lib/libconfuse.so /usr/lib/ && ln -sf /usr/local/include/confuse.h /usr/include/). 
 
 Type the following commands: 
 $ aclocal
@@ -25,7 +25,7 @@ $ ./configure
 $ make
 # make install
 
-You have to set a configuration file (see next section) before launching the server
+You have to set a configuration file (see next section) before launching the server.
 
 Now you can launch the server: 
 $ turnserver -c /path/to/config/file
@@ -45,5 +45,8 @@ in turnserver.conf file.
 The format of each line is:
 login:password:domain.org
 
-If you want to use TLS over TCP you have to set "tls = true" in the configuration file as well as the pathnames of the certificates and private keys.
+If you want to use TLS over TCP you have to set "tls = true" in the configuration file as well as the pathnames of the Certificate Authority (CA), server certificate and associated private key.
+
+Other parameters such as allocations number quota can be configured. For more details about configuration parameters, type:
+$ man turnserver.conf 
 
