@@ -6,7 +6,9 @@
                             - Re-organize some code (message-integrity calculation, ...);
                             - Alternate behavior for DF flag;
                             - Separate TCP and TLS sockets;
-                            - Correctly relayed data from peer to client in TLS.
+                            - Correctly relayed data from peer to client in TLS;
+                            - Multiple XOR-PEER-ADDRESS support in CreatePermission;
+                            - Update wireshark parser (packet-stun2.c).
 
 2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 

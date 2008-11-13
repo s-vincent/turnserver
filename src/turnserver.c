@@ -1158,10 +1158,11 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
  * \param saddr_size sizeof addr
  * \param allocation_list list of allocations
  * \param desc allocation descriptor
+ * \param account account descriptor
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_refresh_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list, struct allocation_desc* desc, struct tls_peer* speer)
+static int turnserver_process_refresh_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list, struct allocation_desc* desc, struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1208,6 +1209,11 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     /* lifetime = 0 delete the allocation */
     allocation_desc_set_timer(desc, 0); /* stop timeout */
     LIST_DEL(&desc->list2); /* in case the allocation has expired during this statement */
+
+    /* decrement allocations for the account */
+    account->allocations--;
+    debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
+    
     allocation_list_remove(allocation_list, desc);
 
     debug(DBG_ATTR, "Explicit delete of allocation\n");
@@ -1331,7 +1337,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(!message->requested_transport)
   {
     /* bad request => error 400 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -1355,7 +1361,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     if(!(error = turn_error_response_420(method, message->msg->turn_msg_id, unknown, 1, iov, &index)))
     {
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -1369,7 +1375,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -1398,7 +1404,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP) 
   {
     /* unsupported transport protocol => error 442 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, NULL);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -1410,7 +1416,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(message->even_port->turn_attr_flags & (~supported_even_port_flags)) 
     {
       /* unsupported flags => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, NULL);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
       return 0;
     }
   }
@@ -1424,7 +1430,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(r_flag)
     {
       /* reservation-token present but E and R are not set to 0 => error 400 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
       return 0;
     }
 #endif
@@ -1473,7 +1479,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(!family_address)
     {
       /* family not supported */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, NULL);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -1542,7 +1548,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(relayed_sock == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
 
@@ -1559,13 +1565,23 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   }
 
   /* TODO quota on number allocation / bandwidth per user */
+  if(account->allocations > turnserver_cfg_max_relay_per_client())
+  {
+    /* quota exceeded, => error 486 */
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
+    return -1;
+  }
 
   desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm, message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
+
+  /* increment number of allocations */
+  account->allocations++;
+  debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
 
   if(!desc)
   {
     /* send error response with code 500 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     close(relayed_sock);
     return -1;
   }
@@ -1760,7 +1776,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
         turnserver_process_allocate_request(transport_protocol, sock, message, saddr, daddr, saddr_size, allocation_list, account, speer);
         break;
       case TURN_METHOD_REFRESH:
-        turnserver_process_refresh_request(transport_protocol, sock, message, saddr, saddr_size, allocation_list, desc, speer);
+        turnserver_process_refresh_request(transport_protocol, sock, message, saddr, saddr_size, allocation_list, desc, account, speer);
         break;
       case TURN_METHOD_CREATEPERMISSION:
         turnserver_process_createpermission_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
@@ -3022,6 +3038,14 @@ int main(int argc, char** argv)
       {
         struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
+        /* find the account and decrement allocations */
+        struct account_desc* desc = account_list_find(&account_list, tmp->username, NULL);
+        if(desc)
+        {
+          desc->allocations--;
+          debug(DBG_ATTR, "Account %s, allocations used: %u\n", desc->username, desc->allocations);
+        }
+
         /* remove it from the list of valid allocation */
         LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
@@ -3086,6 +3110,8 @@ int main(int argc, char** argv)
   list_iterate_safe(get, n, &expired_allocation_list)
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
+
+    /* note we don't care about decrementing account, after all we exit */
 
     LIST_DEL(&tmp->list2);
     allocation_desc_free(&tmp);

@@ -74,6 +74,8 @@ struct account_desc* account_desc_new(const char* username, const char* password
   /* set state */
   ret->state = AUTHORIZED;
 
+  ret->allocations = 0;
+
   turn_calculate_authentication_key(username, realm, password, ret->key, sizeof(ret->key));
 
   return ret;
