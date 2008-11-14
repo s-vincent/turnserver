@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "July 23, 2008" "TurnServer Configuration"
+.TH turnserver.conf 5 "November 14, 2008" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -53,6 +53,10 @@ Wheter or not to run the program as daemon.
 Maximum number of allocation per username.
 
 .TP
+.BR "allocation_lifetime " "= number"
+Lifetime of an allocation in second.
+
+.TP
 .BR "ca_file " "= string"
 The pathname of the Certification Authority certificate (required when tls=true).
 
@@ -75,7 +79,7 @@ The pathname of the account file (required when account_method=file).
 
 .SH EXAMPLE
 
-listen_address = "172"
+listen_address = "172.16.0.1"
 
 listen_addressv6 = "2001:db8::1"
 
@@ -83,9 +87,17 @@ udp_port = 3478
 
 tcp_port = 3478
 
+tls_port = 5349
+
 tls = true
 
+realm = "domain.org"
+
 daemon = false
+
+max_relay_per_username = 10
+
+allocation_lifetime = 1800
 
 ca_file = "/etc/ca.crt"
 
@@ -95,7 +107,7 @@ private_key_file = "/etc/server.key"
 
 account_method = "file"
 
-account_file = "/etc/turnusers.tx
+account_file = "/etc/turnusers.txt
 
 .SH AUTHOR
 

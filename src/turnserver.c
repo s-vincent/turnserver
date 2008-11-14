@@ -70,9 +70,8 @@
 #include "util_crypto.h"
 #include "dbg.h"
 
-
 /* TODO test with other OS to see if they
- * support setting DF flag.
+ * support setting DF flag from userspace.
  */
 #if defined(__linux__)
 
@@ -80,7 +79,7 @@
  * \def OS_SET_DF_SUPPORT
  * \brief Current operating system can set the DF flag.
  */
-#define OS_SET_DF_SUPPORT 
+#define OS_SET_DF_SUPPORT 1
 
 #endif
 
@@ -338,8 +337,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   struct turn_attr_hdr* attr = NULL;
   size_t index = 0;
   ssize_t nb = -1;
-
-  memset(iov, 0x00, 12 * sizeof(struct iovec));
 
   switch(error)
   {
@@ -626,7 +623,6 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
         break;
     }
 
-    /* list OS that support or not setting the DF flag */
 #ifdef OS_SET_DF_SUPPORT 
     if(!getsockopt(desc->relayed_sock, level, optname, &save_val, &optlen))
     {
@@ -1019,7 +1015,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
 
-  memset(peer_addr, 0x00, 16);
+  /* memset(peer_addr, 0x00, 16); */
 
   if(!message->channel_number || !message->peer_addr[0])
   {
@@ -1363,8 +1359,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return 0;
   }
 
-#ifndef OS_SET_DF_SUPPORT 
   /* check if DONT-FRAGMENT attribute is supported */
+#ifndef OS_SET_DF_SUPPORT 
   if(message->dont_fragment)
   {
     struct iovec iov[6]; /* header, error-code, unknown-attributes, software, message-integrity, fingerprint */
@@ -1482,7 +1478,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   }
   else
   {
-    lifetime = TURN_DEFAULT_ALLOCATION_LIFETIME;
+    /* cannot override max value for allocation time */
+    lifetime = turnserver_cfg_allocation_lifetime() > TURN_MAX_ALLOCATION_LIFETIME ? TURN_MAX_ALLOCATION_LIFETIME : turnserver_cfg_allocation_lifetime();
   }
 
   /* draft-ietf-behave-turn-ipv6-05 */
@@ -1570,17 +1567,20 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
-  memset(&relayed_addr, 0x00, sizeof(struct sockaddr_storage));
+  /* memset(&relayed_addr, 0x00, sizeof(struct sockaddr_storage)); */
   if(getsockname(relayed_sock, (struct sockaddr*)&relayed_addr, &relayed_size) != 0)
   {
     close(relayed_sock);
     return -1;
   }
 
+  /* not very useful */
+#if 0
   if(getnameinfo((struct sockaddr*)&relayed_addr, saddr_size, str, sizeof(str), NULL, 0, NI_NUMERICHOST) == -1)
   {
     return -1;
   }
+#endif
 
   /* TODO quota on bandwidth per username */
   if(account->allocations > turnserver_cfg_max_relay_per_username())
@@ -1625,8 +1625,6 @@ send_success_response:
     struct turn_attr_hdr* attr = NULL;
     size_t index = 0;
     ssize_t nb = -1;
-
-    memset(iov, 0x00, 12 * sizeof(struct iovec));
 
     if(!(hdr = turn_msg_allocate_response_create(0, message->msg->turn_msg_id, &iov[index])))
     {

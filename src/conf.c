@@ -79,6 +79,7 @@ static cfg_opt_t opts[]=
   CFG_STR("realm", "domain.org", CFGF_NONE),
   CFG_STR("account_method", "file", CFGF_NONE),
   CFG_STR("account_file", "users.txt", CFGF_NONE),
+  /* the following attributes are not used for the moment */
   CFG_STR("account_db_login", "anonymous", CFGF_NONE),
   CFG_STR("account_db_password", "anonymous", CFGF_NONE),
   CFG_STR("account_db_name", "turnserver", CFGF_NONE),

@@ -8,7 +8,8 @@
                             - Separate TCP and TLS sockets;
                             - Correctly relayed data from peer to client in TLS;
                             - Multiple XOR-PEER-ADDRESS support in CreatePermission;
-                            - Update wireshark parser (packet-stun2.c).
+                            - Update wireshark parser (packet-stun2.c);
+                            - Allocation number quota.
 
 2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
