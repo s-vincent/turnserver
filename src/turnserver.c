@@ -103,7 +103,7 @@ static const char* default_configuration_file = "/etc/turnserver.conf";
 
 /**
  * \var configuration_file
- * \brief Configuration file
+ * \brief Configuration file.
  */
 static const char* configuration_file = NULL;
 
@@ -141,7 +141,7 @@ static struct list_head token_list;
  * \var supported_even_port_flags
  * \brief EVEN-PORT flags supported.
  *
- * For the moment the following flag are supported:
+ * For the moment the following flags are supported:
  * - R : reserve couple of ports (one pair, one impair).
  */
 static const uint8_t supported_even_port_flags = 0x80;
@@ -258,17 +258,17 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 }
 
 /**
- * \brief Print help.
+ * \brief Print help menu.
  * \param name name of the program.
  */
-static void turnserver_print_help(char* name)
+static void turnserver_print_help(char* name, char* version)
 {
-  fprintf(stdout, "%s %s - TURN Server\n", name, PACKAGE_VERSION);
+  fprintf(stdout, "%s %s - TURN Server\n", name, version);
   fprintf(stdout, "Usage: %s [-c file] [-h]\n", name);
 }
 
 /**
- * \brief Parse the command line argument.
+ * \brief Parse the command line arguments.
  * \param argc number of argument
  * \param argv array of argument
  * \return 0 if success, -1 otherwise
@@ -283,7 +283,7 @@ static void turnserver_parse_cmdline(int argc, char** argv)
     switch(s)
     {
       case 'h': /* help */
-        turnserver_print_help(argv[0]);
+        turnserver_print_help(argv[0], PACKAGE_VERSION);
         exit(EXIT_SUCCESS);
         break;
       case 'v': /* version */
@@ -328,6 +328,7 @@ static void turnserver_disable_core_dump(void)
  * \param error error code
  * \param speer TLS peer, if not NULL, send the error in TLS
  * \param key MD5 hash of account, if present, MESSAGE-INTEGRITY / FINGERPRINT will be added
+ * \note Some error codes cannot be sent using this function (440, 438, ...).
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer, unsigned char* key)
@@ -346,12 +347,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 401: /* Unauthorized */
       /* hdr = turn_error_response_401(method, id, &iov[index], &index); */
       break;
-    case 420: /* Unknown attributes */
-      break;
     case 437: /* Alocation mismatch */
       hdr = turn_error_response_437(method, id, &iov[index], &index);
-      break;
-    case 438: /* Wrong credentials */
       break;
     case 440: /* Address family not supported */
       hdr = turn_error_response_440(method, id, &iov[index], &index);
@@ -392,7 +389,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
       iovec_free_data(iov, index);
       return -1;
     }
-    /* the function already set turn_msg_len field to big endian */
+    /* function above already set turn_msg_len field to big endian */
   }
   else
   {
@@ -652,7 +649,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   else /* TCP */
   {
     /* Relaying with TCP is not in the standard TURN specification.
-     * draft-ietf-behave-turn-tcp-00 specify a TURN extension to do this.
+     * draft-ietf-behave-turn-tcp-01 specify a TURN extension to do this.
      * It is currently not supported.
      */
     return -1;
@@ -670,7 +667,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 /**
  * \brief Process a TURN Send indication.
  * \param message TURN message
- * \param desc allocation descriptor.
+ * \param desc allocation descriptor
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_send_indication(const struct turn_message* message, struct allocation_desc* desc)
@@ -831,10 +828,11 @@ static int turnserver_process_send_indication(const struct turn_message* message
     else /* TCP */
     {
       /* Relaying with TCP is not in the standard TURN specification.
-       * draft-ietf-behave-turn-tcp-00 specify a TURN extension to do this.
+       * draft-ietf-behave-turn-tcp-01 specify a TURN extension to do this.
        * It is currently not supported.
        */
-      nb = send(desc->relayed_sock, msg, msg_len, 0); 
+      return -1;
+      /* nb = send(desc->relayed_sock, msg, msg_len, 0); */
     }
 
     if(nb == -1)
@@ -1014,8 +1012,6 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   uint8_t* p = (uint8_t*)&cookie;
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
-
-  /* memset(peer_addr, 0x00, 16); */
 
   if(!message->channel_number || !message->peer_addr[0])
   {
@@ -1440,15 +1436,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   {
     struct allocation_token* token = NULL;
 
-#if 0 /* not sure it is the case in draft-ietf-behave-turn-11 */
-    if(r_flag)
-    {
-      /* reservation-token present but E and R are not set to 0 => error 400 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
-      return 0;
-    }
-#endif
-
     /* find if the requested reservation-token exists */
     if((token = allocation_token_list_find(&token_list, message->reservation_token->turn_attr_token)))
     {
@@ -1519,7 +1506,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     str[INET6_ADDRSTRLEN - 1] = 0x00;
   }
 
-  /* after all this checks, we can allocate an allocation! */
+  /* after all these checks, we can allocate an allocation! */
 
   /* allocate the relayed address or skip this, if we have a token */
   while(!has_token && (relayed_sock == -1 && quit_loop < 5)) /* we try 5 times to find a free port */
@@ -1567,15 +1554,14 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
-  /* memset(&relayed_addr, 0x00, sizeof(struct sockaddr_storage)); */
   if(getsockname(relayed_sock, (struct sockaddr*)&relayed_addr, &relayed_size) != 0)
   {
     close(relayed_sock);
     return -1;
   }
 
-  /* not very useful */
 #if 0
+  /* not very useful */
   if(getnameinfo((struct sockaddr*)&relayed_addr, saddr_size, str, sizeof(str), NULL, 0, NI_NUMERICHOST) == -1)
   {
     return -1;
@@ -1583,6 +1569,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 #endif
 
   /* TODO quota on bandwidth per username */
+
   if(account->allocations > turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded, => error 486 */
@@ -1807,7 +1794,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
   }
   else if(STUN_IS_SUCCESS_RESP(hdr_msg_type) || STUN_IS_ERROR_RESP(hdr_msg_type))
   {
-    /* for the moment do nothing */
+    /* should not happen */
   }
   else if(STUN_IS_INDICATION(hdr_msg_type))
   {
@@ -2077,6 +2064,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       if(username_len > 513 || realm_len > 256)
       {
+        /* some attributes are too long */
         return -1;
       }
 
@@ -3140,12 +3128,17 @@ int main(int argc, char** argv)
     allocation_token_free(&tmp);
   }
 
-  /* close the sockets */
+  /* close UDP and TCP sockets */
   if(sock_udp > 0)
   {
     close(sock_udp);
   }
 
+  if(sock_tcp > 0)
+  {
+    close(sock_tcp);
+  }
+  
   /* close TCP socket list */
   list_iterate_safe(get, n, &tcp_socket_list)
   {
@@ -3159,18 +3152,6 @@ int main(int argc, char** argv)
     free(tmp);
   }
 
-  if(speer)
-  {
-    tls_peer_free(&speer);
-  }
-  else
-  {
-    if(sock_tcp > 0)
-    {
-      close(sock_tcp);
-    }
-  }
-
   /* free the valid allocation list */
   allocation_list_free(&allocation_list);
 
@@ -3182,6 +3163,9 @@ int main(int argc, char** argv)
 
   if(turnserver_cfg_tls())
   {
+    /* close TLS socket */
+    tls_peer_free(&speer);
+
     /* cleanup SSL lib */
     EVP_cleanup();
     ERR_remove_state(0);

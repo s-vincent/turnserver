@@ -61,8 +61,8 @@ struct turnserver_cfg
   int daemon; /**< Daemon state */
   char realm[256]; /**< Realm */
   uint16_t max_client; /**< Max simultanous client */
-  uint16_t max_relay_per_username; /**< Max relay per client */
-  uint32_t allocation_lifetime; /**< Lifetime the server will maintain a binding (in second) */
+  uint16_t max_relay_per_username; /**< Max relay per username */
+  uint32_t allocation_lifetime; /**< Lifetime the server will maintain a binding (in seconds) */
   char nonce_key[255]; /**< Private key used to generate nonce */
   char ca_file[PATH_MAX]; /**< CA file */
   char cert_file[PATH_MAX]; /**< Certificate file */
