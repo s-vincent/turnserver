@@ -62,9 +62,10 @@ enum account_state
 struct account_desc
 {
   char username[64]; /**< Username */
-  char password[64]; /**< Password */
   char realm[256]; /**< Realm */
+  unsigned char key[16]; /**< MD5 hash */
   enum account_state state; /**< Access state */
+  size_t allocations; /**< Number of allocations used */
   struct list_head list; /**< For list management */
 };
 

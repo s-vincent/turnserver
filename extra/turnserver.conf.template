@@ -24,11 +24,8 @@ realm = "domain.org"
 ## Daemon mode.
 daemon = false
 
-## Max client.
-max_client = 10
-
-## Max relay per client.
-max_relay_per_client = 2
+## Max relay per username.
+max_relay_per_username = 5
 
 ## Allocation lifetime.
 allocation_lifetime = 1800

@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "July 23, 2008" "TurnServer Configuration"
+.TH turnserver.conf 5 "November 14, 2008" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -37,8 +37,20 @@ The TCP port of the server to listen for incoming connection.
 Wheter or not activate TLS over TCP connection.
 
 .TP
+.BR "realm " "= string"
+Realm value (i.e. domain.org).
+
+.TP
 .BR "daemon " "= boolean"
 Wheter or not to run the program as daemon.
+
+.TP
+.BR "max_relay_per_username " "= number"
+Maximum number of allocation per username.
+
+.TP
+.BR "allocation_lifetime " "= number"
+Lifetime of an allocation in second.
 
 .TP
 .BR "ca_file " "= string"
@@ -63,7 +75,7 @@ The pathname of the account file (required when account_method=file).
 
 .SH EXAMPLE
 
-listen_address = "172"
+listen_address = "172.168.0.1"
 
 listen_addressv6 = "2001:db8::1"
 
@@ -74,6 +86,10 @@ tcp_port = 3478
 tls = true
 
 daemon = false
+
+max_relay_per_username = 10
+
+allocation_lifetime = 1800
 
 ca_file = "/etc/ca.crt"
 

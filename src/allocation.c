@@ -86,6 +86,9 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   ret->relayed_transport_protocol = IPPROTO_UDP;
 
+  /* by default, this will be set by caller */
+  ret->relayed_tls = 0;
+
   /* list of permissions */
   INIT_LIST(ret->peers_permissions);
 

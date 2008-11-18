@@ -218,11 +218,12 @@ extern "C"
    * \param dir change directory to this, default is /.
    * \param mask to fix permission: mask & 0777, default is 0.
    * \param cleanup cleanup function, if not NULL it is executed before father _exit()
+   * \param arg argument of cleanup function
    * \return -1 if error\n
    * In case of father, this function never returns (_exit)\n
    * If success 0 is returned in case of child
    */
-  int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void));
+  int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg), void* arg);
 
   /**
    * \brief Free elements of an iovec array.

@@ -185,7 +185,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   msb_cookie = ((uint8_t*)&cookie)[0] << 8 | ((uint8_t*)&cookie)[1];
   port ^= msb_cookie;
 
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */ 
+  /* IPv4/IPv6 XOR cookie (just the first four bytes of IPv6 address) */ 
   for(i = 0 ; i < 4 ; i++)
   {
     ptr[i] ^= p[i];
@@ -1274,7 +1274,6 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
   }
   else
   {
-    /* TODO support 64 bit */
     uint64_convert(nonce, sizeof(time_t) * 2, &ct64);
     memcpy(&t, &ct64, 8);
   }
@@ -1313,6 +1312,86 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen)
   }
 
   return crc;
+}
+
+int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint)
+{
+  struct turn_attr_hdr* attr = NULL;
+  struct turn_msg_hdr* hdr = iov[0].iov_base;
+
+  if(!(attr = turn_attr_message_integrity_create(NULL, &iov[*index])))
+  {
+    return -1;
+  }
+  hdr->turn_msg_len += iov[(*index)].iov_len;
+  (*index)++;
+
+  /* compute HMAC */
+  /* convert length to big endian */
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+  /* do not take into account the attribute itself */
+  turn_calculate_integrity_hmac_iov(iov, (*index) - 1, key, key_len, ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
+
+  if(add_fingerprint)
+  {
+
+    /* add a fingerprint */
+    /* revert to host endianness */
+    hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
+    if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
+    {
+      return -1;
+    }
+    hdr->turn_msg_len += iov[(*index)].iov_len;
+    (*index)++;
+
+    /* compute fingerprint */
+
+    /* convert to big endian */
+    hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+    /* do not take into account the attribute itself */
+    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
+    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+  }
+
+  return 0;
+}
+
+int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id)
+{
+  size_t i = 0;
+  size_t len = 0;
+  
+  switch(family)
+  {
+    case STUN_ATTR_FAMILY_IPV4:
+      len = 4;
+      break;
+    case STUN_ATTR_FAMILY_IPV6:
+      len = 16;
+      break;
+    default:
+      return -1;
+  }
+
+  /* XOR port */
+  *peer_port ^= ((cookie[0] << 8) | (cookie[1]));
+
+  /* IPv4/IPv6 XOR cookie (just the first four bytes of IPv6 address) */
+  for(i = 0 ; i < 4 ; i++)
+  {
+    peer_addr[i] ^= cookie[i];
+  }
+
+  /* end of IPv6 address XOR transaction ID */
+  for(i = 4 ; i < len ; i++)
+  {
+    peer_addr[i] ^= msg_id[i - 4];
+  }
+
+  return 0;
 }
 
 int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown, size_t* unknown_size)

@@ -71,7 +71,7 @@
 
 /**
  * \def SIGRT_EXPIRE_CHANNEL
- * \brief Signal value when  channel expires.
+ * \brief Signal value when channel expires.
  */
 #define SIGRT_EXPIRE_CHANNEL (SIGRTMIN + 2)
 
@@ -99,20 +99,20 @@ struct turn_message
   struct turn_attr_message_integrity* message_integrity; /**< MESSAGE-INTEGRITY attribute */
   struct turn_attr_fingerprint* fingerprint; /**< FINGERPRINT attribute */
   struct turn_attr_software* software; /**< SOFTWARE attribute */
-  struct turn_attr_channel_number* channel_number; /**< CHANNEL-NUMBER attribute*/
+  struct turn_attr_channel_number* channel_number; /**< CHANNEL-NUMBER attribute */
   struct turn_attr_lifetime* lifetime; /** LIFETIME attribute */
   struct turn_attr_peer_address* peer_addr; /**< PEER-ADDRESS attribute */
   struct turn_attr_data* data; /**< DATA attribute */
   struct turn_attr_relayed_address* relayed_addr; /**< RELAYED-ADDRESS attribute */
-  struct turn_attr_requested_props* requested_props; /**< REQUESTED-PROPS attribute*/
-  struct turn_attr_requested_transport* requested_transport; /**< REQUESTED-TRANSPORT attribute*/
-  struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute*/
-  struct turn_attr_icmp* icmp; /**< ICMP attribute*/
+  struct turn_attr_requested_props* requested_props; /**< REQUESTED-PROPS attribute */
+  struct turn_attr_requested_transport* requested_transport; /**< REQUESTED-TRANSPORT attribute */
+  struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
+  struct turn_attr_icmp* icmp; /**< ICMP attribute */
   struct turn_attr_requested_address_type* requested_addr_type; /**< REQUETED-ADDRESS-TYPE (ietf-draft-behave-turn-ipv6-04) */
 };
 
 /**
- * \brief Create a complete error 400
+ * \brief Create a complete error 400.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -122,7 +122,7 @@ struct turn_message
 struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 401
+ * \brief Create a complete error 401.
  * \param method method used
  * \param id transaction ID
  * \param realm realm value
@@ -135,7 +135,7 @@ struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, const char* realm, const uint8_t* nonce, size_t nonce_len, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 420
+ * \brief Create a complete error 420.
  * \param method method used
  * \param id transaction ID
  * \param unknown array unknown attributes
@@ -147,7 +147,7 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, cons
 struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, const uint16_t* unknown, size_t unknown_size, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 437
+ * \brief Create a complete error 437.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -157,7 +157,7 @@ struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, cons
 struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 500
+ * \brief Create a complete error 500.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -167,7 +167,7 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 438
+ * \brief Create a complete error 438.
  * \param method method used
  * \param id transaction ID
  * \param realm realm value
@@ -180,7 +180,7 @@ struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, const char* realm, const uint8_t* nonce, size_t nonce_len, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 442
+ * \brief Create a complete error 442.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -190,7 +190,7 @@ struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, cons
 struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 486
+ * \brief Create a complete error 486.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -200,7 +200,7 @@ struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 508
+ * \brief Create a complete error 508.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -210,7 +210,7 @@ struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 440
+ * \brief Create a complete error 440.
  * \param method method used
  * \param id transaction ID
  * \param iov vector
@@ -294,7 +294,7 @@ struct turn_msg_hdr* turn_msg_allocate_response_create(size_t len, const uint8_t
 struct turn_msg_hdr* turn_msg_allocate_error_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
- * \brief Create a TURN Refresh Request
+ * \brief Create a TURN Refresh Request.
  * \param len Length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
@@ -303,7 +303,7 @@ struct turn_msg_hdr* turn_msg_allocate_error_create(size_t len, const uint8_t* i
 struct turn_msg_hdr* turn_msg_refresh_request_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
- * \brief Create a TURN Refresh Response
+ * \brief Create a TURN Refresh Response.
  * \param len Length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
@@ -312,7 +312,7 @@ struct turn_msg_hdr* turn_msg_refresh_request_create(size_t len, const uint8_t* 
 struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
- * \brief Create a TURN Refresh Error
+ * \brief Create a TURN Refresh Error.
  * \param len Length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
@@ -321,7 +321,7 @@ struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t*
 struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
- * \brief Create a TURN ChannelBind Request
+ * \brief Create a TURN ChannelBind Request.
  * \param len Length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
@@ -330,7 +330,7 @@ struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id
 struct turn_msg_hdr* turn_msg_channelbind_request_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
- * \brief Create a TURN ChannelBind Response
+ * \brief Create a TURN ChannelBind Response.
  * \param len Length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
@@ -339,7 +339,7 @@ struct turn_msg_hdr* turn_msg_channelbind_request_create(size_t len, const uint8
 struct turn_msg_hdr* turn_msg_channelbind_response_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
- * \brief Create a TURN ChannelBind Error
+ * \brief Create a TURN ChannelBind Error.
  * \param len Length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
@@ -590,7 +590,7 @@ int turn_generate_transaction_id(uint8_t* id);
 /**
  * \brief Generate a nonce value.
  *
- * nonce = 64-bit timestamp  MD5(timestamp ":" key)
+ * nonce = 64-bit timestamp MD5(timestamp ":" key)
  *
  * When time_t is 4 bytes, the timestamp is padded with 0x30.
  *
@@ -654,6 +654,29 @@ int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, co
  * \return 32 bit fingerprint 
  */
 uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen);
+
+/**
+ * \brief Compute and add MESSAGE-INTEGRITY / optionnally FINGERPRINT attributes to message.
+ * \param iov vector which contains a message and attributes
+ * \param index index in the vector, it will be updated to the next unused position if function succeed
+ * \param key key used to hash
+ * \param key_len length of key
+ * \param add_fingerprint if set to 1, this function add FINGERPRINT attribute
+ * \return 0 if success, -1 otherwise
+ * \note This function set turn_msg_len field of TURN message to big endian (as MESSAGE-INTEGRITY / FINGERPRINT are normally the last attributes added).
+ */
+int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint);
+
+/**
+ * \brief (Address and port) XOR cookie.
+ * \param family address famiily
+ * \param peer_addr peer address (which contains already XORed address), it will be filled with de-XORed address
+ * \param peer_port peer port (which contains already XORed port), it will be filled with de-XORed port
+ * \param cookie cookie
+ * \param msg_id ID of the message
+ * \return 0 if success, -1 otherwise
+ */
+int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id);
 
 /**
  * \brief Parse a TURN / STUN message.

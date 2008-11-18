@@ -218,7 +218,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take count MESSAGE-INTEGRITY attribute */
+  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -233,9 +233,9 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take count FINGER attribute */
+  /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
   printf("Send allocate request\n");
@@ -344,7 +344,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take count MESSAGE-INTEGRITY attribute */
+  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -359,9 +359,9 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take count FINGER attribute */
+  /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
   printf("Send refresh request\n");
@@ -417,7 +417,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take count MESSAGE-INTEGRITY attribute */
+  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -432,14 +432,16 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take count FINGER attribute */
+  /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
+#if 0
   printf("Send ChannelBind request\n");
   nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
   nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
+#endif
 
   iovec_free_data(iov, index);
   index = 0;
@@ -464,6 +466,20 @@ int main(int argc, char** argv)
   index = 0;
   sleep(1);
 
+#if 1
+  nb3 = recvfrom(sock, buf, 1024, 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb = turn_parse_message(buf, nb3, &message, tabu, &tabu_size);
+
+  if(message.data)
+  {
+    char received[1024];
+    printf("Received %u bytes\n", ntohs(message.data->turn_attr_len));
+    memcpy(received, message.data->turn_attr_data, ntohs(message.data->turn_attr_len));
+    received[ntohs(message.data->turn_attr_len)] = 0x00;
+    printf("I receive %s\n", received);
+  }
+#endif
+
   /* ChannelData */
   {
     char* str = "hello";
@@ -481,6 +497,19 @@ int main(int argc, char** argv)
 
     printf("ChannelData\n");
     turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
+
+#if 0
+    nb3 = recvfrom(sock, buf, 1024, 0, (struct sockaddr*)&daddr, &daddr_size);
+    if(nb3 > 0)
+    {
+      char received[1024];
+      struct turn_channel_data* dt = (struct turn_channel_data*)buf;
+      printf("Received %u bytes\n", ntohs(dt->turn_channel_len));
+      memcpy(received, dt->turn_channel_data, ntohs(dt->turn_channel_len));
+      received[ntohs(dt->turn_channel_len)] = 0x00;
+      printf("I receive %s (channel data)\n", received);
+    }
+#endif
   }
 
   sleep(1);
@@ -553,7 +582,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take count MESSAGE-INTEGRITY attribute */
+  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -568,9 +597,9 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take count FINGER attribute */
+  /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
   printf("Send allocate request\n");

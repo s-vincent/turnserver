@@ -64,7 +64,7 @@ typedef unsigned __int64 uint64_t;
 #define STUN_SUCCESS_RESP               0x0100
 #define STUN_ERROR_RESP                 0x0110
 
-/* macros from RFC3489bis to determine class of the message */
+/* macros from RFC5349 to determine class of the message */
 #define STUN_IS_REQUEST(msg_type)       (((msg_type) & 0x0110) == STUN_REQUEST)
 #define STUN_IS_INDICATION(msg_type)    (((msg_type) & 0x0110) == STUN_INDICATION)
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)
@@ -88,7 +88,7 @@ typedef unsigned __int64 uint64_t;
 /* Refresh method */
 #define TURN_METHOD_REFRESH             0x0004
 
-/* ChannelBind Method */
+/* ChannelBind method */
 #define TURN_METHOD_CHANNELBIND         0x0009
 
 /* Indications */
@@ -199,8 +199,11 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_508            "Insufficient port capacity"
 #define TURN_ERROR_440            "Address family not supported"
 
-/* magic cookie */
+/* STUN magic cookie */
 #define STUN_MAGIC_COOKIE               0x2112A442
+
+/* STUN FINGERPRINT XOR value */
+#define STUN_FINGERPRINT_XOR_VALUE      0x5354554E
 
 /* family address for MAPPED-ADDRESS like attributes */
 #define STUN_ATTR_FAMILY_IPV4           0x01
@@ -464,7 +467,7 @@ struct turn_attr_requested_transport
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
   uint32_t turn_attr_protocol : 8; /**< Transport protocol number */
-  uint32_t turn_attr_reserved :24; /**< Reserved, must be 0 */
+  uint32_t turn_attr_reserved : 24; /**< Reserved, must be 0 */
 }__attribute__((packed));
 
 /**

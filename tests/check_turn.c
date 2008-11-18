@@ -220,7 +220,7 @@ START_TEST(test_attr_create)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take count MESSAGE-INTEGRITY attribute */
+  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, "login:domain.org:password", strlen("login:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -248,8 +248,9 @@ START_TEST(test_attr_create)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
   
   /* calculate fingerprint */
-  /* index -1, we do not take count FINGERPRINT attribute */
+  /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
+   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
   nb = turn_udp_send(sock, (struct sockaddr*)&daddr, sizeof(daddr), iov, index);
   fail_unless(nb > 0, "turn_udp_send failed");
@@ -284,7 +285,7 @@ START_TEST(test_attr_create)
   /* check fingerprint */
   {
     uint32_t crc = turn_calculate_fingerprint(iov, index - 1);
-    fail_unless(htonl(crc) ==  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc, "Fingerprint check");
+    fail_unless(htonl(crc) ^ htonl(STUN_FINGERPRINT_XOR_VALUE) == ((struct turn_attr_fingerprint*)attr)->turn_attr_crc, "Fingerprint check");
   }
   
   iovec_free_data(iov, index);
@@ -366,7 +367,7 @@ START_TEST(test_msg_create)
   fail_unless(hdr != NULL, "header creation failed");
   index++;
   
-  /* ChannelBind error */
+  /* ChannelBind response */
   hdr = turn_msg_channelbind_response_create(0, id, &iov[index]);
   fail_unless(hdr != NULL, "header creation failed");
   index++;
@@ -583,7 +584,7 @@ START_TEST(test_message_parse)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take count MESSAGE-INTEGRITY attribute */
+  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, "login:domain.org:password", strlen("login:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   
@@ -599,7 +600,7 @@ START_TEST(test_message_parse)
 
   nb = turn_parse_message(buf, sizeof(buf),  &message, tab, &tab_size);
 
-  /* test if the header and all the headers are present */
+  /* test if the header and all the attributes are present */
   fail_unless(message.msg != NULL, "header must be present");
   fail_unless(message.mapped_addr != NULL, "mapped_addr must be present");
   fail_unless(message.peer_addr != NULL, "peer_addr must be present");

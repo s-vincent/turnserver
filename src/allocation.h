@@ -116,11 +116,12 @@ struct allocation_desc
   struct list_head peers_channels; /**< List of channel to peer bindings */
   struct list_head peers_permissions; /**< List of peers permissions */
   int relayed_sock; /**< Socket for the allocated transport address */
+  int relayed_tls; /**< If allocation has been set in TLS */
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
   uint8_t transaction_id[12]; /**< Transaction ID of the Allocate Request */
   timer_t expire_timer; /**< Expire timer */
   int preserving_flag; /**< Allocation preserving flag */
-  int expired; /**< Expired flag, indicates that the descriptor will be removed  lately */
+  int expired; /**< Expired flag, indicates that the descriptor will be removed lately */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };
@@ -129,7 +130,7 @@ struct allocation_desc
  * \brief Create a new allocation descriptor.
  * \param id transaction ID of the Allocate request
  * \param transport_protocol transport protocol (i.e. TCP, UDP, ...)
- * \param username one-time login
+ * \param username login of the user
  * \param relayed_addr relayed address and port
  * \param server_addr server network address and port
  * \param client_addr client network address and port

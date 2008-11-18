@@ -45,6 +45,7 @@
 #include <string.h>
 
 #include "account.h"
+#include "protocol.h"
 
 struct account_desc* account_desc_new(const char* username, const char* password, const char* realm)
 {
@@ -60,16 +61,22 @@ struct account_desc* account_desc_new(const char* username, const char* password
     return NULL;
   }
 
-  /* copy username, password and realm */
+  /* copy username and realm */
   strncpy(ret->username, username, sizeof(ret->username) -1);
   ret->username[sizeof(ret->username)-1] = 0x00;
+/*
   strncpy(ret->password, password, sizeof(ret->password) -1);
   ret->password[sizeof(ret->password)-1] = 0x00;
+*/
   strncpy(ret->realm, realm, sizeof(ret->realm) -1);
   ret->realm[sizeof(ret->realm)-1] = 0x00;
 
   /* set state */
   ret->state = AUTHORIZED;
+
+  ret->allocations = 0;
+
+  turn_calculate_authentication_key(username, realm, password, ret->key, sizeof(ret->key));
 
   return ret;
 }

@@ -1,3 +1,7 @@
+2008-11-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+  * Version 0.1.2.3 : - Backport code refactoring from 0.2-draft-11 branch.
+
 2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
 	* Version 0.1.2.2	:	- Fix nonce validation for 64-bit platform.

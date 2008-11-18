@@ -74,7 +74,7 @@
  * \var software_description
  * \brief Textual description of the server.
  */
-static const char* software_description = "TurnServer 0.1 by LSIIT's Network Research Team";
+static const char* software_description = "TurnServer 0.1.2.3 by LSIIT's Network Research Team";
 
 /**
  * \var run
@@ -90,7 +90,7 @@ static const char* default_configuration_file = "/etc/turnserver.conf";
 
 /**
  * \var configuration_file
- * \brief Configuration file
+ * \brief Configuration file.
  */
 static const char* configuration_file = NULL;
 
@@ -128,11 +128,11 @@ static struct list_head token_list;
  * \var supported_requested_flags
  * \brief Requested flags supported.
  *
- * For the moment the following flag are  supported:
+ * For the moment the following flag are supported:
  * - E : even port requested.
  * - R : reserve couple of ports (one pair, one impair), this imply E flag;
  *
- * Flags to be supported are :
+ * Flags to be supported are:
  * - P : Preserving allocation requested.
  */
 static const uint32_t supported_requested_flags = 0xC0000000;
@@ -251,17 +251,18 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 }
 
 /**
- * \brief Print help.
- * \param name name of the program.
+ * \brief Print help menu.
+ * \param name name of the program
+ * \param version version of the program
  */
-static void turnserver_print_help(char* name)
+static void turnserver_print_help(char* name, char* version)
 {
-  fprintf(stdout, "%s %s - TURN Server\n", name, PACKAGE_VERSION);
+  fprintf(stdout, "%s %s - TURN Server\n", name, version);
   fprintf(stdout, "Usage: %s [-c file] [-h]\n", name);
 }
 
 /**
- * \brief Parse the command line argument.
+ * \brief Parse the command line arguments.
  * \param argc number of argument
  * \param argv array of argument
  * \return 0 if success, -1 otherwise
@@ -276,7 +277,7 @@ static void turnserver_parse_cmdline(int argc, char** argv)
     switch(s)
     {
       case 'h': /* help */
-        turnserver_print_help(argv[0]);
+        turnserver_print_help(argv[0], PACKAGE_VERSION);
         exit(EXIT_SUCCESS);
         break;
       case 'v': /* version */
@@ -318,17 +319,17 @@ static void turnserver_disable_core_dump(void)
  * \param saddr_size sizeof address
  * \param error error code
  * \param speer TLS peer, if not NULL, send the error in TLS
+ * \param key MD5 hash of account, if present, MESSAGE-INTEGRITY / FINGERPRINT will be added
+ * \note Some error codes cannot be sent using this function (420, 438, ...).
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
+static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer, unsigned char* key)
 {
   struct iovec iov[12]; /* should be sufficient */
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   size_t index = 0;
   ssize_t nb = -1;
-
-  memset(iov, 0x00, 12 * sizeof(struct iovec));
 
   switch(error)
   {
@@ -338,12 +339,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 401: /* Unauthorized */
       /* hdr = turn_error_response_401(method, id, &iov[index], &index); */
       break;
-    case 420: /* Unknown attributes */
-      break;
     case 437: /* Alocation mismatch */
       hdr = turn_error_response_437(method, id, &iov[index], &index);
-      break;
-    case 438: /* Wrong credentials */
       break;
     case 440: /* Address family not supported */
       hdr = turn_error_response_440(method, id, &iov[index], &index);
@@ -373,7 +370,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   if(error == 508)
   {
     /* add it supported flags */
-
     if(!(attr = turn_attr_requested_props_create(supported_requested_flags, &iov[index])))
     {
       iovec_free_data(iov, index);
@@ -390,8 +386,20 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     index++;
   }
 
-  /* convert to big endian */
-  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+  if(key)
+  {
+    if(turn_add_message_integrity(iov, &index, key, 16, 1) == -1)
+    {
+      iovec_free_data(iov, index);
+      return -1;
+    }
+    /* function above already set turn_msg_len field to big endian */
+  }
+  else
+  {
+    /* convert to big endian */
+    hdr->turn_msg_len = htons(hdr->turn_msg_len);
+  }
 
   /* finaly send the response */
   if(speer)
@@ -443,7 +451,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_xor_mapped_address_create(saddr, STUN_MAGIC_COOKIE, message->msg->turn_msg_id, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -461,7 +469,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_fingerprint_create(0, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -472,9 +480,9 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-  /* do not take in count the attribute itself */
+  /* do not take into account the attribute itself */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
   if(speer)
   {
@@ -613,7 +621,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
         break;
     }
 
-    debug(DBG_ATTR, "Send ChannelDatata to peer\n");
+    debug(DBG_ATTR, "Send ChannelData to peer\n");
     nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, desc->relayed_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
   }
   else /* TCP */
@@ -622,7 +630,8 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
      * draft-ietf-behave-turn-tcp-00 specify a TURN extension to do this.
      * It is currently not supported.
      */
-    nb = send(desc->relayed_sock, msg, len, 0);
+    return -1;
+    /* nb = send(desc->relayed_sock, msg, len, 0); */
   }
 
   if(nb == -1)
@@ -636,7 +645,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 /**
  * \brief Process a TURN Send indication.
  * \param message TURN message
- * \param desc allocation descriptor.
+ * \param desc allocation descriptor
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_send_indication(const struct turn_message* message, struct allocation_desc* desc)
@@ -649,7 +658,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
   size_t len = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
-  size_t i = 0;
   ssize_t nb = -1;
 
   if(!message->peer_addr)
@@ -665,11 +673,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
     return -1;
   }
 
-  /* host order port XOR most-significant 16 bits of the cookie */
-  peer_port = ntohs( message->peer_addr->turn_attr_port);
-  peer_port ^= ((p[0] << 8) | (p[1]));
-
-  /* copy peer address */
   switch(message->peer_addr->turn_attr_family)
   {
     case STUN_ATTR_FAMILY_IPV4:
@@ -680,21 +683,16 @@ static int turnserver_process_send_indication(const struct turn_message* message
       break;
     default:
       return -1;
+      break;
   }
+
+  /* copy peer address */
   memcpy(peer_addr, message->peer_addr->turn_attr_address, len);
+  peer_port = ntohs(message->peer_addr->turn_attr_port);
 
-  /* XOR the address */
-
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */
-  for(i = 0 ; i < 4 ; i++)
+  if(turn_xor_address_cookie(message->peer_addr->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
-    peer_addr[i] ^= p[i];
-  }
-
-  /* end of IPv6 address XOR transaction ID */
-  for(i = 4 ;i < len ; i++)
-  {
-    peer_addr[i] ^= message->msg->turn_msg_id[i - 4];
+    return -1;
   }
 
   /* find a permission */
@@ -752,7 +750,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
        * draft-ietf-behave-turn-tcp-00 specify a TURN extension to do this.
        * It is currently not supported.
        */
-      nb = send(desc->relayed_sock, msg, msg_len, 0); 
+      return -1;
+      /* nb = send(desc->relayed_sock, msg, msg_len, 0); */
     }
 
     if(nb == -1)
@@ -792,17 +791,14 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   size_t len = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
-  size_t i = 0;
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
-
-  memset(peer_addr, 0x00, 16);
 
   if(!message->channel_number || !message->peer_addr)
   {
     /* attributes missing => error 400 */
     debug(DBG_ATTR, "Channel number or peer address attributes missing\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -812,7 +808,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     /* bad channel => error 400 */
     debug(DBG_ATTR, "Channel number is invalid\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -823,14 +819,10 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     debug(DBG_ATTR, "Do not allow requesting a Channel when allocated address family mismatch peer address family\n");
 
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
     return -1;
 
   }
-
-  /* host order port XOR most-significant 16 bits of the cookie */
-  peer_port = ntohs(message->peer_addr->turn_attr_port);
-  peer_port ^= ((p[0] << 8) | (p[1]));
 
   switch(family)
   {
@@ -844,23 +836,14 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
       return -1;
       break;
   }
-  memcpy(&peer_addr, message->peer_addr->turn_attr_address, len);
 
-  /* XOR the address */
+  memcpy(peer_addr, message->peer_addr->turn_attr_address, len);
+  peer_port = ntohs(message->peer_addr->turn_attr_port);
 
-  /* IPv4/IPv6 XOR  cookie (just the first four bytes of IPv6 address) */
-  for(i = 0 ; i < 4 ; i++)
+  if(turn_xor_address_cookie(family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
-    peer_addr[i] ^= p[i];
+    return -1;
   }
-
-  /* end of IPv6 address XOR transaction ID */
-  for(i = 4 ;i < len ; i++)
-  {
-    peer_addr[i] ^= message->msg->turn_msg_id[i - 4];
-  }
-
-  inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
 
   debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
 
@@ -873,7 +856,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     {
       /* different transport address => error 400 */
       debug(DBG_ATTR, "Channel already bound to another transport address\n");
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
       return 0;
     }
 
@@ -906,7 +889,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   /* finaly send the response */
   if(!(hdr = turn_msg_channelbind_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
   index++;
@@ -918,51 +901,12 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     index++;
   }
 
-  if(!(attr = turn_attr_message_integrity_create(NULL, &iov[index])))
+  if(turn_add_message_integrity(iov, &index, account->key, sizeof(account->key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
-  /* compute HMAC */
-  {
-    unsigned char key[16];
-    char* realm = turnserver_cfg_realm();
-
-    /* convert length to big endian */
-    hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-    turn_calculate_authentication_key(account->username, realm, account->password, key, sizeof(key));
-
-    /* do not take count the attribute itself */
-    turn_calculate_integrity_hmac_iov(iov, index - 1, key, sizeof(key), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
-  }
-
-  /* NOTE: maybe add a configuration flag to enable/disable fingerprint in output message */
-
-  /* add a fingerprint */
-  /* revert to host endianness */
-  hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
-  if(!(attr = turn_attr_fingerprint_create(0, &iov[index])))
-  {
-    iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
-    return -1;
-  }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
-  /* compute fingerprint */
-
-  /* convert to big endian */
-  hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-  /* do not take in count the attribute itself */
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
   debug(DBG_ATTR, "ChannelBind successfull, send success ChannelBind response\n");
 
@@ -1016,7 +960,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   ssize_t nb = -1;
 
   /* draft-ietf-behave-turn-ipv6-04 : at this stage we know the 5-tuple and the allocation associated.
-   * No matter to known if the relayed address has a different address family than 5-tuple, so 
+   * No matter to know if the relayed address has a different address family than 5-tuple, so 
    * no need to have a REQUESTED-ADDRESS-TYPE attribute in Refresh request.
    */
 
@@ -1036,7 +980,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   {
     /* no lifetime attribute => bad request error 400) */
     debug(DBG_ATTR, "NO LIFETIME\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -1053,12 +997,16 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     LIST_DEL(&desc->list2); /* in case the allocation has expired during this statement */
     allocation_list_remove(allocation_list, desc);
 
+    /* decrement allocations for the account */
+    account->allocations--;
+    debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
+
     debug(DBG_ATTR, "Explicit delete of allocation\n");
   }
 
   if(!(hdr = turn_msg_refresh_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
   index++;
@@ -1066,7 +1014,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -1079,50 +1027,12 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     index++;
   }
 
-  if(!(attr = turn_attr_message_integrity_create(NULL, &iov[index])))
+  if(turn_add_message_integrity(iov, &index, account->key, sizeof(account->key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
-  /* compute HMAC */
-  {
-    unsigned char key[16];
-    char* realm = turnserver_cfg_realm();
-
-    /* convert length to big endian */
-    hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-    turn_calculate_authentication_key(account->username, realm, account->password, key, sizeof(key));
-
-    /* do not take count the attribute itself */
-    turn_calculate_integrity_hmac_iov(iov, index - 1, key, sizeof(key), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
-  }
-
-  /* NOTE: maybe add a configuration flag to enable/disable fingerprint in output message */
-  /* add a fingerprint */
-  /* revert to host endianness */
-  hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
-  if(!(attr = turn_attr_fingerprint_create(0, &iov[index])))
-  {
-    iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
-    return -1;
-  }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
-  /* compute fingerprint */
-
-  /* convert to big endian */
-  hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-  /* do not take in count the attribute itself */
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
   debug(DBG_ATTR, "Refresh successfull, send success refresh response\n");
 
@@ -1205,7 +1115,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     else
     {
       /* allocation mismatch => error 437 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, account->key);
     }
     return 0;
   }
@@ -1214,7 +1124,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(!message->requested_transport)
   {
     /* bad request => error 400 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -1223,7 +1133,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP) 
   {
     /* unsupported transport protocol => error 442 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -1237,7 +1147,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if((!e_flag && r_flag) || (ntohl(message->requested_props->turn_attr_flags) & (~supported_requested_flags))) 
     {
       /* unsupported flags => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
       return 0;
     }
 
@@ -1245,7 +1155,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     {
       /* unfortunaly TurnServer does not provide the Preserving allocation yet... */
       /* => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
       return 0;
     }
   }
@@ -1258,7 +1168,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if((e_flag || r_flag))
     {
       /* reservation-token present but E and R are not set to 0 => error 400 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
       return 0;
     }
 
@@ -1291,7 +1201,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   }
   else
   {
-    lifetime = TURN_DEFAULT_ALLOCATION_LIFETIME;
+    /* cannot override max value for allocation time */
+    lifetime = turnserver_cfg_allocation_lifetime() > TURN_MAX_ALLOCATION_LIFETIME ? TURN_MAX_ALLOCATION_LIFETIME : turnserver_cfg_allocation_lifetime();
   }
 
   /* draft-ietf-behave-turn-ipv6-04 */
@@ -1306,7 +1217,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(!family_address)
     {
       /* family not supported */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -1331,7 +1242,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     str[INET6_ADDRSTRLEN - 1] = 0x00;
   }
 
-  /* after all this checks, we can allocate an allocation! */
+  /* after all these checks, we can allocate an allocation! */
 
   /* allocate the relayed address or skip this, if we have a token */
   while(!has_token && (relayed_sock == -1 && quit_loop < 5)) /* we try 5 times to find a free port */
@@ -1375,19 +1286,20 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(relayed_sock == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
 
-  memset(&relayed_addr, 0x00, sizeof(struct sockaddr_storage));
   if(getsockname(relayed_sock, (struct sockaddr*)&relayed_addr, &relayed_size) != 0)
   {
     close(relayed_sock);
     return -1;
   }
 
-  if(getnameinfo((struct sockaddr*)&relayed_addr, saddr_size, str, sizeof(str), NULL, 0, NI_NUMERICHOST) == -1)
+  if(account->allocations > turnserver_cfg_max_relay_per_username())
   {
+    /* quota exceeded, => error 486 */
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
     return -1;
   }
 
@@ -1396,9 +1308,18 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(!desc)
   {
     /* send error response with code 500 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     close(relayed_sock);
     return -1;
+  }
+
+  /* increment number of allocations */
+  account->allocations++;
+  debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
+ 
+  if(speer)
+  {
+    desc->relayed_tls = 1;
   }
 
   /* assign the sockets to the allocation */
@@ -1418,11 +1339,9 @@ send_success_response:
     size_t index = 0;
     ssize_t nb = -1;
 
-    memset(iov, 0x00, 12 * sizeof(struct iovec));
-
     if(!(hdr = turn_msg_allocate_response_create(0, message->msg->turn_msg_id, &iov[index])))
     {
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
     index++;
@@ -1431,7 +1350,7 @@ send_success_response:
     if(!(attr = turn_attr_relayed_address_create((struct sockaddr*)&relayed_addr, STUN_MAGIC_COOKIE, message->msg->turn_msg_id, &iov[index])))
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
     hdr->turn_msg_len += iov[index].iov_len;
@@ -1440,7 +1359,7 @@ send_success_response:
     if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
     hdr->turn_msg_len += iov[index].iov_len;
@@ -1463,7 +1382,7 @@ send_success_response:
     if(!(attr = turn_attr_xor_mapped_address_create(saddr, STUN_MAGIC_COOKIE, message->msg->turn_msg_id, &iov[index])))
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
     hdr->turn_msg_len += iov[index].iov_len;
@@ -1475,7 +1394,7 @@ send_success_response:
       if(!(attr = turn_attr_reservation_token_create(reservation_token, &iov[index])))
       {
         iovec_free_data(iov, index);
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
         return -1;
       }
       hdr->turn_msg_len += iov[index].iov_len;
@@ -1489,50 +1408,12 @@ send_success_response:
       index++;
     }
 
-    if(!(attr = turn_attr_message_integrity_create(NULL, &iov[index])))
+    if(turn_add_message_integrity(iov, &index, account->key, sizeof(account->key), 1) == -1)
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
-
-    /* compute HMAC */
-    {
-      unsigned char key[16];
-      char* realm = turnserver_cfg_realm();
-
-      /* convert length to big endian */
-      hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-      turn_calculate_authentication_key(account->username, realm, account->password, key, sizeof(key));
-
-      /* do not take count the attribute itself */
-      turn_calculate_integrity_hmac_iov(iov, index - 1, key, sizeof(key), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
-    }
-
-    /* NOTE: maybe add a configuration flag to enable/disable fingerprint in output message */
-    /* add a fingerprint */
-    /* revert to host endianness */
-    hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
-    if(!(attr = turn_attr_fingerprint_create(0, &iov[index])))
-    {
-      iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
-      return -1;
-    }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
-
-    /* compute fingerprint */
-
-    /* convert to big endian */
-    hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-    /* do not take in count the attribute itself */
-    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(0x5354554e);
 
     debug(DBG_ATTR, "Allocation successfull, send success allocate response\n");
 
@@ -1601,7 +1482,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
       if(STUN_IS_REQUEST(hdr_msg_type)) /* the refresh function will handle this case */
       {
         /* => error 437 */ 
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, account->key);
         return 0;
       }
 
@@ -1630,7 +1511,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
   }
   else if(STUN_IS_SUCCESS_RESP(hdr_msg_type) || STUN_IS_ERROR_RESP(hdr_msg_type))
   {
-    /* for the moment do nothing */
+    /* should not happen */
   }
   else if(STUN_IS_INDICATION(hdr_msg_type))
   {
@@ -1764,7 +1645,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
     crc = crc32_generate((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint), 0);
 
-    if(htonl(crc) != (message.fingerprint->turn_attr_crc ^ htonl(0x5354554e)))
+    if(htonl(crc) != (message.fingerprint->turn_attr_crc ^ htonl(STUN_FINGERPRINT_XOR_VALUE)))
     {
       debug(DBG_ATTR, "Fingerprint mismatch\n");
       return -1;
@@ -1786,16 +1667,15 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       struct turn_msg_hdr* error = NULL;
       struct turn_attr_hdr* attr = NULL;
       uint8_t nonce[32];
-      char* realm = turnserver_cfg_realm();
       char* key = turnserver_cfg_nonce_key();
 
       debug(DBG_ATTR, "No message integrity\n");
 
       turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key, strlen(key));
 
-      if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
+      if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
       {
-        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer);
+        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
         return -1;
       }
 
@@ -1836,7 +1716,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     if(!message.username || !message.realm || !message.nonce)
     {
       /* missing username, realm or nonce => error 400 */
-      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
       return 0;
     }
 
@@ -1855,7 +1735,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       if(!(error = turn_error_response_438(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
       {
-        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer);
+        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
         return -1;
       }
 
@@ -1900,6 +1780,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       if(username_len > 513 || realm_len > 256)
       {
+        /* some attributes are too long */
         return -1;
       }
 
@@ -1928,7 +1809,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
         {
-          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer);
+          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
           return -1;
         }
 
@@ -1969,11 +1850,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
     /* compute HMAC-SHA1 and compare with the value in message_integrity */
     {
-      char* realm = turnserver_cfg_realm();
       uint8_t hash[20];
-      uint8_t key[16];
-
-      turn_calculate_authentication_key(account->username, realm, account->password, key, sizeof(key));
 
       if(message.fingerprint)
       {
@@ -1983,14 +1860,14 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         message.msg->turn_msg_len = ntohs(message.msg->turn_msg_len) - sizeof(struct turn_attr_fingerprint);
 
         message.msg->turn_msg_len = htons(message.msg->turn_msg_len);
-        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint) - sizeof(struct turn_attr_message_integrity), key, sizeof(key), hash);
+        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint) - sizeof(struct turn_attr_message_integrity), account->key, sizeof(account->key), hash);
 
         /* restore length */
         message.msg->turn_msg_len = len_save;
       }
       else
       {
-        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len -  sizeof(struct turn_attr_message_integrity), key, sizeof(key), hash);
+        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len -  sizeof(struct turn_attr_message_integrity), account->key, sizeof(account->key), hash);
       }
 
       if(memcmp(hash, message.message_integrity->turn_attr_hmac, 20) != 0)
@@ -2007,9 +1884,9 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)nonce_key, strlen(nonce_key));
 
-        if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
+        if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
         {  
-          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer);
+          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
           return -1;
         }
 
@@ -2061,7 +1938,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     /* unknown attributes found => error 420 */
     if(!(error = turn_error_response_420(method, message.msg->turn_msg_id, unknown, unknown_size, iov, &index)))
     {
-      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer);
+      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -2110,9 +1987,10 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
  * \param daddr destination address of the message
  * \param saddr_size sizeof addr
  * \param allocation_list list of allocations
+ * \param speer TLS peer, if not NULL, message is relayed in TLS
  * \return 0 if message processed correctly, -1 otherwise
  */
-static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list)
+static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct tls_peer* speer)
 {
   struct allocation_desc* desc = NULL;
   uint8_t peer_addr[16];
@@ -2125,6 +2003,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   struct turn_channel_data channel_data;
   uint32_t padding = 0;
   ssize_t nb = -1;
+  size_t len = 0; /* for TLS */
 
   /* find the allocation associated with the relayed transport address */
   desc = allocation_list_find_relayed(allocation_list, daddr, saddr_size);
@@ -2138,11 +2017,11 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   switch(saddr->sa_family)
   {
     case AF_INET:
-      memcpy(&peer_addr, &((struct sockaddr_in*)saddr)->sin_addr, 4);
+      memcpy(peer_addr, &((struct sockaddr_in*)saddr)->sin_addr, 4);
       peer_port = ntohs(((struct sockaddr_in*)saddr)->sin_port);
       break;
     case AF_INET6:
-      memcpy(&peer_addr, &((struct sockaddr_in6*)saddr)->sin6_addr, 16);
+      memcpy(peer_addr, &((struct sockaddr_in6*)saddr)->sin6_addr, 16);
       peer_port = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
       break;
     default:
@@ -2162,6 +2041,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   
   if(channel != 0)
   {
+    len = sizeof(struct turn_channel_data);
+
     /* send it with ChannelData */
     channel_data.turn_channel_number = htons(channel);
     channel_data.turn_channel_len = htons(buflen); /* big endian */
@@ -2177,11 +2058,14 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
       index++;
     }
 
+    len += buflen;
+
     /* add padding (MUST be included for TCP, MAY be included for UDP) */
     if(buflen % 4)
     {
       iov[index].iov_base = &padding;
       iov[index].iov_len = 4 - (buflen % 4);
+      len += iov[index].iov_len;
       index++;
     }
   }
@@ -2213,16 +2097,23 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
+    len = hdr->turn_msg_len + sizeof(struct turn_msg_hdr);
+
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
   }
 
   /* send it to the tuple (TURN client) */
   debug(DBG_ATTR, "Send data to client\n");
-  if(desc->tuple.transport_protocol == IPPROTO_UDP)
+
+  if(speer)
+  {
+    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), len, iov, index);
+  }
+  else if(desc->tuple.transport_protocol == IPPROTO_UDP)
   {
     nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), iov, index);
   }
-  else
+  else /* TCP */
   {
     nb = turn_tcp_send(desc->tuple_sock, iov, index);
   }
@@ -2376,7 +2267,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         }
         else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
         {
-          debug(DBG_ATTR, "Bad STUN / TURN message\n");
+          debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
         }
       }
       else
@@ -2393,7 +2284,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
       if(tmp->sock > 0 && tmp->sock < max_fd && SFD_ISSET(tmp->sock, &fdsr))
       {
-        debug(DBG_ATTR, "Received TCP on listening address\n");
+        debug(DBG_ATTR, "Received data from TCP client\n");
 
         memset(buf, 0x00, sizeof(buf));
         nb = recv(tmp->sock, buf, sizeof(buf), 0);
@@ -2418,7 +2309,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             {
               if(turnserver_listen_recv(IPPROTO_TCP, tmp->sock, buf2, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer) == -1)
               {
-                debug(DBG_ATTR, "Bad STUN / TURN message\n");
+                debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
               }
             }
             else
@@ -2432,7 +2323,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             /* non-TLS data */
             if(turnserver_listen_recv(IPPROTO_TCP, tmp->sock, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
             {
-              debug(DBG_ATTR, "Bad STUN / TURN message\n");
+              debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
             }
           }
         }
@@ -2455,6 +2346,8 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     {
       struct socket_desc* sdesc = NULL;
       int sock = accept(sock_tcp, (struct sockaddr*)&saddr, &saddr_size);
+
+      debug(DBG_ATTR, "Received TCP on listening address\n");
 
       if(sock > 0)
       {
@@ -2504,7 +2397,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
         if(nb > 0)
         {
-          turnserver_relayed_recv(buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list);
+          turnserver_relayed_recv(buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, tmp->relayed_tls ? speer : NULL);
         }
         else
         {
@@ -2518,6 +2411,19 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     get_error(errno, error_str, sizeof(error_str));
     debug(DBG_ATTR, "select() failed : %s\n", error_str);
   }
+}
+
+/**
+ * \brief Cleanup function used when fork() to correctly free() ressources.
+ * \param arg argument, in this case it is the account_list pointer
+ */
+static void turnserver_cleanup(void* arg)
+{
+  list_head* accounts = arg; /* account_list */
+
+  /* configuration file */
+  turnserver_cfg_free();
+  account_list_free(accounts);
 }
 
 /**
@@ -2675,7 +2581,7 @@ int main(int argc, char** argv)
 
   if(turnserver_cfg_daemon())
   {
-    if(go_daemon("./", 0, turnserver_cfg_free) == -1)
+    if(go_daemon("./", 0, turnserver_cleanup, &account_list) == -1)
     {
       fprintf(stderr, "Failed to start daemon, exiting...\n");
       turnserver_cfg_free();
@@ -2701,7 +2607,7 @@ int main(int argc, char** argv)
   {
     /* libssl initialization */
     SSL_library_init();
-    /*  OpenSSL_add_all_algorithms(); */
+    /* OpenSSL_add_all_algorithms(); */
     SSL_load_error_strings();
     ERR_load_crypto_strings();
 
@@ -2736,7 +2642,6 @@ int main(int argc, char** argv)
   }
   else
   {
-
     run = 1;
   }
 
@@ -2764,6 +2669,14 @@ int main(int argc, char** argv)
          */
         if(tmp->expired)
         {
+          /* find the account and decrement allocations */
+          struct account_desc* desc = account_list_find(&account_list, tmp->username, NULL);
+          if(desc)
+          {
+            desc->allocations--;
+            debug(DBG_ATTR, "Account %s, allocations used: %u\n", desc->username, desc->allocations);
+          }
+
           /* remove it from the list of valid allocation */
           LIST_DEL(&tmp->list);
           LIST_DEL(&tmp->list2);

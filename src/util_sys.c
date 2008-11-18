@@ -151,7 +151,7 @@ extern "C"
     return error;
   }
 
-  int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void))
+  int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg), void* arg)
   {
     pid_t pid = -1;
     long i = 0;
@@ -168,7 +168,7 @@ extern "C"
     {
       if(cleanup)
       {
-        cleanup();
+        cleanup(arg);
       }
       _exit(EXIT_SUCCESS);
     }
