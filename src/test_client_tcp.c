@@ -441,7 +441,7 @@ int main(int argc, char** argv)
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
-#if 0
+#if 1
   printf("Send ChannelBind request\n");
   nb = turn_tcp_send(sock, iov, index);
   nb = recv(sock, buf, sizeof(buf), 0);
@@ -467,8 +467,9 @@ int main(int argc, char** argv)
   nb = turn_tcp_send(sock, iov, index);
 
   iovec_free_data(iov, index);
+  index = 0;
 
-#if 1
+#if 0 
   nb3 = recv(sock, buf, 1024, 0);
   nb = turn_parse_message(buf, nb3, &message, tabu, &tabu_size);
 
@@ -482,8 +483,6 @@ int main(int argc, char** argv)
   }
 #endif
 
-
-  index = 0;
   sleep(1);
 
   /* ChannelData */
@@ -512,7 +511,7 @@ int main(int argc, char** argv)
     printf("ChannelData\n");
     turn_tcp_send(sock, iov, index);
 
-#if 0 
+#if 1
     nb3 = recv(sock, buf, 1024, 0);
     if(nb3 > 0)
     {
@@ -524,7 +523,6 @@ int main(int argc, char** argv)
       printf("I receive %s (channel data)\n", received);
     }
 #endif
-
   }
 
   sleep(1);

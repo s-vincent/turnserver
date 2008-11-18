@@ -304,8 +304,7 @@ int main(int argc, char** argv)
   iovec_free_data(iov, index);
 
   nb = recv(sock, buf, sizeof(buf), 0);
-  /* XXX */
-  nb = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
 
   nb2 = 0;
   nb = turn_parse_message(buf2, (size_t)nb, &message, NULL, (size_t*)&nb2);
@@ -518,6 +517,9 @@ int main(int argc, char** argv)
   printf("Send Send indication request\n");
   nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
 
+  iovec_free_data(iov, index);
+  index = 0;
+
 #if 0
   nb2 = recv(speer->sock, buf, sizeof(buf), 0);
   nb2 = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
@@ -538,8 +540,6 @@ int main(int argc, char** argv)
   }
 #endif
 
-  iovec_free_data(iov, index);
-  index = 0;
   sleep(1);
 
   /* ChannelData */
@@ -572,6 +572,8 @@ int main(int argc, char** argv)
 
     printf("ChannelData len = %zu\n", data_len);
     nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, data_len, iov, index);
+
+    iovec_free_data(iov, index);
   
 #if 1
     nb2 = recv(speer->sock, buf, sizeof(buf), 0);
