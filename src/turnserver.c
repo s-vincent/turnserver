@@ -638,7 +638,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     optlen = 0;
 #endif
 
-    debug(DBG_ATTR, "Send ChannelDatata to peer\n");
+    debug(DBG_ATTR, "Send ChannelData to peer\n");
     nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, desc->relayed_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
 
     if(optlen)
@@ -2288,6 +2288,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   struct turn_channel_data channel_data;
   uint32_t padding = 0;
   ssize_t nb = -1;
+  size_t len = 0; /* for TLS */
 
   /* find the allocation associated with the relayed transport address */
   desc = allocation_list_find_relayed(allocation_list, daddr, saddr_size);
@@ -2325,6 +2326,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 
   if(channel != 0)
   {
+    len = sizeof(struct turn_channel_data);
+    
     /* send it with ChannelData */
     channel_data.turn_channel_number = htons(channel);
     channel_data.turn_channel_len = htons(buflen); /* big endian */
@@ -2337,14 +2340,17 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     {
       iov[index].iov_base = (void*)buf;
       iov[index].iov_len = buflen;
+      len += buflen;
       index++;
     }
+
 
     /* add padding (MUST be included for TCP, MAY be included for UDP) */
     if(buflen % 4)
     {
       iov[index].iov_base = &padding;
       iov[index].iov_len = 4 - (buflen % 4);
+      len += iov[index].iov_len;
       index++;
     }
   }
@@ -2376,6 +2382,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
+    len = hdr->turn_msg_len + sizeof(struct turn_msg_hdr);
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
   }
 
@@ -2384,7 +2391,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 
   if(speer)
   {
-    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), ntohs(hdr->turn_msg_len), iov, index);
+    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), len, iov, index);
   }
   else if(desc->tuple.transport_protocol == IPPROTO_UDP)
   {

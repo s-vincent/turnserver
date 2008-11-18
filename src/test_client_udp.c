@@ -454,7 +454,7 @@ int main(int argc, char** argv)
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
-#if 1 
+#if 0
   printf("Send ChannelBind request\n");
   nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
   nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
@@ -543,7 +543,22 @@ int main(int argc, char** argv)
 
   iovec_free_data(iov, index);
   index = 0;
-  sleep(2);
+
+#if 1
+  nb3 = recvfrom(sock, buf, 1024, 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb = turn_parse_message(buf, nb3, &message, tabu, &tabu_size);
+
+  if(message.data)
+  {
+    char received[1024];
+    printf("Received %u bytes\n", ntohs(message.data->turn_attr_len));
+    memcpy(received, message.data->turn_attr_data, ntohs(message.data->turn_attr_len));
+    received[ntohs(message.data->turn_attr_len)] = 0x00;
+    printf("I receive %s\n", received);
+  }
+#endif
+
+  sleep(1);
 
   /* ChannelData */
   {
@@ -562,6 +577,19 @@ int main(int argc, char** argv)
 
     printf("ChannelData\n");
     turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
+
+#if 0
+    nb3 = recvfrom(sock, buf, 1024, 0, (struct sockaddr*)&daddr, &daddr_size);
+    if(nb3 > 0)
+    {
+      char received[1024];
+      struct turn_channel_data* dt = (struct turn_channel_data*)buf;
+      printf("Received %u bytes\n", ntohs(dt->turn_channel_len));
+      memcpy(received, dt->turn_channel_data, ntohs(dt->turn_channel_len));
+      received[ntohs(dt->turn_channel_len)] = 0x00;
+      printf("I receive %s (channel data)\n", received);
+    }
+#endif
   }
 
   sleep(1);

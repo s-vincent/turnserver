@@ -458,13 +458,14 @@ int main(int argc, char** argv)
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
+#if 1
   printf("Send ChannelBind request\n");
   nb = turn_tcp_send(sock, iov, index);
+  nb = recv(sock, buf, sizeof(buf), 0);
+#endif
 
   iovec_free_data(iov, index);
   index = 0;
-
-  nb = recv(sock, buf, sizeof(buf), 0);
 
   /* CreatePermission */
   hdr = turn_msg_createpermission_request_create(0, id, &iov[index]);
@@ -542,6 +543,21 @@ int main(int argc, char** argv)
 
   iovec_free_data(iov, index);
   index = 0;
+
+#if 0 
+  nb3 = recv(sock, buf, 1024, 0);
+  nb = turn_parse_message(buf, nb3, &message, tabu, &tabu_size);
+
+  if(message.data)
+  {
+    char received[1024];
+    printf("Received %u bytes\n", ntohs(message.data->turn_attr_len));
+    memcpy(received, message.data->turn_attr_data, ntohs(message.data->turn_attr_len));
+    received[ntohs(message.data->turn_attr_len)] = 0x00;
+    printf("I receive %s\n", received);
+  }
+#endif
+
   sleep(1);
 
   /* ChannelData */
@@ -569,6 +585,19 @@ int main(int argc, char** argv)
 
     printf("ChannelData\n");
     turn_tcp_send(sock, iov, index);
+
+#if 1
+    nb3 = recv(sock, buf, 1024, 0);
+    if(nb3 > 0)
+    {
+      char received[1024];
+      struct turn_channel_data* dt = (struct turn_channel_data*)buf;
+      printf("Received %u bytes\n", ntohs(dt->turn_channel_len));
+      memcpy(received, dt->turn_channel_data, ntohs(dt->turn_channel_len));
+      received[ntohs(dt->turn_channel_len)] = 0x00;
+      printf("I receive %s (channel data)\n", received);
+    }
+#endif
   }
 
   sleep(1);

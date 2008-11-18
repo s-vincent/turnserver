@@ -321,6 +321,7 @@ int main(int argc, char** argv)
   iovec_free_data(iov, index);
 
   nb = recv(sock, buf, sizeof(buf), 0);
+  nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
 
   nb2 = 0;
   nb = turn_parse_message(buf, (size_t)nb, &message, NULL, (size_t*)&nb2);
@@ -438,6 +439,7 @@ int main(int argc, char** argv)
   index = 0;
 
   nb = recv(sock, buf, sizeof(buf), 0);
+  nb2 = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
 
   /* ChannelBind request */
   hdr = turn_msg_channelbind_request_create(0, id, &iov[index]);
@@ -506,13 +508,15 @@ int main(int argc, char** argv)
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
 
+#if 1
   printf("Send ChannelBind request\n");
   nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
+  nb = recv(sock, buf, sizeof(buf), 0);
+  nb2 = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+#endif
 
   iovec_free_data(iov, index);
   index = 0;
-
-  nb = recv(sock, buf, sizeof(buf), 0);
 
   /* CreatePermission */
   hdr = turn_msg_createpermission_request_create(0, id, &iov[index]);
@@ -568,6 +572,7 @@ int main(int argc, char** argv)
   printf("Send CreatePermission request\n");
   nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
   nb = recv(sock, buf, sizeof(buf), 0);
+  nb2 = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
 #endif
   iovec_free_data(iov, index);
   index = 0;
@@ -591,6 +596,26 @@ int main(int argc, char** argv)
   iovec_free_data(iov, index);
   index = 0;
   sleep(1);
+
+#if 0
+  nb2 = recv(speer->sock, buf, sizeof(buf), 0);
+  nb2 = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb = turn_parse_message(buf2, nb2, &message, tabu, &tabu_size);
+
+  if(nb == -1)
+  {
+    printf("turn_parse_message failed\n");
+  }
+
+  if(message.data)
+  {
+    char received[8192];
+    printf("Received %u bytes\n", ntohs(message.data->turn_attr_len));
+    memcpy(received, message.data->turn_attr_data, ntohs(message.data->turn_attr_len));
+    received[ntohs(message.data->turn_attr_len)] = 0x00;
+    printf("I receive %s\n", received);
+  }
+#endif
 
   /* ChannelData */
   {
@@ -622,6 +647,21 @@ int main(int argc, char** argv)
 
     printf("ChannelData len = %zu\n", data_len);
     nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, data_len, iov, index);
+
+#if 1
+    nb2 = recv(speer->sock, buf, sizeof(buf), 0);
+    nb2 = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+
+    if(nb2 > 0)
+    {
+      char received[8192];
+      struct turn_channel_data* dt = (struct turn_channel_data*)buf2;
+      printf("Received %u bytes\n", ntohs(dt->turn_channel_len));
+      memcpy(received, dt->turn_channel_data, ntohs(dt->turn_channel_len));
+      received[ntohs(dt->turn_channel_len)] = 0x00;
+      printf("I receive %s (channel data)\n", received);
+    }
+#endif
   }
 
   sleep(1);
