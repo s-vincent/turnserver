@@ -64,7 +64,7 @@ typedef unsigned __int64 uint64_t;
 #define STUN_SUCCESS_RESP               0x0100
 #define STUN_ERROR_RESP                 0x0110
 
-/* macros from RFC3489bis to determine class of the message */
+/* macros from RFC5389 to determine class of the message */
 #define STUN_IS_REQUEST(msg_type)       (((msg_type) & 0x0110) == STUN_REQUEST)
 #define STUN_IS_INDICATION(msg_type)    (((msg_type) & 0x0110) == STUN_INDICATION)
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)

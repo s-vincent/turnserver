@@ -71,7 +71,7 @@
 
 /**
  * \def SIGRT_EXPIRE_CHANNEL
- * \brief Signal value when  channel expires.
+ * \brief Signal value when channel expires.
  */
 #define SIGRT_EXPIRE_CHANNEL (SIGRTMIN + 2)
 
@@ -636,7 +636,7 @@ int turn_generate_transaction_id(uint8_t* id);
 /**
  * \brief Generate a nonce value.
  *
- * nonce = 64-bit timestamp  MD5(timestamp ":" key)
+ * nonce = 64-bit timestamp MD5(timestamp ":" key)
  *
  * When time_t is 4 bytes, the timestamp is padded with 0x30.
  *

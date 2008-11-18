@@ -259,7 +259,8 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
 /**
  * \brief Print help menu.
- * \param name name of the program.
+ * \param name name of the program
+ * \param version version of the program
  */
 static void turnserver_print_help(char* name, char* version)
 {
@@ -328,7 +329,7 @@ static void turnserver_disable_core_dump(void)
  * \param error error code
  * \param speer TLS peer, if not NULL, send the error in TLS
  * \param key MD5 hash of account, if present, MESSAGE-INTEGRITY / FINGERPRINT will be added
- * \note Some error codes cannot be sent using this function (440, 438, ...).
+ * \note Some error codes cannot be sent using this function (420, 438, ...).
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer, unsigned char* key)
@@ -476,7 +477,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-  /* do not take in count the attribute itself */
+  /* do not take into account the attribute itself */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
@@ -703,7 +704,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
     return -1;
   }
 
-  /* copy peer address */
   switch(message->peer_addr[0]->turn_attr_family)
   {
     case STUN_ATTR_FAMILY_IPV4:
@@ -714,10 +714,12 @@ static int turnserver_process_send_indication(const struct turn_message* message
       break;
     default:
       return -1;
+      break;
   }
 
+  /* copy peer address */
   memcpy(peer_addr, message->peer_addr[0]->turn_attr_address, len);
-  peer_port = ntohs( message->peer_addr[0]->turn_attr_port);
+  peer_port = ntohs(message->peer_addr[0]->turn_attr_port);
 
   if(turn_xor_address_cookie(message->peer_addr[0]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
@@ -908,7 +910,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     }
 
     memcpy(peer_addr, message->peer_addr[j]->turn_attr_address, len);
-    peer_port = ntohs( message->peer_addr[j]->turn_attr_port);
+    peer_port = ntohs(message->peer_addr[j]->turn_attr_port);
 
     if(turn_xor_address_cookie(message->peer_addr[j]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
     {
@@ -1056,7 +1058,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
       break;
   }
 
-  memcpy(&peer_addr, message->peer_addr[0]->turn_attr_address, len);
+  memcpy(peer_addr, message->peer_addr[0]->turn_attr_address, len);
   peer_port = ntohs(message->peer_addr[0]->turn_attr_port);
 
   if(turn_xor_address_cookie(family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
@@ -1223,12 +1225,11 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     /* lifetime = 0 delete the allocation */
     allocation_desc_set_timer(desc, 0); /* stop timeout */
     LIST_DEL(&desc->list2); /* in case the allocation has expired during this statement */
+    allocation_list_remove(allocation_list, desc);
 
     /* decrement allocations for the account */
     account->allocations--;
     debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
-    
-    allocation_list_remove(allocation_list, desc);
 
     debug(DBG_ATTR, "Explicit delete of allocation\n");
   }
@@ -1579,10 +1580,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm, message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
 
-  /* increment number of allocations */
-  account->allocations++;
-  debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
-
   if(!desc)
   {
     /* send error response with code 500 */
@@ -1591,6 +1588,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
   
+  /* increment number of allocations */
+  account->allocations++;
+  debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
+
   if(speer)
   {
     desc->relayed_tls = 1;
@@ -1756,7 +1757,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
       if(STUN_IS_REQUEST(hdr_msg_type)) /* the refresh function will handle this case */
       {
         /* => error 437 */ 
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, desc->key);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, account->key);
         return 0;
       }
 
@@ -2300,11 +2301,11 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   switch(saddr->sa_family)
   {
     case AF_INET:
-      memcpy(&peer_addr, &((struct sockaddr_in*)saddr)->sin_addr, 4);
+      memcpy(peer_addr, &((struct sockaddr_in*)saddr)->sin_addr, 4);
       peer_port = ntohs(((struct sockaddr_in*)saddr)->sin_port);
       break;
     case AF_INET6:
-      memcpy(&peer_addr, &((struct sockaddr_in6*)saddr)->sin6_addr, 16);
+      memcpy(peer_addr, &((struct sockaddr_in6*)saddr)->sin6_addr, 16);
       peer_port = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
       break;
     default:

@@ -1370,7 +1370,7 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   /* convert length to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-  /* do not take count the attribute itself */
+  /* do not take into account the attribute itself */
   turn_calculate_integrity_hmac_iov(iov, (*index) - 1, key, key_len, ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
 
   if(add_fingerprint)
@@ -1395,7 +1395,7 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
     /* convert to big endian */
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-    /* do not take in count the attribute itself */
+    /* do not take into account the attribute itself */
     ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
     ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
   }
