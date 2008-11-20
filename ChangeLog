@@ -9,7 +9,9 @@
                             - Correctly relayed data from peer to client in TLS;
                             - Multiple XOR-PEER-ADDRESS support in CreatePermission;
                             - Update wireshark parser (packet-stun2.c);
-                            - Allocation number quota.
+                            - Additionnal configuration parameters;
+                            - Allocation number quota;
+                            - Address / port restrictions.
 
 2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
