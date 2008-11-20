@@ -442,6 +442,8 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   struct turn_attr_hdr* attr = NULL;
   ssize_t nb = -1;
 
+  debug(DBG_ATTR, "Binding request received!\n");
+
   if(!(hdr = turn_msg_binding_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
     return -1;
@@ -529,6 +531,8 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   size_t len = 0;
   char* msg = NULL;
   ssize_t nb = -1;
+
+  debug(DBG_ATTR, "ChannelData received!\n");
 
   channel_data = (struct turn_channel_data*)buf;
   len = ntohs(channel_data->turn_channel_len);
@@ -659,6 +663,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
   ssize_t nb = -1;
+
+  debug(DBG_ATTR, "Send indication received!\n");
 
   if(!message->peer_addr)
   {
@@ -793,6 +799,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   uint8_t* p = (uint8_t*)&cookie;
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
+
+  debug(DBG_ATTR, "ChannelBind request received!\n");
 
   if(!message->channel_number || !message->peer_addr)
   {
@@ -958,6 +966,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   ssize_t nb = -1;
+  
+  debug(DBG_ATTR, "Refresh request received!\n");
 
   /* draft-ietf-behave-turn-ipv6-04 : at this stage we know the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
@@ -1094,6 +1104,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint8_t reservation_token[8];
   char str[INET6_ADDRSTRLEN];
   int has_token = 0;
+  
+  debug(DBG_ATTR, "Allocate request received!\n");
 
   /* check if it was a valid allocation */
   desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size);
