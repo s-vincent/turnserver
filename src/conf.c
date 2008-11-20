@@ -63,13 +63,14 @@ extern int cfg_yylex_destroy(void);
 #endif
 
 /** 
- * \var cfg_address_opts
+ * \var deny_address_opts
  * \brief Deny address option.
  */
 static cfg_opt_t deny_address_opts[] =
 {
   CFG_STR("address", "", CFGF_NONE),
   CFG_INT("mask", 24, CFGF_NONE),
+  CFG_INT("port", 0, CFGF_NONE),
   CFG_END()
 };
 
@@ -96,7 +97,7 @@ static cfg_opt_t opts[]=
   CFG_STR("realm", "domain.org", CFGF_NONE),
   CFG_STR("account_method", "file", CFGF_NONE),
   CFG_STR("account_file", "users.txt", CFGF_NONE),
-  CFG_SEC("deny_address", deny_address_opts, CFGF_TITLE | CFGF_MULTI),
+  CFG_SEC("deny_address", deny_address_opts, CFGF_MULTI),
   /* the following attributes are not used for the moment */
   CFG_STR("account_db_login", "anonymous", CFGF_NONE),
   CFG_STR("account_db_password", "anonymous", CFGF_NONE),
@@ -115,6 +116,7 @@ struct deny_address
   int family; /**< AF family (AF_INET or AF_INET6) */
   uint8_t addr[16]; /**< IPv4 or IPv6 address */
   uint8_t mask; /**< Network mask of the address */
+  uint16_t port; /**< Port */
   struct list_head list; /**< For list management */
 };
 
@@ -125,10 +127,10 @@ struct deny_address
 static cfg_t* cfg = NULL;
 
 /**
- * \var deny_list
+ * \var deny_address_list
  * \brief The denied address list.
  */
-struct list_head deny_list;
+struct list_head deny_address_list;
 
 int turnserver_cfg_parse(const char* file)
 {
@@ -136,7 +138,10 @@ int turnserver_cfg_parse(const char* file)
   size_t i = 0;
   cfg = cfg_init(opts, CFGF_NONE);
 
+  INIT_LIST(deny_address_list);
+
   ret = cfg_parse(cfg, file);
+
   if (ret == CFG_FILE_ERROR)
   {
     fprintf(stderr, "Cannot find configuration file %s\n", file);
@@ -154,12 +159,19 @@ int turnserver_cfg_parse(const char* file)
     cfg_t* ad = cfg_getnsec(cfg, "deny_address", i);
     char* addr = cfg_getstr(ad, "address");
     uint8_t mask = cfg_getint(ad, "mask");
-    struct deny_address* denied = malloc(sizeof(struct deny_address));
+    uint16_t port = cfg_getint(ad, "port");
+    struct deny_address* denied = NULL;
+    
+    denied = malloc(sizeof(struct deny_address));
 
     if(!denied)
     {
       return -3;
     }
+
+    memset(denied, 0x00, sizeof(struct deny_address));
+    denied->mask = mask;
+    denied->port = port;
 
     if(inet_pton(AF_INET, addr, denied->addr) != 1)
     {
@@ -192,7 +204,7 @@ int turnserver_cfg_parse(const char* file)
     }
 
     /* add to the list */
-    LIST_ADD(&denied->list, &deny_list);
+    LIST_ADD(&denied->list, &deny_address_list);
   }
 
   return 0;
@@ -218,9 +230,10 @@ void turnserver_cfg_free(void)
 #endif
   }
 
-  list_iterate_safe(get, n, &deny_list)
+  list_iterate_safe(get, n, &deny_address_list)
   {
     struct deny_address* tmp = list_get(get, struct deny_address, list);
+    LIST_DEL(&tmp->list);
     free(tmp);
   }
 }
@@ -335,19 +348,23 @@ uint16_t turnserver_cfg_account_db_port(void)
   return cfg_getint(cfg, "account_db_port");
 }
 
-int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen)
+int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port)
 {
   struct list_head* get = NULL; 
   struct list_head* n = NULL;
+  uint8_t nb = 0;
+  uint8_t mod = 0;
+  size_t i = 0;
 
   if(addrlen > 16)
   {
     return 0;
   }
 
-  list_iterate_safe(get, n, &deny_list)
+  list_iterate_safe(get, n, &deny_address_list)
   {
     struct deny_address* tmp = list_get(get, struct deny_address, list);
+    int  diff = 0;
    
     /* compare addresses from same family */
     if((tmp->family == AF_INET6 && addrlen != 16) ||
@@ -356,11 +373,51 @@ int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen)
       continue;
     }
 
-    /* XXX compare bits */
-    if(!memcmp(tmp->addr, addr, tmp->mask / 8))
+    nb = (uint8_t)(tmp->mask / 8);
+
+    for(i = 0 ; i < nb ; i++)
     {
-      /* match */
-      return 1;
+      if(tmp->addr[i] != addr[i])
+      {
+        diff = 1;
+        break;
+      }
+    }
+
+    /* if mismatch in the addresses */
+    if(diff)
+    {
+      continue;
+    }
+
+    /* OK so now the full bytes from the address are the same, 
+     * check for last bit if any.
+     */
+    mod = (tmp->mask % 8);
+
+    if(mod)
+    {
+      uint8_t b = 0;
+
+      for(i = 0 ; i < mod ; i++)
+      {
+        b |= (1 << (7 - i));
+      }
+
+      if((tmp->addr[nb] & b) == (addr[nb] & b))
+      {
+        if(tmp->port == 0 || tmp->port == port)
+        {
+          return 1;
+        }
+      }
+    }
+    else
+    {
+      if(tmp->port == 0 || tmp->port == port)
+      {
+        return 1;
+      }
     }
   }
 

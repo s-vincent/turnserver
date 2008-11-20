@@ -57,6 +57,26 @@ Maximum number of allocation per username.
 Lifetime of an allocation in second.
 
 .TP
+.nf
+.BR "deny_list {"
+.BR " address " "= IPv4 | IPv6 address"
+.BR " mask " "= bitmask number"
+.BR " port " "= number (1 - 65535)"
+.B }
+.fi
+
+Defines an entry for the deny access list. This can appear multiple time. Format is defined as follow:
+.br
+.B address 
+is a string representing an IPv4 or IPv6 address.
+.br
+.B mask
+is a number representing the bitmask (i.e. 24 is similar as 255.255.255.0, ...).
+.br
+.B port
+is a number representing the network port. The 0 value means all ports.
+
+.TP
 .BR "ca_file " "= string"
 The pathname of the Certification Authority certificate (required when tls=true).
 
@@ -98,6 +118,12 @@ daemon = false
 max_relay_per_username = 10
 
 allocation_lifetime = 1800
+
+deny_address {
+  address = "172.1.0.3"
+  mask = 24
+  port = 0
+}
 
 ca_file = "/etc/ca.crt"
 

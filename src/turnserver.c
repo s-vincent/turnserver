@@ -439,6 +439,8 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   struct turn_attr_hdr* attr = NULL;
   ssize_t nb = -1;
 
+  debug(DBG_ATTR, "Binding request received!\n");
+
   if(!(hdr = turn_msg_binding_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
     return -1;
@@ -530,6 +532,8 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   int optval = 0;
   int save_val =0;
   socklen_t optlen = sizeof(int);
+
+  debug(DBG_ATTR, "ChannelData received!\n");
 
   channel_data = (struct turn_channel_data*)buf;
   len = ntohs(channel_data->turn_channel_len);
@@ -689,7 +693,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   int save_val = 0;
   socklen_t optlen = sizeof(int);
 
-  debug(DBG_ATTR, "Send Indication received!\n");
+  debug(DBG_ATTR, "Send indication received!\n");
 
   if(!message->peer_addr[0] || !message->data)
   {
@@ -723,6 +727,14 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
   if(turn_xor_address_cookie(message->peer_addr[0]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
+    return -1;
+  }
+
+  if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+  {
+    char str[INET6_ADDRSTRLEN];
+    debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
+    /* XXX send response ? */
     return -1;
   }
 
@@ -874,6 +886,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   size_t index = 0;
   ssize_t nb = -1;
 
+  debug(DBG_ATTR, "CreatePermission request received\n");
+
   if(message->xor_peer_addr_overflow)
   {
     /* too many XOR-PEER-ADDRESS attributes => error 508 */
@@ -917,7 +931,13 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
       return -1;
     }
 
-    /* TODO server may restrict IP address */
+    if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+    {
+      char str[INET6_ADDRSTRLEN];
+      debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
+      /* XXX send response ? */
+      continue;
+    }
 
     /* find a permission */
     alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
@@ -1015,6 +1035,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
 
+  debug(DBG_ATTR, "ChannelBind request received!\n");
+
   if(!message->channel_number || !message->peer_addr[0])
   {
     /* attributes missing => error 400 */
@@ -1042,7 +1064,6 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, desc->key);
     return -1;
-
   }
 
   switch(family)
@@ -1063,6 +1084,13 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   if(turn_xor_address_cookie(family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
+    return -1;
+  }
+  
+  if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+  {
+    debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
+    /* XXX send response ? */
     return -1;
   }
   
@@ -1188,6 +1216,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   ssize_t nb = -1;
+
+  debug(DBG_ATTR, "Refresh request received!\n");
 
   /* draft-ietf-behave-turn-ipv6-05 : at this stage we know the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
@@ -1322,6 +1352,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint8_t reservation_token[8];
   char str[INET6_ADDRSTRLEN];
   int has_token = 0;
+
+  debug(DBG_ATTR, "Allocate request received!\n");
 
   /* check if it was a valid allocation */
   desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size);

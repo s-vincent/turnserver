@@ -33,6 +33,13 @@ max_relay_per_username = 5
 ## Allocation lifetime.
 allocation_lifetime = 1800
 
+## Deny list
+#deny_address {
+#  address = "10.1.4.0"
+#  mask = 24
+#  port = 0
+#}
+
 ## Certification Authority file.
 ca_file = "./ca.crt"
 

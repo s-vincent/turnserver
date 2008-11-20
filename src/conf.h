@@ -46,6 +46,7 @@
 #include <stdint.h>
 #include <limits.h>
 
+#if 0 /* not used for the moment */
 /**
  * \struct turnserver_cfg
  * \brief TurnServer configuration.
@@ -70,6 +71,7 @@ struct turnserver_cfg
   char account_method; /**< Method (only "file" are implemented) */
   char account_file[PATH_MAX]; /**< Account file */
 };
+#endif
 
 /**
  * \brief Parse the configuration file.
@@ -228,12 +230,13 @@ char* turnserver_cfg_account_db_address(void);
 uint16_t turnserver_cfg_account_db_port(void);
 
 /**
- * \brief Verify if address is in deny list.
+ * \brief Verify if address / port is in deny list.
  * \param addr IPv4 / IPv6 address to check
  * \param addrlen sizeof the address (IPv4 = 4, IPv6 = 16)
+ * \param port port to check
  * \return 1 if address is denied, 0 otherwise
  */
-int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen);
+int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port);
 
 #endif /* CONF_H */
 
