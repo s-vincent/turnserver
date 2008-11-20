@@ -40,9 +40,15 @@
 #include <config.h>
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
+#include <arpa/inet.h>
+
 #include <confuse.h>
 
 #include "conf.h"
+#include "list.h"
 
 /* remove extern function because this does not compile on some libconfuse version (< 2.6) */
 #if 0 
@@ -55,6 +61,17 @@
  */
 extern int cfg_yylex_destroy(void);
 #endif
+
+/** 
+ * \var cfg_address_opts
+ * \brief Deny address option.
+ */
+static cfg_opt_t deny_address_opts[] =
+{
+  CFG_STR("address", "", CFGF_NONE),
+  CFG_INT("mask", 24, CFGF_NONE),
+  CFG_END()
+};
 
 /**
  * \var opts
@@ -79,6 +96,7 @@ static cfg_opt_t opts[]=
   CFG_STR("realm", "domain.org", CFGF_NONE),
   CFG_STR("account_method", "file", CFGF_NONE),
   CFG_STR("account_file", "users.txt", CFGF_NONE),
+  CFG_SEC("deny_address", deny_address_opts, CFGF_TITLE | CFGF_MULTI),
   /* the following attributes are not used for the moment */
   CFG_STR("account_db_login", "anonymous", CFGF_NONE),
   CFG_STR("account_db_password", "anonymous", CFGF_NONE),
@@ -89,14 +107,33 @@ static cfg_opt_t opts[]=
 };
 
 /**
+ * \struct deny_address
+ * \brief Describes an address.
+ */
+struct deny_address
+{
+  int family; /**< AF family (AF_INET or AF_INET6) */
+  uint8_t addr[16]; /**< IPv4 or IPv6 address */
+  uint8_t mask; /**< Network mask of the address */
+  struct list_head list; /**< For list management */
+};
+
+/**
  * \var cfg
  * \brief Config pointer.
  */
 static cfg_t* cfg = NULL;
 
+/**
+ * \var deny_list
+ * \brief The denied address list.
+ */
+struct list_head deny_list;
+
 int turnserver_cfg_parse(const char* file)
 {
   int ret = 0;
+  size_t i = 0;
   cfg = cfg_init(opts, CFGF_NONE);
 
   ret = cfg_parse(cfg, file);
@@ -110,6 +147,54 @@ int turnserver_cfg_parse(const char* file)
     fprintf(stderr, "Parse error in configuration file %s\n", file);
     return -2;
   }
+
+  /* add the denied address */
+  for(i = 0 ; i < cfg_size(cfg, "deny_address") ; i++)
+  {
+    cfg_t* ad = cfg_getnsec(cfg, "deny_address", i);
+    char* addr = cfg_getstr(ad, "address");
+    uint8_t mask = cfg_getint(ad, "mask");
+    struct deny_address* denied = malloc(sizeof(struct deny_address));
+
+    if(!denied)
+    {
+      return -3;
+    }
+
+    if(inet_pton(AF_INET, addr, denied->addr) != 1)
+    {
+      /* try IPv6 */
+      if(inet_pton(AF_INET6, addr, denied->addr) != 1)
+      {
+        free(denied);
+        return -2;
+      }
+      else
+      {
+        /* check mask */
+        if(mask > 128)
+        {
+          free(denied);
+          return -2;
+        }
+        denied->family = AF_INET6;
+      }
+    }
+    else
+    {
+      /* mask check */
+      if(mask > 24)
+      {
+        free(denied);
+        return -2;
+      }
+      denied->family = AF_INET;
+    }
+
+    /* add to the list */
+    LIST_ADD(&denied->list, &deny_list);
+  }
+
   return 0;
 }
 
@@ -121,6 +206,9 @@ void turnserver_cfg_print(void)
 
 void turnserver_cfg_free(void)
 {
+  struct list_head* get = NULL;
+  struct list_head* n = NULL;
+
   if (cfg)
   {
     cfg_free(cfg);
@@ -128,6 +216,12 @@ void turnserver_cfg_free(void)
 #if 0 
     cfg_yylex_destroy();
 #endif
+  }
+
+  list_iterate_safe(get, n, &deny_list)
+  {
+    struct deny_address* tmp = list_get(get, struct deny_address, list);
+    free(tmp);
   }
 }
 
@@ -241,3 +335,34 @@ uint16_t turnserver_cfg_account_db_port(void)
   return cfg_getint(cfg, "account_db_port");
 }
 
+int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen)
+{
+  struct list_head* get = NULL; 
+  struct list_head* n = NULL;
+
+  if(addrlen > 16)
+  {
+    return 0;
+  }
+
+  list_iterate_safe(get, n, &deny_list)
+  {
+    struct deny_address* tmp = list_get(get, struct deny_address, list);
+   
+    /* compare addresses from same family */
+    if((tmp->family == AF_INET6 && addrlen != 16) ||
+       (tmp->family == AF_INET && addrlen != 4))
+    {
+      continue;
+    }
+
+    /* XXX compare bits */
+    if(!memcmp(tmp->addr, addr, tmp->mask / 8))
+    {
+      /* match */
+      return 1;
+    }
+  }
+
+  return 0;
+}

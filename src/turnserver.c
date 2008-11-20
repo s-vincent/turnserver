@@ -155,7 +155,7 @@ static const uint8_t supported_even_port_flags = 0x80;
 struct socket_desc
 {
   int sock; /**< The socket */
-  struct list_head list; /**< for list management */
+  struct list_head list; /**< For list management */
 };
 
 /**
