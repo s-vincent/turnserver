@@ -74,7 +74,7 @@
  * \var software_description
  * \brief Textual description of the server.
  */
-static const char* software_description = "TurnServer 0.1.2.3 by LSIIT's Network Research Team";
+static const char* software_description = "TurnServer 0.1.3 by LSIIT's Network Research Team";
 
 /**
  * \var run
