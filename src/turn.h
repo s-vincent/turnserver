@@ -455,7 +455,7 @@ struct turn_attr_requested_props
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
-  uint32_t turn_attr_flags; /**< flags */
+  uint32_t turn_attr_flags; /**< Flags */
 }__attribute__((packed));
 
 /**

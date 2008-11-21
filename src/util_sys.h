@@ -140,9 +140,9 @@ typedef long int fd_mask;
 typedef struct sfd_set
 {
 #ifndef _WIN32
-  fd_mask fds_bits[SFD_SETSIZE / (8 * sizeof(fd_mask)) + 1]; /**< bitmask */
+  fd_mask fds_bits[SFD_SETSIZE / (8 * sizeof(fd_mask)) + 1]; /**< Bitmask */
 #else
-  fd_mask fds_bits[SFD_SETSIZE]; /**< bitmask */
+  fd_mask fds_bits[SFD_SETSIZE]; /**< Bitmask */
 #endif
 /* For *BSD */
 #define __fds_bits fds_bits

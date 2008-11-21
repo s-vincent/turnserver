@@ -146,7 +146,7 @@ static const uint32_t supported_requested_flags = 0xC0000000;
 struct socket_desc
 {
   int sock; /**< The socket */
-  struct list_head list; /**< for list management */
+  struct list_head list; /**< For list management */
 };
 
 /**

@@ -111,7 +111,7 @@ struct ssl_peer
 {
   SSL* ssl; /**< The remote peer */
   int handshake_complete; /**< State of the handshake */
-  struct sockaddr_storage addr; /**< socket address */
+  struct sockaddr_storage addr; /**< Socket address */
   struct list_head list; /**< For list management */
 };
 
