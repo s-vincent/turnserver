@@ -100,7 +100,7 @@ struct turn_message
   struct turn_attr_fingerprint* fingerprint; /**< FINGERPRINT attribute */
   struct turn_attr_software* software; /**< SOFTWARE attribute */
   struct turn_attr_channel_number* channel_number; /**< CHANNEL-NUMBER attribute */
-  struct turn_attr_lifetime* lifetime; /** LIFETIME attribute */
+  struct turn_attr_lifetime* lifetime; /**< LIFETIME attribute */
   struct turn_attr_peer_address* peer_addr; /**< PEER-ADDRESS attribute */
   struct turn_attr_data* data; /**< DATA attribute */
   struct turn_attr_relayed_address* relayed_addr; /**< RELAYED-ADDRESS attribute */

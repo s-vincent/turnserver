@@ -117,6 +117,9 @@ typedef struct iovec
 #define	MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #ifdef _POSIX_C_SOURCE
+/**
+ * \brief Definition of fd_mask for select() operations.
+ */
 typedef long int fd_mask;
 #endif
 
@@ -141,11 +144,14 @@ typedef struct sfd_set
 {
 #ifndef _WIN32
   fd_mask fds_bits[SFD_SETSIZE / (8 * sizeof(fd_mask)) + 1]; /**< Bitmask */
+/**
+ * \def __fds_bits
+ * \brief Definition of __fds_bits for *BSD.
+ */
+#define __fds_bits fds_bits 
 #else
   fd_mask fds_bits[SFD_SETSIZE]; /**< Bitmask */
 #endif
-/* For *BSD */
-#define __fds_bits fds_bits
 }sfd_set;
 
 /**
