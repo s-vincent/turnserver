@@ -1593,14 +1593,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
-#if 0
-  /* not very useful */
-  if(getnameinfo((struct sockaddr*)&relayed_addr, saddr_size, str, sizeof(str), NULL, 0, NI_NUMERICHOST) == -1)
-  {
-    return -1;
-  }
-#endif
-
   /* TODO quota on bandwidth per username */
 
   if(account->allocations > turnserver_cfg_max_relay_per_username())
