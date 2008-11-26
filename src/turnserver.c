@@ -365,7 +365,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   {
     return -1;
   }
-  index++;
 
   if(error == 508)
   {
