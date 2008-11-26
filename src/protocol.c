@@ -1355,12 +1355,14 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   struct turn_attr_hdr* attr = NULL;
   struct turn_msg_hdr* hdr = iov[0].iov_base;
 
+  if(*index == 0)
+  {
+    /* could not place message-integrity or fingerprint in first place */
+    return -1;
+  }
+
   if(!(attr = turn_attr_message_integrity_create(NULL, &iov[*index])))
   {
-/*
-    iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
-*/
     return -1;
   }
   hdr->turn_msg_len += iov[(*index)].iov_len;
@@ -1375,16 +1377,12 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
 
   if(add_fingerprint)
   {
-
     /* add a fingerprint */
     /* revert to host endianness */
     hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
+
     if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
     {
-/*
-    iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer);
-*/
       return -1;
     }
     hdr->turn_msg_len += iov[(*index)].iov_len;

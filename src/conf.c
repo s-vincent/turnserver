@@ -54,7 +54,7 @@
 #include "list.h"
 
 /* remove extern function because this does not compile on some libconfuse version (< 2.6) */
-#if 0 
+#if 0
 /**
  * \brief Free the resources used by the lex parser.
  *

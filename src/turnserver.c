@@ -374,7 +374,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   {
     return -1;
   }
-  index++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
@@ -558,8 +557,6 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     /* with TCP, length MUST a multiple of four */
     return -1;
   }
-
-  debug(DBG_ATTR, "ChannelData received\n");
 
   desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size);
   if(!desc)
@@ -1965,9 +1962,9 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
    * so now we can process the packet more in details 
    */
 
-  /* check long-term authentication for all requests except for a STUN binding request */
   if(STUN_IS_REQUEST(hdr_msg_type) && method != STUN_METHOD_BINDING)
   {
+    /* check long-term authentication for all requests except for a STUN binding request */
     if(!message.message_integrity)
     {
       /* no messages integrity => error 401 */
@@ -2079,7 +2076,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       iovec_free_data(iov, index);
       return 0;
     }
-
+    
     /* find the desired username and password in the account list */
     {
       char username[514];
@@ -3196,7 +3193,10 @@ int main(int argc, char** argv)
   if(turnserver_cfg_tls())
   {
     /* close TLS socket */
-    tls_peer_free(&speer);
+    if(speer)
+    {
+      tls_peer_free(&speer);
+    }
 
     /* cleanup SSL lib */
     EVP_cleanup();

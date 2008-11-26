@@ -69,14 +69,14 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([dup2 gettimeofday memset select pselect socket strchr strdup strerror sigaction signal])
 
 # Enable compilation in debug mode.
-AC_ARG_ENABLE(debug-build, [  --enable-debug-build   allow to compile with debug informations [default=no]], enable_debug_build=$enableval, enable_debug_build=no)
+AC_ARG_ENABLE(debug-build, [  --enable-debug-build    allow to compile with debug informations [default=no]], enable_debug_build=$enableval, enable_debug_build=no)
 if test "$enable_debug_build" = "yes"; then
   AC_DEFINE([DEBUG_BUILD], [1], [Enable debug build])
 fi
 AM_CONDITIONAL(ENABLE_DEBUG_BUILD, test "$enable_debug_build" = "yes")
 
 # Enable setting FD_SETSIZE.
-AC_ARG_ENABLE(fdsetsize, [  --enable-fdsetsize   allow to preconfigure FD_SETSIZE macro (must be a number >=32) [default=no]], enable_fdsetsize=$enableval, enable_fdsetsize=0)
+AC_ARG_ENABLE(fdsetsize, [  --enable-fdsetsize      allow to preconfigure FD_SETSIZE macro (must be a number >=32) [default=no]], enable_fdsetsize=$enableval, enable_fdsetsize=0)
 if test "$enable_fdsetsize" -ge "32"; then
   AC_DEFINE_UNQUOTED([SFD_SETSIZE], $enable_fdsetsize, [Enable user-defined FD_SETSIZE])
 else
