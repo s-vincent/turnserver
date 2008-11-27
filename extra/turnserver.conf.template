@@ -34,6 +34,7 @@ max_relay_per_username = 5
 allocation_lifetime = 1800
 
 ## Allocation bandwidth limitation (in KBytes/s).
+# 0 value means bandwidth quota disabled.
 bandwidth_per_allocation = 150
 
 ## Deny list

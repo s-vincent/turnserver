@@ -329,7 +329,13 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
 {
   struct timeval now;
   unsigned long diff = 0;
-  double d = 0; 
+  double d = turnserver_cfg_bandwidth_per_allocation();
+
+  if(d <= 0)
+  {
+    /* bandwidth quota disabled */
+    return 0;
+  }
 
   /* check in ms */
   gettimeofday(&now, NULL);
@@ -339,7 +345,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
     if(desc->bucket_tokenup < desc->bucket_capacity)
     {
       diff = (now.tv_sec - desc->last_timeup.tv_sec) * 1000 + (now.tv_usec - desc->last_timeup.tv_usec) / 1000;
-      d = (turnserver_cfg_bandwidth_per_allocation() * diff);
+      d *= diff;
       desc->bucket_tokenup = MIN(desc->bucket_capacity, desc->bucket_tokenup + d);
       gettimeofday(&desc->last_timeup, NULL);
     }
@@ -362,7 +368,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
     if(desc->bucket_tokendown < desc->bucket_capacity)
     {
       diff = (now.tv_sec - desc->last_timedown.tv_sec) * 1000 + (now.tv_usec - desc->last_timedown.tv_usec) / 1000;
-      d = turnserver_cfg_bandwidth_per_allocation() * diff;
+      d *= diff;
       desc->bucket_tokendown = MIN(desc->bucket_capacity, desc->bucket_tokendown + d);
       gettimeofday(&desc->last_timedown, NULL);
     }

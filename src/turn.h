@@ -498,7 +498,6 @@ struct turn_attr_reservation_token
   uint8_t turn_attr_token[8]; /**< Token */
 }__attribute__((packed));
 
-
 #if 0
 
 /**
