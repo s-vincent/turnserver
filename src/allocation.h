@@ -47,6 +47,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include "list.h"
 
@@ -123,6 +124,11 @@ struct allocation_desc
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
   uint8_t transaction_id[12]; /**< Transaction ID of the Allocate Request */
   timer_t expire_timer; /**< Expire timer */
+  unsigned long bucket_capacity; /**< Capacity of token bucket */
+  unsigned long bucket_tokenup; /**< Number of tokens available for upload */
+  unsigned long bucket_tokendown; /**< Number of tokens available for download */
+  struct timeval last_timeup ; /**< Last time of bandwidth limit checking for upload */
+  struct timeval last_timedown ; /**< Last time of bandwidth limit checking for download */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };

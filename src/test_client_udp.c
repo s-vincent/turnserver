@@ -89,6 +89,7 @@ int main(int argc, char** argv)
   size_t n_len = 0;
   uint8_t token[8];
   char peer_port[8];
+  char buff[2500];
 
   if(argc != 5)
   {
@@ -336,7 +337,7 @@ int main(int argc, char** argv)
   index++;
 
   /* LIFETIME */
-  attr = turn_attr_lifetime_create(0x00000006, &iov[index]);
+  attr = turn_attr_lifetime_create(0x00000010, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -520,6 +521,15 @@ int main(int argc, char** argv)
   iovec_free_data(iov, index);
   index = 0;
 
+#ifdef TEST_BANDWIDTH
+  while(1)
+  {
+    static size_t i = 0;
+
+    i++;
+
+    usleep(5000);
+#endif 
   hdr = turn_msg_send_indication_create(0, id, &iov[index]);
   index++;
 
@@ -532,7 +542,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  attr = turn_attr_data_create("Hello", 5, &iov[index]);
+  attr = turn_attr_data_create(buff, 1024, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -545,19 +555,29 @@ int main(int argc, char** argv)
   index = 0;
 
 #if 1
-  nb3 = recvfrom(sock, buf, 1024, 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb3 = recvfrom(sock, buf, 1500, 0, (struct sockaddr*)&daddr, &daddr_size);
+  if(nb3 == -1)
+  {
+    perror("recvfrom");
+  }
+
   nb = turn_parse_message(buf, nb3, &message, tabu, &tabu_size);
+
+  if(nb == -1)
+  {
+    printf("Error parsing\n");
+  }
 
   if(message.data)
   {
-    char received[1024];
     printf("Received %u bytes\n", ntohs(message.data->turn_attr_len));
-    memcpy(received, message.data->turn_attr_data, ntohs(message.data->turn_attr_len));
-    received[ntohs(message.data->turn_attr_len)] = 0x00;
-    printf("I receive %s\n", received);
   }
 #endif
 
+#ifdef TEST_BANDWIDTH
+  printf("Sent %u\n", i);
+  }
+#endif
   sleep(1);
 
   /* ChannelData */

@@ -188,6 +188,12 @@ char* turnserver_cfg_private_key_file(void);
 char* turnserver_cfg_realm(void);
 
 /**
+ * \brief Get the bandwidth limitation per allocation (in kB/s).
+ * \return bandwidth limit
+ */
+uint16_t turnserver_cfg_bandwidth_per_allocation(void);
+
+/**
  * \brief Get the account method (file, mysql-db, ...).
  * \return method
  */

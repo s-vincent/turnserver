@@ -101,6 +101,7 @@ static cfg_opt_t opts[]=
   CFG_STR("account_method", "file", CFGF_NONE),
   CFG_STR("account_file", "users.txt", CFGF_NONE),
   CFG_SEC("deny_address", deny_address_opts, CFGF_MULTI),
+  CFG_INT("bandwidth_per_allocation", 150, CFGF_NONE),
   /* the following attributes are not used for the moment */
   CFG_STR("account_db_login", "anonymous", CFGF_NONE),
   CFG_STR("account_db_password", "anonymous", CFGF_NONE),
@@ -314,6 +315,11 @@ char* turnserver_cfg_private_key_file(void)
 char* turnserver_cfg_realm(void)
 {
   return cfg_getstr(cfg, "realm");
+}
+
+uint16_t turnserver_cfg_bandwidth_per_allocation(void)
+{
+  return cfg_getint(cfg, "bandwidth_per_allocation");
 }
 
 char* turnserver_cfg_account_method(void)

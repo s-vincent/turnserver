@@ -57,6 +57,10 @@ Maximum number of allocation per username.
 Lifetime of an allocation in second.
 
 .TP
+.BR "bandwidth_per_allocation " "= number"
+Bandwidth limit for an allocation in KBytes/s.
+
+.TP
 .nf
 .BR "deny_list {"
 .BR " address " "= IPv4 | IPv6 address"
@@ -118,6 +122,8 @@ daemon = false
 max_relay_per_username = 10
 
 allocation_lifetime = 1800
+
+bandwidth_per_allocation = 150
 
 deny_address {
   address = "172.1.0.3"

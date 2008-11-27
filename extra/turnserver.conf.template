@@ -33,6 +33,9 @@ max_relay_per_username = 5
 ## Allocation lifetime.
 allocation_lifetime = 1800
 
+## Allocation bandwidth limitation (in KBytes/s).
+bandwidth_per_allocation = 150
+
 ## Deny list
 #deny_address {
 #  address = "10.1.4.0"

@@ -319,6 +319,71 @@ static void turnserver_disable_core_dump(void)
 #endif
 
 /**
+ * \brief Check bandwidth limitation.
+ * \param desc allocation descriptor
+ * \param byteup byte received on uplink connection
+ * \param bytedown byte received on downlink connection
+ * \return 1 if bandwidth threshold is exceeded, 0 otherwise
+ */
+static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t byteup, size_t bytedown)
+{
+  struct timeval now;
+  unsigned long diff = 0;
+  double d = 0; 
+
+  /* check in ms */
+  gettimeofday(&now, NULL);
+
+  if(byteup)
+  {
+    if(desc->bucket_tokenup < desc->bucket_capacity)
+    {
+      diff = (now.tv_sec - desc->last_timeup.tv_sec) * 1000 + (now.tv_usec - desc->last_timeup.tv_usec) / 1000;
+      d = (turnserver_cfg_bandwidth_per_allocation() * diff);
+      desc->bucket_tokenup = MIN(desc->bucket_capacity, desc->bucket_tokenup + d);
+      gettimeofday(&desc->last_timeup, NULL);
+    }
+
+    debug(DBG_ATTR, "Tokenup bucket available: %u, tokens requested: %u\n", desc->bucket_tokenup, byteup);
+
+    if(byteup <= desc->bucket_tokenup)
+    { 
+      desc->bucket_tokenup -= byteup;
+    }
+    else
+    {
+      /* bandwidth exceeded */
+      return 1;
+    }
+  }
+
+  if(bytedown)
+  {
+    if(desc->bucket_tokendown < desc->bucket_capacity)
+    {
+      diff = (now.tv_sec - desc->last_timedown.tv_sec) * 1000 + (now.tv_usec - desc->last_timedown.tv_usec) / 1000;
+      d = turnserver_cfg_bandwidth_per_allocation() * diff;
+      desc->bucket_tokendown = MIN(desc->bucket_capacity, desc->bucket_tokendown + d);
+      gettimeofday(&desc->last_timedown, NULL);
+    }
+
+    debug(DBG_ATTR, "Tokendown bucket available: %u, tokens requested: %u\n", desc->bucket_tokendown, bytedown);
+
+    if(bytedown <= desc->bucket_tokendown)
+    { 
+      desc->bucket_tokendown -= bytedown;
+    }
+    else
+    {
+      /* bandwidth exceeded */
+      return 1;
+    }
+  }
+  
+  return 0;
+}
+
+/**
  * \brief Send an Error Response.
  * \param transport_protocol transport protocol to send the message
  * \param sock socket
@@ -579,6 +644,13 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     return -1;
   }
 
+  /* check bandwidth limit */
+  if(turnserver_check_bandwidth_limit(desc, 0, len))
+  {
+    debug(DBG_ATTR, "Bandwidth quotas reached!\n");
+    return -1;
+  }
+
   if(desc->relayed_transport_protocol == IPPROTO_UDP)
   {
     struct sockaddr_storage storage;
@@ -750,6 +822,13 @@ static int turnserver_process_send_indication(const struct turn_message* message
   {
     msg = (char*)message->data->turn_attr_data;
     msg_len = ntohs(message->data->turn_attr_len);
+  
+    /* check bandwidth limit */
+    if(turnserver_check_bandwidth_limit(desc, 0, msg_len))
+    {
+      debug(DBG_ATTR, "Bandwidth quotas reached!\n");
+      return -1;
+    }
 
     if(desc->relayed_transport_protocol == IPPROTO_UDP)
     {
@@ -1608,6 +1687,11 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     close(relayed_sock);
     return -1;
   }
+
+  /* init token bucket */
+  desc->bucket_capacity = turnserver_cfg_bandwidth_per_allocation() * 1000; /* store it in bytes */
+  desc->bucket_tokenup = desc->bucket_capacity;
+  desc->bucket_tokendown = desc->bucket_capacity;
   
   /* increment number of allocations */
   account->allocations++;
@@ -2342,6 +2426,13 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     return -1;
   }
 
+  /* check bandwidth limit */
+  if(turnserver_check_bandwidth_limit(desc, buflen, 0))
+  {
+    debug(DBG_ATTR, "Bandwidth quotas reached!\n");
+    return -1;
+  }
+
   /* see if a channel is bound to the peer */
   channel = allocation_desc_find_channel(desc, saddr->sa_family, peer_addr, peer_port);
 
@@ -2975,7 +3066,7 @@ int main(int argc, char** argv)
   list_iterate_safe(get, n, &account_list)
   {
     struct account_desc* tmp = list_get(get, struct account_desc, list);
-    printf("%s %s %s\n", tmp->username, tmp->password, tmp->realm);
+    printf("%s %s\n", tmp->username, tmp->realm);
   }
 #endif
 
@@ -3131,7 +3222,7 @@ int main(int argc, char** argv)
       }
     }
 
-    /* wait messages and processing*/
+    /* wait messages and processing */
     turnserver_main(sock_udp, sock_tcp, &tcp_socket_list, &allocation_list, &account_list, speer);
   }
 

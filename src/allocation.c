@@ -93,6 +93,11 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
   /* by default, this will be set by caller */
   ret->relayed_tls = 0;
 
+  /* tocken bucket initialization */
+  ret->bucket_capacity = 0;
+  ret->bucket_tokenup = 0;
+  ret->bucket_tokendown = 0;
+
   /* list of permissions */
   INIT_LIST(ret->peers_permissions);
 
@@ -177,6 +182,10 @@ void allocation_desc_set_timer(struct allocation_desc* desc, uint32_t lifetime)
   expire.it_interval.tv_sec = 0; /* no interval */
   expire.it_interval.tv_nsec = 0;
   memset(&old, 0x00, sizeof(struct itimerspec));
+
+  /* (re)-init bandwidth quota stuff */
+  gettimeofday(&desc->last_timeup, NULL);
+  gettimeofday(&desc->last_timedown, NULL);
 
   /* set the timer */
   if(timer_settime(desc->expire_timer, 0, &expire, &old) == -1)
