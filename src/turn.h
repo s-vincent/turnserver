@@ -70,6 +70,8 @@ typedef unsigned __int64 uint64_t;
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)
 #define STUN_IS_ERROR_RESP(msg_type)    (((msg_type) & 0x0110) == STUN_ERROR_RESP)
 
+#define TURN_IS_CHANNELDATA(msg_type)   (((msg_type) & 0xC000) != 0) /* bit 0 and 1 are not set to 0 */
+
 #define STUN_GET_METHOD(msg_type)       ((msg_type) & 0x3EEF)
 #define STUN_GET_CLASS(msg_type)        ((msg_type) & 0x0110)
 

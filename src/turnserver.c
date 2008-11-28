@@ -382,7 +382,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
       return 1;
     }
   }
-  
+
   return 0;
 }
 
@@ -827,7 +827,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   {
     msg = (char*)message->data->turn_attr_data;
     msg_len = ntohs(message->data->turn_attr_len);
-  
+
     /* check bandwidth limit */
     if(turnserver_check_bandwidth_limit(desc, 0, msg_len))
     {
@@ -1167,14 +1167,14 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     return -1;
   }
-  
+
   if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
   {
     debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
     /* XXX send response ? */
     return -1;
   }
-  
+
   debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
 
   /* check that the transport address is not currently bound to another channel */
@@ -1319,10 +1319,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   }
   else
   {
-    /* no lifetime attribute => bad request error 400) */
-    debug(DBG_ATTR, "NO LIFETIME\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
-    return 0;
+    lifetime = TURN_DEFAULT_ALLOCATION_LIFETIME;
   }
 
   if(lifetime > 0)
@@ -1697,7 +1694,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   desc->bucket_capacity = turnserver_cfg_bandwidth_per_allocation() * 1000; /* store it in bytes */
   desc->bucket_tokenup = desc->bucket_capacity;
   desc->bucket_tokendown = desc->bucket_capacity;
-  
+
   /* increment number of allocations */
   account->allocations++;
   debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
@@ -1967,7 +1964,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   type = ntohs(type);
 
   /* Is it a ChannelData message (bit 0 and 1 are not set to 0) */
-  if((type & 0xC000) != 0)
+  if(TURN_IS_CHANNELDATA(type))
   {
     /* ChannelData */
     return turnserver_process_channeldata(transport_protocol, type, buf, buflen, saddr, daddr, saddr_size, allocation_list);
@@ -2080,7 +2077,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         error->turn_msg_len += iov[index].iov_len;
         index++;
       }
-    
+
       turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
 
       /* convert to big endian */
@@ -2167,7 +2164,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       iovec_free_data(iov, index);
       return 0;
     }
-    
+
     /* find the desired username and password in the account list */
     {
       char username[514];
@@ -2279,8 +2276,12 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         uint8_t nonce[32];
         char* nonce_key = turnserver_cfg_nonce_key();
 
-        debug(DBG_ATTR, "hash mismatch\n");
-
+        debug(DBG_ATTR, "Hash mismatch\n");
+#ifndef NDEBUG
+        /* print computed hash and the one from the message */
+        digest_print(hash, 20);
+        digest_print(message.message_integrity->turn_attr_hmac, 20);
+#endif
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)nonce_key, strlen(nonce_key));
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
@@ -2450,7 +2451,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   if(channel != 0)
   {
     len = sizeof(struct turn_channel_data);
-    
+
     /* send it with ChannelData */
     channel_data.turn_channel_number = htons(channel);
     channel_data.turn_channel_len = htons(buflen); /* big endian */
@@ -2585,6 +2586,68 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   }
 
   return 0;
+}
+
+/**
+ * \brief Process message(s) in a single TCP stream.
+ * \param buf data received
+ * \param nb length of data
+ * \param sock socket
+ * \param saddr source address of the message
+ * \param daddr destination address of the message
+ * \param saddr_size sizeof addr
+ * \param allocation_list list of allocations
+ * \param account_list list of accounts
+ * \param speer TLS peer if not NULL, the server accept TLS connection
+ */
+static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, int sock, struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+{
+  const char* tmp_buf = buf;
+  ssize_t tmp_len = 0;
+  uint16_t type = 0;
+  ssize_t tmp_nb = nb;
+
+  while(tmp_nb)
+  {
+    if(tmp_nb < 4)
+    {
+      break;
+    }
+
+    memcpy(&type, tmp_buf, 2);
+    type = ntohs(type);
+
+    if(TURN_IS_CHANNELDATA(type))
+    {
+      struct turn_channel_data* cdata = (struct turn_channel_data*)tmp_buf;
+      tmp_len = ntohs(cdata->turn_channel_len) + 4;
+    }
+    else
+    {
+      struct turn_msg_hdr* hdr = (struct turn_msg_hdr*)tmp_buf;
+      tmp_len = ntohs(hdr->turn_msg_len) + 20;
+    }
+
+    printf("nb = %d tmp_len = %d\n", tmp_nb, tmp_len);
+
+    if(tmp_nb < tmp_len)
+    {
+      /* XXX incomplete message,
+       * store it into a temporary buffer and wait for the
+       * next call of recv().
+       */
+      debug(DBG_ATTR, "Incomplete message\n");
+      break;
+    }
+
+    if(turnserver_listen_recv(IPPROTO_TCP, sock, tmp_buf, tmp_len, saddr, daddr, saddr_size, allocation_list, account_list, speer) == -1)
+    {
+      debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
+    }
+
+    tmp_nb -= tmp_len;
+    tmp_buf += tmp_len;
+  }
 }
 
 /**
@@ -2768,10 +2831,9 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             /* decode TLS data */
             if((nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
             {
-              if(turnserver_listen_recv(IPPROTO_TCP, tmp->sock, buf2, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer) == -1)
-              {
-                debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
-              }
+
+              /* TLS over TCP stream may contain multiple STUN / TURN messages */
+              turnserver_process_tcp_stream(buf2, nb, tmp->sock, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer);
             }
             else
             {
@@ -2779,13 +2841,10 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
               debug(DBG_ATTR, "Error : %s\n", error_str);
             }
           } 
-          else
+          else /* non-encrypted TCP data */
           {
-            /* non-TLS data */
-            if(turnserver_listen_recv(IPPROTO_TCP, tmp->sock, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
-            {
-              debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
-            }
+            /* TCP stream may contain multiple STUN / TURN messages */
+            turnserver_process_tcp_stream(buf, nb, tmp->sock, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL);
           }
         }
         else
@@ -3266,7 +3325,7 @@ int main(int argc, char** argv)
   {
     close(sock_tcp);
   }
-  
+
   /* close TCP socket list */
   list_iterate_safe(get, n, &tcp_socket_list)
   {

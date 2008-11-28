@@ -335,7 +335,6 @@ int main(int argc, char** argv)
     crc = crc32_generate((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint), 0);
 
     nb = htonl(crc) == message.fingerprint->turn_attr_crc;
-
   }
 
   if(message.message_integrity)
