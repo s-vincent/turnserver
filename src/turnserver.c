@@ -58,9 +58,6 @@
 
 #include <netdb.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-
 #include "conf.h"
 #include "protocol.h"
 #include "allocation.h"
@@ -464,6 +461,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
   else
   {
+    turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
+
     /* convert to big endian */
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
   }
@@ -2081,6 +2080,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         error->turn_msg_len += iov[index].iov_len;
         index++;
       }
+    
+      turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
@@ -2216,6 +2217,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
           index++;
         }
 
+        turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
+
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
@@ -2292,6 +2295,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
           error->turn_msg_len += iov[index].iov_len;
           index++;
         }
+
+        turn_add_fingerprint(iov, &index); /* not fatal it not successfull */
 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
@@ -3116,10 +3121,7 @@ int main(int argc, char** argv)
   if(turnserver_cfg_tls())
   {
     /* libssl initialization */
-    SSL_library_init();
-    /* OpenSSL_add_all_algorithms(); */
-    SSL_load_error_strings();
-    ERR_load_crypto_strings();
+    LIBSSL_INIT;
 
     /* TLS TCP socket */
     speer = tls_peer_new(IPPROTO_TCP, NULL, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
@@ -3296,10 +3298,7 @@ int main(int argc, char** argv)
     }
 
     /* cleanup SSL lib */
-    EVP_cleanup();
-    ERR_remove_state(0);
-    ERR_free_strings();
-    CRYPTO_cleanup_all_ex_data();
+    LIBSSL_CLEANUP;
   }
 
   /* free the configuration parser */

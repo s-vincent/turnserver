@@ -10,7 +10,7 @@
                             - Multiple XOR-PEER-ADDRESS support in CreatePermission;
                             - Update wireshark parser (packet-stun2.c);
                             - Additionnal configuration parameters;
-                            - Allocation number quota;
+                            - Allocation number and bandwidth quota;
                             - Address / port restrictions.
 
 2008-11-22  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>

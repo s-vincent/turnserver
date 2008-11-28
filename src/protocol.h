@@ -714,6 +714,14 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen);
 int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint);
 
 /**
+ * \brief Compute fingerprint and add it to the message.
+ * \param iov vector which contains a message and attributes
+ * \param index index in the vector, it will be updated to the next unused position if function succeed
+ * \return 0 if success, -1 if failure
+ */
+int turn_add_fingerprint(struct iovec* iov, size_t* index);
+
+/**
  * \brief (Address and port) XOR cookie.
  * \param family address famiily
  * \param peer_addr peer address (which contains already XORed address), it will be filled with de-XORed address

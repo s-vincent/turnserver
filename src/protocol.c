@@ -765,7 +765,7 @@ struct turn_attr_hdr* turn_attr_dont_fragment_create(struct iovec* iov)
 
   ret->turn_attr_type = htons(TURN_ATTR_DONT_FRAGMENT);
   ret->turn_attr_len = htons(0);
-  
+
   iov->iov_base = ret;
   iov->iov_len = sizeof(struct turn_attr_dont_fragment);
 
@@ -1375,28 +1375,48 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   /* do not take into account the attribute itself */
   turn_calculate_integrity_hmac_iov(iov, (*index) - 1, key, key_len, ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
 
+  hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
+
   if(add_fingerprint)
   {
-    /* add a fingerprint */
-    /* revert to host endianness */
-    hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
-
-    if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
-    {
-      return -1;
-    }
-    hdr->turn_msg_len += iov[(*index)].iov_len;
-    (*index)++;
-
-    /* compute fingerprint */
-
-    /* convert to big endian */
-    hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-    /* do not take into account the attribute itself */
-    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
-    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+    turn_add_fingerprint(iov, index);
   }
+
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+  return 0;
+}
+
+int turn_add_fingerprint(struct iovec* iov, size_t* index)
+{
+  struct turn_attr_hdr* attr = NULL;
+  struct turn_msg_hdr* hdr = iov[0].iov_base;
+
+  if(*index == 0)
+  {
+    /* could not place fingerprint in first place */
+    return -1;
+  }
+
+  /* add a fingerprint */
+
+  if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
+  {
+    return -1;
+  }
+  hdr->turn_msg_len += iov[(*index)].iov_len;
+  (*index)++;
+
+  /* compute fingerprint */
+
+  /* convert to big endian */
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+  /* do not take into account the attribute itself */
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+
+  hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
 
   return 0;
 }
@@ -1405,7 +1425,7 @@ int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
 {
   size_t i = 0;
   size_t len = 0;
-  
+
   switch(family)
   {
     case STUN_ATTR_FAMILY_IPV4:
@@ -1550,7 +1570,6 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
            */
           message->xor_peer_addr_overflow = 1; 
         }
-        
         break;
       case TURN_ATTR_DATA:
         message->data =  (struct turn_attr_data*)ptr;
