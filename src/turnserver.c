@@ -67,8 +67,9 @@
 #include "util_crypto.h"
 #include "dbg.h"
 
-/* TODO test with other OS to see if they
- * support setting DF flag from userspace.
+/* For operating systems that support setting 
+ * DF flag from userspace, give them a
+ * #define OS_SET_DF_SUPPORT
  */
 #if defined(__linux__)
 
@@ -808,7 +809,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
   {
     char str[INET6_ADDRSTRLEN];
     debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
-    /* XXX send response ? */
     return -1;
   }
 
@@ -1670,8 +1670,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     close(relayed_sock);
     return -1;
   }
-
-  /* TODO quota on bandwidth per username */
 
   if(account->allocations > turnserver_cfg_max_relay_per_username())
   {
@@ -2628,15 +2626,14 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, int sock,
       tmp_len = ntohs(hdr->turn_msg_len) + 20;
     }
 
-    printf("nb = %d tmp_len = %d\n", tmp_nb, tmp_len);
-
     if(tmp_nb < tmp_len)
     {
-      /* XXX incomplete message,
-       * store it into a temporary buffer and wait for the
-       * next call of recv().
-       */
+      /* incomplete message */
       debug(DBG_ATTR, "Incomplete message\n");
+
+      /* TODO store it into a temporary buffer and 
+       * wait for the next call of recv() to process it.
+       */
       break;
     }
 
