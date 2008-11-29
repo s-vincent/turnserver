@@ -86,6 +86,7 @@ int main(int argc, char** argv)
   size_t n_len = 0;
   uint8_t token[8];
   char peer_port[8];
+  size_t i = 0;
 
   if(argc != 5)
   {
@@ -162,8 +163,24 @@ int main(int argc, char** argv)
   hdr = turn_msg_allocate_request_create(0, id, &iov[index]);
   index++;
 
+  /* SOFTWARE */
+  attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
   printf("Send allocate request\n");
-  nb = turn_tcp_send(sock, iov, index);
+  for(i = 0 ; i < index ; i++)
+  {
+    nb = turn_tcp_send(sock, &iov[i], 1 /* index */);
+    sleep(1);
+  }
+
+  printf("Send OK\n");
+
+  hdr->turn_msg_len = 0;
+  index--;
 
   if(nb == -1)
   {
@@ -389,10 +406,14 @@ int main(int argc, char** argv)
 #endif
 
   printf("Send refresh request\n");
-  nb = turn_tcp_send(sock, iov, index);
+  nb = turn_tcp_send(sock, iov, index - 1);
 
+  iov[0] = iov[index - 1];
+  index = 1;
+/* 
   iovec_free_data(iov, index);
   index = 0;
+*/
 
   nb = recv(sock, buf, sizeof(buf), 0);
 
@@ -443,10 +464,10 @@ int main(int argc, char** argv)
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
   /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
-  turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
+  turn_calculate_integrity_hmac_iov(iov + 1, index - 1 - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
 
-#if 1
+#if 0
   /* FINGERPRINT */
   attr = turn_attr_fingerprint_create(0, &iov[index]);
   hdr->turn_msg_len = ntohs(hdr->turn_msg_len) + iov[index].iov_len;
@@ -464,6 +485,7 @@ int main(int argc, char** argv)
 #if 1
   printf("Send ChannelBind request\n");
   nb = turn_tcp_send(sock, iov, index);
+  nb = recv(sock, buf, sizeof(buf), 0);
   nb = recv(sock, buf, sizeof(buf), 0);
 #endif
 
@@ -542,7 +564,11 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   printf("Send Send indication request\n");
-  nb = turn_tcp_send(sock, iov, index);
+  for(i = 0 ; i < index ; i++)
+  {
+    nb = turn_tcp_send(sock, iov + i, 1 /* index */);
+    sleep(1);
+  }
 
   iovec_free_data(iov, index);
   index = 0;

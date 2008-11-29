@@ -153,6 +153,10 @@ static const uint8_t supported_even_port_flags = 0x80;
 struct socket_desc
 {
   int sock; /**< The socket */
+  /* XXX maybe 1500 is not sufficient for all case */
+  char buf[1500]; /**< Internal buffer for TCP stream reconstruction */
+  size_t buf_pos; /**< Position in the internal buffer */
+  size_t msg_len; /**< Message length that is not complete */
   struct list_head list; /**< For list management */
 };
 
@@ -626,6 +630,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   if(transport_protocol == IPPROTO_TCP && (buflen % 4))
   {
     /* with TCP, length MUST a multiple of four */
+    debug(DBG_ATTR, "TCP length must be multiple of four!\n");
     return -1;
   }
 
@@ -2598,52 +2603,120 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
  * \param account_list list of accounts
  * \param speer TLS peer if not NULL, the server accept TLS connection
  */
-static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, int sock, struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct socket_desc* sock, struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
 {
-  const char* tmp_buf = buf;
-  ssize_t tmp_len = 0;
-  uint16_t type = 0;
-  ssize_t tmp_nb = nb;
+  char* tmp_buf = NULL;
+  size_t tmp_len = 0;
+  size_t tmp_nb = (size_t)nb;
+
+  /* maybe we have incomplete message */
+  if(sock->buf_pos)
+  {
+    tmp_buf = sock->buf;
+    /* concatenate bytes received */
+    memcpy(tmp_buf + sock->buf_pos, buf, MIN(sizeof(sock->buf), tmp_nb));
+    sock->buf_pos += tmp_nb;
+    /* printf("Incomplete packet!!!\n"); */
+    tmp_nb = sock->buf_pos;
+  }
+  else
+  {
+    tmp_buf = (char*)buf; /* after that we don't modify buf */
+  }
+
+  /* printf("Received: %u, Have: %u\n", tmp_nb, tmp_nb); */
 
   while(tmp_nb)
   {
     if(tmp_nb < 4)
     {
+      /* message too small, maybe 
+       * incomplete ones
+       */
+      sock->buf_pos = tmp_nb;
+
+      if(sock->buf != tmp_buf)
+      {
+        memcpy(sock->buf, tmp_buf, sock->buf_pos);
+      }
       break;
     }
 
-    memcpy(&type, tmp_buf, 2);
-    type = ntohs(type);
-
-    if(TURN_IS_CHANNELDATA(type))
+    if(!sock->msg_len)
     {
-      struct turn_channel_data* cdata = (struct turn_channel_data*)tmp_buf;
-      tmp_len = ntohs(cdata->turn_channel_len) + 4;
+      uint16_t type = 0;
+      memcpy(&type, tmp_buf, 2);
+      type = ntohs(type);
+
+      if(TURN_IS_CHANNELDATA(type))
+      {
+        struct turn_channel_data* cdata = (struct turn_channel_data*)tmp_buf;
+        tmp_len = ntohs(cdata->turn_channel_len);
+
+        /* TCP so padding mandatory */
+        if(ntohs(cdata->turn_channel_len) % 4)
+        {
+          tmp_len += 4 - (tmp_len % 4);
+        }
+
+        /* size of ChannelData header */
+        tmp_len += 4;
+      }
+      else if(STUN_IS_REQUEST(type) || STUN_IS_INDICATION(type))
+      {
+        struct turn_msg_hdr* hdr = (struct turn_msg_hdr*)tmp_buf;
+        /* size of STUN header */
+        tmp_len = ntohs(hdr->turn_msg_len) + 20;
+      }
+      else
+      {
+        debug(DBG_ATTR, "Not a STUN request or TURN ChannelData!\n");
+        sock->buf_pos = 0;
+        sock->msg_len = 0;
+        break;
+      }
     }
     else
     {
-      struct turn_msg_hdr* hdr = (struct turn_msg_hdr*)tmp_buf;
-      tmp_len = ntohs(hdr->turn_msg_len) + 20;
+      /* we know already the next message length */
+      tmp_len = sock->msg_len;
     }
+
+    /* printf("Received: %u, Need %u bytes, Have %u bytes\n", tmp_nb, tmp_len, tmp_len); */
 
     if(tmp_nb < tmp_len)
     {
       /* incomplete message */
       debug(DBG_ATTR, "Incomplete message\n");
 
-      /* TODO store it into a temporary buffer and 
-       * wait for the next call of recv() to process it.
-       */
+      sock->msg_len = tmp_len;
+
+      sock->buf_pos = MIN(sizeof(sock->buf), tmp_nb);
+      if(sock->buf != tmp_buf)
+      {
+        memcpy(sock->buf, tmp_buf, sock->buf_pos);
+      }
+
+      /* printf("State, msg_len: %u, buf_pos: %u\n", sock->msg_len, sock->buf_pos); */
       break;
     }
 
-    if(turnserver_listen_recv(IPPROTO_TCP, sock, tmp_buf, tmp_len, saddr, daddr, saddr_size, allocation_list, account_list, speer) == -1)
+    if(turnserver_listen_recv(IPPROTO_TCP, sock->sock, tmp_buf, tmp_len, saddr, daddr, saddr_size, allocation_list, account_list, speer) == -1)
     {
       debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
     }
 
     tmp_nb -= tmp_len;
     tmp_buf += tmp_len;
+    sock->msg_len = 0;
+    
+    if(sock->buf_pos != 0)
+    {
+      /* decrement buffer position */
+      sock->buf_pos -= tmp_len;
+    }
+
+    /* printf("tmp_nb: %u, sock->buf_pos: %u\n", tmp_nb, sock->buf_pos); */
   }
 }
 
@@ -2830,7 +2903,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             {
 
               /* TLS over TCP stream may contain multiple STUN / TURN messages */
-              turnserver_process_tcp_stream(buf2, nb, tmp->sock, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer);
+              turnserver_process_tcp_stream(buf2, nb, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer);
             }
             else
             {
@@ -2841,7 +2914,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
           else /* non-encrypted TCP data */
           {
             /* TCP stream may contain multiple STUN / TURN messages */
-            turnserver_process_tcp_stream(buf, nb, tmp->sock, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL);
+            turnserver_process_tcp_stream(buf, nb, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL);
           }
         }
         else
@@ -2880,6 +2953,9 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         {
           debug(DBG_ATTR, "Received TCP connection\n");
           sdesc = malloc(sizeof(struct socket_desc));
+          
+          sdesc->buf_pos = 0;
+          sdesc->msg_len = 0;
 
           if(!sdesc)
           {
