@@ -1,24 +1,39 @@
+2008-12-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+  * Version 0.2:  - Add attributes from turn-12 draft;
+                  - Add authentication on all TURN responses when possible;
+                  - Pre-calculate account MD5 hash;
+                  - Re-organize some code (message-integrity calculation, ...);
+                  - Alternate behavior for DF flag;
+                  - Separate TCP and TLS sockets;
+                  - Correctly relayed data from peer to client in TLS;
+                  - Multiple XOR-PEER-ADDRESS support in CreatePermission;
+                  - Update wireshark parser (packet-stun2.c);
+                  - Additionnal configuration parameters;
+                  - Allocation number and bandwidth quota;
+                  - Address / port restrictions.
+
 2008-11-22  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-  * Version 0.1.3 : - Backport code refactoring from 0.2-draft-11 branch;
+  * Version 0.1.3:  - Backport code refactoring from 0.2-draft-11 branch;
                     - Additionnal configuration parameters.
 
 2008-10-21	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* Version 0.1.2.2	:	- Fix nonce validation for 64-bit platform.
+	* Version 0.1.2.2:	- Fix nonce validation for 64-bit platform.
 
 2008-09-24	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* Version 0.1.2.1	:	- Fix bug in go_daemon().
+	* Version 0.1.2.1:  - Fix bug in go_daemon().
 
 2008-09-02	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* Version 0.1.2 : - Fix bug (infinite loop) when receiving unknown
-											comprehension-required attribute.
+	* Version 0.1.2:  - Fix bug (infinite loop) when receiving unknown
+										-	comprehension-required attribute.
 
 2008-08-16	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* Version 0.1.1 : - Fix IPv6 problem;
+	* Version 0.1.1:  - Fix IPv6 problem;
 										- Add missing XOR for FINGERPRINT mechanism;
 										- Fix minors bugs.
 

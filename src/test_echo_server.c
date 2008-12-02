@@ -48,7 +48,7 @@ int main(int argc, char** argv)
   int sock = -1;
   struct sockaddr_storage addr;
   socklen_t addr_size = sizeof(struct sockaddr_storage);
-  char buf[1024];
+  char buf[2500];
   ssize_t nb = -1;
   uint16_t port = 0;
 

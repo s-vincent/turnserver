@@ -46,6 +46,7 @@
 #include <stdint.h>
 #include <limits.h>
 
+#if 0 /* not used for the moment */
 /**
  * \struct turnserver_cfg
  * \brief TurnServer configuration.
@@ -56,6 +57,7 @@ struct turnserver_cfg
   char listen_addressv6[256]; /**< Listening address (IPv6 address or FQDN) */
   uint16_t udp_port; /**< UDP listening port */
   uint16_t tcp_port; /**< TCP listening port */
+  uint16_t tls_port; /**< TLS listening port */
   int tls;/**< TLS socket support */
   int daemon; /**< Daemon state */
   char realm[256]; /**< Realm */
@@ -69,11 +71,13 @@ struct turnserver_cfg
   char account_method; /**< Method (only "file" are implemented) */
   char account_file[PATH_MAX]; /**< Account file */
 };
+#endif
 
 /**
  * \brief Parse the configuration file.
  * \param file the file name
  * \return -1 if the file canont be found\n
+ * -3 memory problem\n
  * -2 if parse error\n
  *  0 if OK
  * \note Do not forget to call turnserver_cfg_free() to free parser memory.
@@ -115,6 +119,12 @@ uint16_t turnserver_cfg_udp_port(void);
  * \return TCP port
  */
 uint16_t turnserver_cfg_tcp_port(void);
+
+/**
+ * \brief Get the TLS listening port.
+ * \return TLS port
+ */
+uint16_t turnserver_cfg_tls_port(void);
 
 /**
  * \brief Run with TLS socket.
@@ -178,6 +188,12 @@ char* turnserver_cfg_private_key_file(void);
 char* turnserver_cfg_realm(void);
 
 /**
+ * \brief Get the bandwidth limitation per allocation (in kB/s).
+ * \return bandwidth limit
+ */
+uint16_t turnserver_cfg_bandwidth_per_allocation(void);
+
+/**
  * \brief Get the account method (file, mysql-db, ...).
  * \return method
  */
@@ -218,6 +234,15 @@ char* turnserver_cfg_account_db_address(void);
  * \return database network port
  */
 uint16_t turnserver_cfg_account_db_port(void);
+
+/**
+ * \brief Verify if address / port is in deny list.
+ * \param addr IPv4 / IPv6 address to check
+ * \param addrlen sizeof the address (IPv4 = 4, IPv6 = 16)
+ * \param port port to check
+ * \return 1 if address is denied, 0 otherwise
+ */
+int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port);
 
 #endif /* CONF_H */
 

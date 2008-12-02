@@ -99,14 +99,14 @@ START_TEST(test_attr_create)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
-  attr = turn_attr_peer_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
   
-  /* RELAYED-ADDRESS */
-  attr = turn_attr_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  /* XOR-RELAYED-ADDRESS */
+  attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -145,7 +145,7 @@ START_TEST(test_attr_create)
   index++;
 
   /* ERROR-CODE */
-  attr = turn_attr_error_create(420, "Bad request", strlen("Bad request"), &iov[index]);
+  attr = turn_attr_error_create(400, "Bad request", strlen("Bad request"), &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -196,15 +196,23 @@ START_TEST(test_attr_create)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0xC0000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x80, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
+#if 0
   /* ICMP */
   attr = turn_attr_icmp_create(0xFF, 0xFE, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+#endif
+
+  /* DONT-FRAGMENT */
+  attr = turn_attr_dont_fragment_create(&iov[index]);
+  fail_unless(attr != NULL, "attribute header create failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -250,7 +258,7 @@ START_TEST(test_attr_create)
   /* calculate fingerprint */
   /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
   nb = turn_udp_send(sock, (struct sockaddr*)&daddr, sizeof(daddr), iov, index);
   fail_unless(nb > 0, "turn_udp_send failed");
@@ -377,6 +385,21 @@ START_TEST(test_msg_create)
   fail_unless(hdr != NULL, "header creation failed");
   index++;
 
+  /* CreatePermission request */
+  hdr = turn_msg_createpermission_request_create(0, id, &iov[index]);
+  fail_unless(hdr != NULL, "header creation failed");
+  index++;
+
+  /* CreatePermission response */
+  hdr = turn_msg_createpermission_response_create(0, id, &iov[index]);
+  fail_unless(hdr != NULL, "header creation failed");
+  index++;
+
+  /* CreatePermission error */
+  hdr = turn_msg_createpermission_error_create(0, id, &iov[index]);
+  fail_unless(hdr != NULL, "header creation failed");
+  index++;
+
   /* Refresh request */
   hdr = turn_msg_refresh_request_create(0, id, &iov[index]);
   fail_unless(hdr != NULL, "header creation failed");
@@ -459,14 +482,14 @@ START_TEST(test_message_parse)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
-  attr = turn_attr_peer_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
   
-  /* RELAYED-ADDRESS */
-  attr = turn_attr_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  /* XOR-RELAYED-ADDRESS */
+  attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -547,12 +570,12 @@ START_TEST(test_message_parse)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0xC0000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x80, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
- 
+
   /* RESERVATION-TOKEN */
   {
     uint8_t token[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -562,9 +585,17 @@ START_TEST(test_message_parse)
     index++;
   }
 
+#if 0
   /* ICMP */
   attr = turn_attr_icmp_create(0xFF, 0xFE, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+#endif
+
+  /* DONT-FRAGMENT */
+  attr = turn_attr_dont_fragment_create(&iov[index]);
+  fail_unless(attr != NULL, "attribute header create failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -612,11 +643,14 @@ START_TEST(test_message_parse)
   fail_unless(message.channel_number != NULL, "channel_number must be present");
   fail_unless(message.lifetime != NULL, "lifetime must be present");
   fail_unless(message.nonce != NULL, "nonce must be present");
+#if 0
   fail_unless(message.icmp != NULL, "icmp must be present");
+#endif
   fail_unless(message.realm != NULL, "realm must be present");
   fail_unless(message.username != NULL, "username must be present");
-  fail_unless(message.requested_props != NULL, "requested_props must be present");
+  fail_unless(message.even_port != NULL, "even_port must be present");
   fail_unless(message.requested_transport != NULL, "requested_transport must be present");
+  fail_unless(message.dont_fragment != NULL, "dont_fragment must be present");
   fail_unless(message.unknown_attribute != NULL, "unknown_attribute must be present");
   fail_unless(message.message_integrity == NULL, "fingerprint MUST be the last attribute");
   fail_unless(message.fingerprint != NULL, "fingerprint must be present");

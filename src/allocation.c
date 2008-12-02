@@ -50,7 +50,7 @@
 #include "allocation.h"
 #include "protocol.h"
 
-struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, int preserving_flag, uint32_t lifetime)
+struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
 {
   struct allocation_desc* ret = NULL;
   size_t len_username = 0;
@@ -58,7 +58,7 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   len_username = strlen(username);
 
-  if(!username || !relayed_addr || !server_addr || !client_addr || len_username == 0 ||  !addr_size || !id)
+  if(!username || !relayed_addr || !server_addr || !client_addr || len_username == 0 ||  !addr_size || !id || !realm || !key || !nonce)
   {
     return NULL;
   }
@@ -71,10 +71,14 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
   /* copy transaction ID */
   memcpy(ret->transaction_id, id, 12);
 
-  /* copy the username */
+  /* copy authentication information */
   ret->username = malloc(len_username + 1);
   strncpy(ret->username, username, len_username);
   ret->username[len_username] = 0x00;
+  memcpy(ret->key, key, 16); /* 16 = MD5 length */
+  memcpy(ret->nonce, nonce, 24); /* see protocol.c for nonce length */
+  strncpy(ret->realm, realm, sizeof(ret->realm) -1);
+  ret->realm[sizeof(ret->realm) -1] = 0x00;
 
   /* initialize the 5-tuple */
   ret->tuple.transport_protocol = transport_protocol;
@@ -83,11 +87,16 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   /* copy relayed address */
   memcpy(&ret->relayed_addr, relayed_addr, addr_size);
-
+  
   ret->relayed_transport_protocol = IPPROTO_UDP;
 
   /* by default, this will be set by caller */
   ret->relayed_tls = 0;
+
+  /* tocken bucket initialization */
+  ret->bucket_capacity = 0;
+  ret->bucket_tokenup = 0;
+  ret->bucket_tokendown = 0;
 
   /* list of permissions */
   INIT_LIST(ret->peers_permissions);
@@ -97,10 +106,6 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   INIT_LIST(ret->list);
   INIT_LIST(ret->list2);
-
-  ret->preserving_flag = preserving_flag;
-
-  ret->expired = 0;
 
   /* timer */
   memset(&event, 0x00, sizeof(struct sigevent));
@@ -178,19 +183,15 @@ void allocation_desc_set_timer(struct allocation_desc* desc, uint32_t lifetime)
   expire.it_interval.tv_nsec = 0;
   memset(&old, 0x00, sizeof(struct itimerspec));
 
+  /* (re)-init bandwidth quota stuff */
+  gettimeofday(&desc->last_timeup, NULL);
+  gettimeofday(&desc->last_timedown, NULL);
+
   /* set the timer */
   if(timer_settime(desc->expire_timer, 0, &expire, &old) == -1)
   {
     return;
   }
-}
-
-void allocation_desc_set_last_timer(struct allocation_desc* desc, uint32_t lifetime)
-{
-  allocation_desc_set_timer(desc, lifetime);
-
-  /* set the expired flag */
-  desc->expired = 1;
 }
 
 struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const uint8_t* peer_addr)

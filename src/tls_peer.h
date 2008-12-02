@@ -67,8 +67,24 @@
 #include <netinet/in.h>
 
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include "list.h"
+
+/**
+ * \def LIBSSL_INIT
+ * \brief Initialize libssl.
+ * \note You have to call it before using tls_peer functions.
+ */
+#define LIBSSL_INIT {SSL_library_init(); OpenSSL_add_all_algorithms(); SSL_load_error_strings(); ERR_load_crypto_strings(); }while(0)
+
+/**
+ * \def LIBSSL_CLEANUP
+ * \brief Cleanup libssl.
+ * \note You have to call it when your program exit.
+ * \note It is normal if your program still leaks 48 bytes due to libssl.
+ */
+#define LIBSSL_CLEANUP {EVP_cleanup(); ERR_remove_state(0); ERR_free_strings(); CRYPTO_cleanup_all_ex_data(); }while(0)
 
 /**
  * \enum protocol_type

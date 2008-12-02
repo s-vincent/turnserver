@@ -2,6 +2,7 @@ TurnServer coding style
 ========================
 
 I) Code layout
+---------------
 
 The software uses the ANSI coding standard layout. Use 2 space indentation instead 
 of tabs.
@@ -45,6 +46,7 @@ It is recommanded to use only the C-style comments :
  */
 
 II) Code organization
+----------------------
 
 The code has to follow these recommandations : 
 - Always initialize your variables;

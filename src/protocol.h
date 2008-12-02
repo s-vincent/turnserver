@@ -81,6 +81,14 @@
  */
 #define SIGRT_EXPIRE_TOKEN (SIGRTMIN + 3)
 
+#ifndef XOR_PEER_ADDRESS_MAX
+/**
+ * \def XOR_PEER_ADDRESS_MAX
+ * \brief Maximum number of XOR-PEER-ADDRESS attributes in a request.
+ */
+#define XOR_PEER_ADDRESS_MAX 5
+#endif
+
 /**
  * \struct turn_message
  * \brief Structure containing pointers on STUN / TURN header and attributes.
@@ -101,14 +109,18 @@ struct turn_message
   struct turn_attr_software* software; /**< SOFTWARE attribute */
   struct turn_attr_channel_number* channel_number; /**< CHANNEL-NUMBER attribute */
   struct turn_attr_lifetime* lifetime; /**< LIFETIME attribute */
-  struct turn_attr_peer_address* peer_addr; /**< PEER-ADDRESS attribute */
+  struct turn_attr_xor_peer_address* peer_addr[XOR_PEER_ADDRESS_MAX]; /**< XOR-PEER-ADDRESS attribute */
   struct turn_attr_data* data; /**< DATA attribute */
-  struct turn_attr_relayed_address* relayed_addr; /**< RELAYED-ADDRESS attribute */
-  struct turn_attr_requested_props* requested_props; /**< REQUESTED-PROPS attribute */
+  struct turn_attr_xor_relayed_address* relayed_addr; /**< XOR-RELAYED-ADDRESS attribute */
+  struct turn_attr_even_port* even_port; /**< REQUESTED-PROPS attribute */
   struct turn_attr_requested_transport* requested_transport; /**< REQUESTED-TRANSPORT attribute */
+  struct turn_attr_dont_fragment* dont_fragment; /**< DONT-FRAGMENT attribute */
   struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
+#if 0
   struct turn_attr_icmp* icmp; /**< ICMP attribute */
-  struct turn_attr_requested_address_type* requested_addr_type; /**< REQUETED-ADDRESS-TYPE (ietf-draft-behave-turn-ipv6-04) */
+#endif
+  struct turn_attr_requested_address_type* requested_addr_type; /**< REQUETED-ADDRESS-TYPE (ietf-draft-behave-turn-ipv6-05) */
+  size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
 
 /**
@@ -321,6 +333,33 @@ struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t*
 struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id, struct iovec* iov);
 
 /**
+ * \brief Create a TURN CreatePermission Request.
+ * \param len Length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_createpermission_request_create(size_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN CreatePermission Response.
+ * \param len Length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_createpermission_response_create(size_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN CreatePermission Error.
+ * \param len Length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_createpermission_error_create(size_t len, const uint8_t* id, struct iovec* iov);
+
+/**
  * \brief Create a TURN ChannelBind Request.
  * \param len Length of the message
  * \param id 96 bit transaction ID
@@ -478,14 +517,14 @@ struct turn_attr_hdr* turn_attr_channel_number_create(uint16_t number, struct io
 struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime, struct iovec* iov);
 
 /**
- * \brief Create a PEER-ADDRESS attribute.
+ * \brief Create a XOR-PEER-ADDRESS attribute.
  * \param address address
  * \param cookie magic cookie
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
-struct turn_attr_hdr* turn_attr_peer_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov);
+struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a DATA attribute.
@@ -497,22 +536,22 @@ struct turn_attr_hdr* turn_attr_peer_address_create(const struct sockaddr* addre
 struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, struct iovec* iov);
 
 /**
- * \brief Create a RELAYED-ADDRESS attribute.
+ * \brief Create a XOR-RELAYED-ADDRESS attribute.
  * \param address address
  * \param cookie magic cookie
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
-struct turn_attr_hdr* turn_attr_relayed_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov);
+struct turn_attr_hdr* turn_attr_xor_relayed_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a REQUESTED-PROPS attribute.
- * \param flags flags value
+ * \param flags flags value (for the moment just R flag are defined => 0x80)
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
-struct turn_attr_hdr* turn_attr_requested_props_create(uint32_t flags, struct iovec* iov);
+struct turn_attr_hdr* turn_attr_even_port_create(uint8_t flags, struct iovec* iov);
 
 /**
  * \brief Create a REQUESTED-TRANSPORT attribute.
@@ -521,6 +560,13 @@ struct turn_attr_hdr* turn_attr_requested_props_create(uint32_t flags, struct io
  * \return pointer on turn_attr_hdr or NULL if problem
  */
 struct turn_attr_hdr* turn_attr_requested_transport_create(uint8_t protocol, struct iovec* iov);
+
+/**
+ * \brief Create a DONT-FRAGMENT attribute.
+ * \param iov vector
+ * \return pointer on turn_attr_hdr or NULL if problem
+ */
+struct turn_attr_hdr* turn_attr_dont_fragment_create(struct iovec* iov);
 
 /**
  * \brief Create a RESERVATION-TOKEN attribute.
@@ -666,6 +712,14 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen);
  * \note This function set turn_msg_len field of TURN message to big endian (as MESSAGE-INTEGRITY / FINGERPRINT are normally the last attributes added).
  */
 int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint);
+
+/**
+ * \brief Compute fingerprint and add it to the message.
+ * \param iov vector which contains a message and attributes
+ * \param index index in the vector, it will be updated to the next unused position if function succeed
+ * \return 0 if success, -1 if failure
+ */
+int turn_add_fingerprint(struct iovec* iov, size_t* index);
 
 /**
  * \brief (Address and port) XOR cookie.

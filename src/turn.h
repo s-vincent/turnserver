@@ -64,11 +64,13 @@ typedef unsigned __int64 uint64_t;
 #define STUN_SUCCESS_RESP               0x0100
 #define STUN_ERROR_RESP                 0x0110
 
-/* macros from RFC5349 to determine class of the message */
+/* macros from RFC5389 to determine class of the message */
 #define STUN_IS_REQUEST(msg_type)       (((msg_type) & 0x0110) == STUN_REQUEST)
 #define STUN_IS_INDICATION(msg_type)    (((msg_type) & 0x0110) == STUN_INDICATION)
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)
 #define STUN_IS_ERROR_RESP(msg_type)    (((msg_type) & 0x0110) == STUN_ERROR_RESP)
+
+#define TURN_IS_CHANNELDATA(msg_type)   (((msg_type) & 0xC000) != 0) /* bit 0 and 1 are not set to 0 */
 
 #define STUN_GET_METHOD(msg_type)       ((msg_type) & 0x3EEF)
 #define STUN_GET_CLASS(msg_type)        ((msg_type) & 0x0110)
@@ -87,6 +89,9 @@ typedef unsigned __int64 uint64_t;
 
 /* Refresh method */
 #define TURN_METHOD_REFRESH             0x0004
+
+/* CreatePermission method */
+#define TURN_METHOD_CREATEPERMISSION    0x0008
 
 /* ChannelBind method */
 #define TURN_METHOD_CHANNELBIND         0x0009
@@ -114,7 +119,7 @@ typedef unsigned __int64 uint64_t;
 #define STUN_ATTR_ERROR_CODE            0x0009
 
 /* UNKNOWN-ATTRIBUTES */
-#define STUN_ATTR_UNKNOWN_ATTRIBUTES    0x000a
+#define STUN_ATTR_UNKNOWN_ATTRIBUTES    0x000A
 
 /* REALM */
 #define STUN_ATTR_REALM                 0x0014
@@ -137,33 +142,40 @@ typedef unsigned __int64 uint64_t;
 /* TURN attributes */
 
 /* CHANNEL-NUMBER */
-#define TURN_ATTR_CHANNEL_NUMBER        0x000c
+#define TURN_ATTR_CHANNEL_NUMBER        0x000C
 
 /* LIFETIME */
-#define TURN_ATTR_LIFETIME              0x000d
+#define TURN_ATTR_LIFETIME              0x000D
 
 /* PEER-ADDRESS */
-#define TURN_ATTR_PEER_ADDRESS          0x0012
+#define TURN_ATTR_XOR_PEER_ADDRESS      0x0012
 
 /* DATA */
 #define TURN_ATTR_DATA                  0x0013
 
 /* RELAYED-ADDRESS */
-#define TURN_ATTR_RELAYED_ADDRESS       0x0016
+#define TURN_ATTR_XOR_RELAYED_ADDRESS   0x0016
 
-/* REQUESTED-PROPS */
-#define TURN_ATTR_REQUESTED_PROPS       0x0018
+/* EVEN-PORT */
+#define TURN_ATTR_EVEN_PORT             0x0018
 
 /* REQUESTED-TRANSPORT */
 #define TURN_ATTR_REQUESTED_TRANSPORT   0x0019
 
+/* DONT-FRAGMENT */
+#define TURN_ATTR_DONT_FRAGMENT         0X001A
+
 /* RESERVATION-TOKEN */
 #define TURN_ATTR_RESERVATION_TOKEN     0x0022
+
+#if 0
 
 /* ICMP */
 #define TURN_ATTR_ICMP                  0x0030
 
-/* REQUESTED-ADDRESS-TYPE (draft-ietf-behave-turn-ipv6-04) */
+#endif
+
+/* REQUESTED-ADDRESS-TYPE (draft-ietf-behave-turn-ipv6-05) */
 #define TURN_ATTR_REQUESTED_ADDRESS_TYPE          0x0017
 
 /* STUN error codes */
@@ -179,8 +191,8 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_WRONG_CREDENTIALS              441
 #define TURN_ERROR_UNSUPPORTED_TRANSPORT_PROTOCOL 442
 #define TURN_ERROR_ALLOCATION_QUOTA_REACHED       486
-#define TURN_ERROR_INSUFFICIENT_PORT_CAPACITY     508
-/* draft-ietf-behave-turn-ipv6-04 */
+#define TURN_ERROR_INSUFFICIENT_CAPACITY          508
+/* draft-ietf-behave-turn-ipv6-05 */
 #define TURN_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED   440
 
 /* STUN error recommended reasons */
@@ -196,7 +208,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_441            "Wrong credentials"
 #define TURN_ERROR_442            "Unsupported transport protocol"
 #define TURN_ERROR_486            "Allocation quota reached"
-#define TURN_ERROR_508            "Insufficient port capacity"
+#define TURN_ERROR_508            "Insufficient capacity"
 #define TURN_ERROR_440            "Address family not supported"
 
 /* STUN magic cookie */
@@ -220,9 +232,6 @@ typedef unsigned __int64 uint64_t;
 
 /* default channel lifetime (in seconds) unless refreshed */
 #define TURN_DEFAULT_CHANNEL_LIFETIME         600
-
-/* lifetime of an expired allocation (in seconds) */
-#define TURN_EXPIRED_ALLOCATION_LIFETIME      120
 
 /* lifetime of a nonce (in seconds) */
 #define TURN_DEFAULT_NONCE_LIFETIME           180
@@ -409,10 +418,10 @@ struct turn_attr_lifetime
 }__attribute__((packed));
 
 /**
- * \struct turn_attr_peer_address
- * \brief PEER-ADDRESS attribute.
+ * \struct turn_attr_xor_peer_address
+ * \brief XOR-PEER-ADDRESS attribute.
  */
-struct turn_attr_peer_address
+struct turn_attr_xor_peer_address
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
@@ -434,10 +443,10 @@ struct turn_attr_data
 }__attribute__((packed));
 
 /**
- * \struct turn_attr_relayed_address
- * \brief RELAYED-ADDRESS attribute.
+ * \struct turn_attr_xor_relayed_address
+ * \brief XOR-RELAYED-ADDRESS attribute.
  */
-struct turn_attr_relayed_address
+struct turn_attr_xor_relayed_address
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
@@ -448,14 +457,14 @@ struct turn_attr_relayed_address
 }__attribute__((packed));
 
 /**
- * \struct turn_attr_requested_props
- * \brief REQUESTED-PROPS attribute.
+ * \struct turn_attr_even_port
+ * \brief EVENT-PORT attribute.
  */
-struct turn_attr_requested_props
+struct turn_attr_even_port
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
-  uint32_t turn_attr_flags; /**< Flags */
+  uint8_t turn_attr_flags; /**< Flags (for the moment just R flag are defined) */
 }__attribute__((packed));
 
 /**
@@ -471,6 +480,16 @@ struct turn_attr_requested_transport
 }__attribute__((packed));
 
 /**
+ * \struct turn_attr_dont_fragment
+ * \brief DONT-FRAGMENT attribute.
+ */
+struct turn_attr_dont_fragment
+{
+  uint16_t turn_attr_type; /**< Attribute type */
+  uint16_t turn_attr_len; /**< Length of "value" */
+}__attribute__((packed));
+
+/**
  * \struct turn_attr_reservation_token
  * \brief RESERVATION-TOKEN attribute.
  */
@@ -481,6 +500,8 @@ struct turn_attr_reservation_token
   uint8_t turn_attr_token[8]; /**< Token */
 }__attribute__((packed));
 
+#if 0
+
 /**
  * \struct turn_attr_icmp
  * \brief ICMP attribute.
@@ -489,10 +510,12 @@ struct turn_attr_icmp
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
-  uint8_t turn_attr_icmp_type; /**< ICMP type */
+  uint8_t turn_attr_icmp_type : ; /**< ICMP type */
   uint8_t turn_attr_icmp_code; /**< ICMP code */
   uint16_t turn_attr_icmp_reserved; /**< Reserved, must be 0 */
 }__attribute__((packed));
+
+#endif
 
 /**
  * \struct turn_channel_data
@@ -507,7 +530,7 @@ struct turn_channel_data
 
 /**
  * \struct turn_attr_requested_address_type.
- * \brief REQUESTED-ADDRESS-TYPE attribute (draft-ietf-behave-turn-ipv6-04).
+ * \brief REQUESTED-ADDRESS-TYPE attribute (draft-ietf-behave-turn-ipv6-05).
  */
 struct turn_attr_requested_address_type
 {

@@ -26,7 +26,15 @@ check_allocation_LDADD = @CHECK_LIBS@
 # account unit tests
 check_account_SOURCES = check_account.c \
 										 $(top_builddir)/src/account.h \
-										 $(top_builddir)/src/account.c
+										 $(top_builddir)/src/account.c \
+										 $(top_builddir)/src/protocol.h \
+										 $(top_builddir)/src/protocol.c \
+										 $(top_builddir)/src/util_sys.h \
+										 $(top_builddir)/src/util_sys.c \
+										 $(top_builddir)/src/util_crypto.h \
+										 $(top_builddir)/src/util_crypto.c \
+										 $(top_builddir)/src/tls_peer.h \
+										 $(top_builddir)/src/tls_peer.c
 check_account_CFLAGS = @CHECK_CFLAGS@
 check_account_LDADD = @CHECK_LIBS@
 

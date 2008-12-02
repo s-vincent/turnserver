@@ -15,6 +15,9 @@ udp_port = 3478
 ## TCP listening port.
 tcp_port = 3478
 
+## TLS listening port.
+tls_port = 5349
+
 ## TLS support.
 tls = false
 
@@ -25,10 +28,21 @@ realm = "domain.org"
 daemon = false
 
 ## Max relay per username.
-max_relay_per_username = 5
+max_relay_per_username = 5 
 
 ## Allocation lifetime.
 allocation_lifetime = 1800
+
+## Allocation bandwidth limitation (in KBytes/s).
+# 0 value means bandwidth quota disabled.
+bandwidth_per_allocation = 150
+
+## Deny list
+#deny_address {
+#  address = "10.1.4.0"
+#  mask = 24
+#  port = 0
+#}
 
 ## Certification Authority file.
 ca_file = "./ca.crt"

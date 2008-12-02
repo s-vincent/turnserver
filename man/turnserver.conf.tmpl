@@ -33,6 +33,10 @@ The UDP port of the server to listen for incoming connection.
 The TCP port of the server to listen for incoming connection.
 
 .TP
+.BR "tls_port " "= number"
+The TLS port of the server to listen for incoming connection.
+
+.TP
 .BR "tls " "= boolean"
 Wheter or not activate TLS over TCP connection.
 
@@ -51,6 +55,31 @@ Maximum number of allocation per username.
 .TP
 .BR "allocation_lifetime " "= number"
 Lifetime of an allocation in second.
+
+.TP
+.BR "bandwidth_per_allocation " "= number"
+Bandwidth limit for an allocation in KBytes/s.
+0 value means disable bandwidth quota.
+
+.TP
+.nf
+.BR "deny_list {"
+.BR " address " "= IPv4 | IPv6 address"
+.BR " mask " "= bitmask number"
+.BR " port " "= number (1 - 65535)"
+.B }
+.fi
+
+Defines an entry for the deny access list. This can appear multiple time. Format is defined as follow:
+.br
+.B address 
+is a string representing an IPv4 or IPv6 address.
+.br
+.B mask
+is a number representing the bitmask (i.e. 24 is similar as 255.255.255.0, ...).
+.br
+.B port
+is a number representing the network port. The 0 value means all ports.
 
 .TP
 .BR "ca_file " "= string"
@@ -75,7 +104,7 @@ The pathname of the account file (required when account_method=file).
 
 .SH EXAMPLE
 
-listen_address = "172.168.0.1"
+listen_address = "172.16.0.1"
 
 listen_addressv6 = "2001:db8::1"
 
@@ -83,13 +112,26 @@ udp_port = 3478
 
 tcp_port = 3478
 
+tls_port = 5349
+
 tls = true
+
+realm = "domain.org"
 
 daemon = false
 
 max_relay_per_username = 10
 
 allocation_lifetime = 1800
+
+bandwidth_per_allocation = 150
+
+deny_address {
+  address = "172.1.0.3"
+  mask = 24
+  port = 0
+
+}
 
 ca_file = "/etc/ca.crt"
 
@@ -99,7 +141,7 @@ private_key_file = "/etc/server.key"
 
 account_method = "file"
 
-account_file = "/etc/turnusers.tx
+account_file = "/etc/turnusers.txt
 
 .SH AUTHOR
 

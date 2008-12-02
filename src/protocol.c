@@ -128,7 +128,7 @@ static struct turn_attr_hdr* turn_attr_address_create(uint16_t type, const struc
  */
 static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
 {
-  struct turn_attr_xor_mapped_address* ret = NULL; /* XOR-MAPPED-ADDRESS are the same as PEER-ADDRESS and RELAYED-ADDRESS */
+  struct turn_attr_xor_mapped_address* ret = NULL; /* XOR-MAPPED-ADDRESS are the same as XOR-PEER-ADDRESS and XOR-RELAYED-ADDRESS */
   size_t len = 0;
   uint8_t* ptr = NULL; /* pointer on the address (IPv4 or IPv6) */
   uint8_t* p = (uint8_t*)&cookie;
@@ -307,6 +307,21 @@ struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t*
 struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_ERROR_RESP), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_createpermission_request_create(size_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_REQUEST), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_createpermission_response_create(size_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_SUCCESS_RESP), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_createpermission_error_create(size_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_ERROR_RESP), len, id, iov);
 }
 
 struct turn_msg_hdr* turn_msg_channelbind_request_create(size_t len, const uint8_t* id, struct iovec* iov)
@@ -662,9 +677,9 @@ struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime, struct iovec*
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_peer_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
 {
-  return turn_attr_xor_address_create(TURN_ATTR_PEER_ADDRESS, address, cookie, id, iov);
+  return turn_attr_xor_address_create(TURN_ATTR_XOR_PEER_ADDRESS, address, cookie, id, iov);
 }
 
 struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, struct iovec* iov)
@@ -694,26 +709,27 @@ struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, st
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_relayed_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_relayed_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
 {
-  return turn_attr_xor_address_create(TURN_ATTR_RELAYED_ADDRESS, address, cookie, id, iov);
+  return turn_attr_xor_address_create(TURN_ATTR_XOR_RELAYED_ADDRESS, address, cookie, id, iov);
 }
 
-struct turn_attr_hdr* turn_attr_requested_props_create(uint32_t flags, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_even_port_create(uint8_t flags, struct iovec* iov)
 {
-  struct turn_attr_requested_props* ret = NULL;
+  struct turn_attr_even_port* ret = NULL;
 
-  if(!(ret = malloc(sizeof(struct turn_attr_requested_props))))
+  /* attributes must be a multiple of four */
+  if(!(ret = malloc(sizeof(struct turn_attr_even_port) + 3)))
   {
     return NULL;
   }
 
-  ret->turn_attr_type = htons(TURN_ATTR_REQUESTED_PROPS);
+  ret->turn_attr_type = htons(TURN_ATTR_EVEN_PORT);
   ret->turn_attr_len = htons(4);
-  ret->turn_attr_flags = htonl(flags);
+  ret->turn_attr_flags = flags;
 
   iov->iov_base = ret;
-  iov->iov_len = sizeof(struct turn_attr_requested_props);
+  iov->iov_len = sizeof(struct turn_attr_even_port) + 3;
 
   return (struct turn_attr_hdr*)ret;
 }
@@ -738,6 +754,24 @@ struct turn_attr_hdr* turn_attr_requested_transport_create(uint8_t protocol, str
   return (struct turn_attr_hdr*)ret;
 }
 
+struct turn_attr_hdr* turn_attr_dont_fragment_create(struct iovec* iov)
+{
+  struct turn_attr_dont_fragment* ret = NULL;
+
+  if(!(ret = malloc(sizeof(struct turn_attr_dont_fragment))))
+  {
+    return NULL;
+  }
+
+  ret->turn_attr_type = htons(TURN_ATTR_DONT_FRAGMENT);
+  ret->turn_attr_len = htons(0);
+
+  iov->iov_base = ret;
+  iov->iov_len = sizeof(struct turn_attr_dont_fragment);
+
+  return (struct turn_attr_hdr*)ret;
+}
+
 struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, struct iovec* iov)
 {
   struct turn_attr_reservation_token* ret = NULL;
@@ -757,6 +791,7 @@ struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, s
   return (struct turn_attr_hdr*)ret;
 }
 
+#if 0
 struct turn_attr_hdr* turn_attr_icmp_create(uint8_t type, uint8_t code, struct iovec* iov)
 {
   struct turn_attr_icmp* ret = NULL;
@@ -777,6 +812,7 @@ struct turn_attr_hdr* turn_attr_icmp_create(uint8_t type, uint8_t code, struct i
 
   return (struct turn_attr_hdr*)ret;
 }
+#endif
 
 struct turn_attr_hdr* turn_attr_requested_address_type_create(uint8_t family, struct iovec* iov)
 {
@@ -1319,6 +1355,12 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   struct turn_attr_hdr* attr = NULL;
   struct turn_msg_hdr* hdr = iov[0].iov_base;
 
+  if(*index == 0)
+  {
+    /* could not place message-integrity or fingerprint in first place */
+    return -1;
+  }
+
   if(!(attr = turn_attr_message_integrity_create(NULL, &iov[*index])))
   {
     return -1;
@@ -1333,28 +1375,48 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   /* do not take into account the attribute itself */
   turn_calculate_integrity_hmac_iov(iov, (*index) - 1, key, key_len, ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
 
+  hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
+
   if(add_fingerprint)
   {
-
-    /* add a fingerprint */
-    /* revert to host endianness */
-    hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
-    if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
-    {
-      return -1;
-    }
-    hdr->turn_msg_len += iov[(*index)].iov_len;
-    (*index)++;
-
-    /* compute fingerprint */
-
-    /* convert to big endian */
-    hdr->turn_msg_len = htons(hdr->turn_msg_len);
-
-    /* do not take into account the attribute itself */
-    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
-    ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+    turn_add_fingerprint(iov, index);
   }
+
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+  return 0;
+}
+
+int turn_add_fingerprint(struct iovec* iov, size_t* index)
+{
+  struct turn_attr_hdr* attr = NULL;
+  struct turn_msg_hdr* hdr = iov[0].iov_base;
+
+  if(*index == 0)
+  {
+    /* could not place fingerprint in first place */
+    return -1;
+  }
+
+  /* add a fingerprint */
+
+  if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
+  {
+    return -1;
+  }
+  hdr->turn_msg_len += iov[(*index)].iov_len;
+  (*index)++;
+
+  /* compute fingerprint */
+
+  /* convert to big endian */
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+  /* do not take into account the attribute itself */
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+
+  hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
 
   return 0;
 }
@@ -1363,7 +1425,7 @@ int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
 {
   size_t i = 0;
   size_t len = 0;
-  
+
   switch(family)
   {
     case STUN_ATTR_FAMILY_IPV4:
@@ -1401,6 +1463,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   const char* ptr = msg;
   int ret = 0;
   size_t unknown_index = 0;
+  size_t xor_peer_address_nb = 0; /* count of XOR-PEER-ADDRESS attribute */
 
   /* zeroed structure */
   memset(message, 0x00, sizeof(struct turn_message));
@@ -1493,27 +1556,44 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
       case TURN_ATTR_LIFETIME:
         message->lifetime = (struct turn_attr_lifetime*)ptr;
         break;
-      case TURN_ATTR_PEER_ADDRESS:
-        message->peer_addr = (struct turn_attr_peer_address*)ptr;
+      case TURN_ATTR_XOR_PEER_ADDRESS:
+        if(xor_peer_address_nb < XOR_PEER_ADDRESS_MAX)
+        {
+          message->peer_addr[xor_peer_address_nb] = (struct turn_attr_xor_peer_address*)ptr;
+          xor_peer_address_nb++;
+        }
+        else
+        {
+          /* too many XOR-PEER-ADDRESS attribute, 
+           * this will inform process_createpermission() to reject the 
+           * request with a 508 error.
+           */
+          message->xor_peer_addr_overflow = 1; 
+        }
         break;
       case TURN_ATTR_DATA:
         message->data =  (struct turn_attr_data*)ptr;
         break;
-      case TURN_ATTR_RELAYED_ADDRESS:
-        message->relayed_addr = (struct turn_attr_relayed_address*)ptr;
+      case TURN_ATTR_XOR_RELAYED_ADDRESS:
+        message->relayed_addr = (struct turn_attr_xor_relayed_address*)ptr;
         break;
-      case TURN_ATTR_REQUESTED_PROPS:
-        message->requested_props = (struct turn_attr_requested_props*)ptr;
+      case TURN_ATTR_EVEN_PORT:
+        message->even_port = (struct turn_attr_even_port*)ptr;
         break;
       case TURN_ATTR_REQUESTED_TRANSPORT:
         message->requested_transport = (struct turn_attr_requested_transport*)ptr;
         break;
+      case TURN_ATTR_DONT_FRAGMENT:
+        message->dont_fragment = (struct turn_attr_dont_fragment*)ptr;
+        break;
       case TURN_ATTR_RESERVATION_TOKEN:
         message->reservation_token = (struct turn_attr_reservation_token*)ptr;
         break;
+#if 0
       case TURN_ATTR_ICMP:
         message->icmp = (struct turn_attr_icmp*)ptr;
         break;
+#endif
       case TURN_ATTR_REQUESTED_ADDRESS_TYPE:
         message->requested_addr_type = (struct turn_attr_requested_address_type*)ptr;
         break;

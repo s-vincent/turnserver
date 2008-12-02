@@ -72,6 +72,7 @@ int main(int argc, char** argv)
   struct sockaddr_storage server_addr;
   socklen_t server_addr_size = 0;
   struct sockaddr_storage peer_addr;
+  struct sockaddr_storage peer_addr2;
   struct sockaddr_storage daddr;
   socklen_t daddr_size = sizeof(struct sockaddr_in);
   struct addrinfo hints;
@@ -88,6 +89,7 @@ int main(int argc, char** argv)
   size_t n_len = 0;
   uint8_t token[8];
   char peer_port[8];
+  char buff[2500];
 
   if(argc != 5)
   {
@@ -125,6 +127,22 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
   memcpy(&peer_addr, res->ai_addr, res->ai_addrlen);
+  freeaddrinfo(res);
+
+  /* get address for peer_addr2 */
+  snprintf(peer_port, sizeof(peer_port), "%s", argv[4]);
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol =  IPPROTO_UDP;
+  hints.ai_flags = 0;
+
+  if(getaddrinfo("10.1.0.3", peer_port, &hints, &res) != 0)
+  {
+    perror("getaddrinfo");
+    exit(EXIT_FAILURE);
+  }
+  memcpy(&peer_addr2, res->ai_addr, res->ai_addrlen);
   freeaddrinfo(res);
 
   nb = turn_generate_transaction_id(id);
@@ -181,12 +199,12 @@ int main(int argc, char** argv)
   attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
+  
   /* LIFETIME */
   attr = turn_attr_lifetime_create(0x00000005, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
+  
   /* SOFTWARE */
   attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
@@ -197,8 +215,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0xC0000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x80, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -218,7 +236,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
+  /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -233,7 +251,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take into account FINGERPRINT attribute */
+  /* index - 1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
@@ -319,7 +337,7 @@ int main(int argc, char** argv)
   index++;
 
   /* LIFETIME */
-  attr = turn_attr_lifetime_create(0x00000006, &iov[index]);
+  attr = turn_attr_lifetime_create(0x00000010, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -328,8 +346,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0x00000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x00, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -344,7 +362,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
+  /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -359,7 +377,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take into account FINGERPRINT attribute */
+  /* index - 1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
@@ -401,8 +419,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* PEER-ADDRESS */
-  attr = turn_attr_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -417,7 +435,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
+  /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -432,7 +450,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take into account FINGERPRINT attribute */
+  /* index - 1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
@@ -441,19 +459,90 @@ int main(int argc, char** argv)
   printf("Send ChannelBind request\n");
   nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
   nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
-#endif
-
+#endif 
   iovec_free_data(iov, index);
   index = 0;
 
-  hdr = turn_msg_send_indication_create(0, id, &iov[index]);
+  /* CreatePermission */
+  hdr = turn_msg_createpermission_request_create(0, id, &iov[index]);
   index++;
 
-  attr = turn_attr_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  /* NONCE */
+  attr = turn_attr_nonce_create(nonce, n_len, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  attr = turn_attr_data_create("Hello", 5, &iov[index]);
+  /* REALM */
+  attr = turn_attr_realm_create("domain.org", strlen("domain.org"), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* USERNAME */
+  attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* SOFTWARE */
+  attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* MESSAGE-INTEGRITY */
+  attr = turn_attr_message_integrity_create(NULL, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+
+  nb = index; /* number of element before MESSAGE-INTEGRITY */
+  index++;
+
+  /* convert to big endian */
+  hdr->turn_msg_len = htons(hdr->turn_msg_len);
+
+  /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
+  /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
+  md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
+  turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
+  attr2 = attr;
+
+#if 1
+  printf("Send CreatePermission request\n");
+  nb = turn_udp_send(sock, (struct sockaddr*)&server_addr, server_addr_size, iov, index);
+  nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &nb2);
+#endif
+  iovec_free_data(iov, index);
+  index = 0;
+
+#ifdef TEST_BANDWIDTH
+  while(1)
+  {
+    static size_t i = 0;
+
+    i++;
+
+    usleep(5000);
+#endif 
+  hdr = turn_msg_send_indication_create(0, id, &iov[index]);
+  index++;
+
+  /* DONT-FRAGMENT */
+  attr = turn_attr_dont_fragment_create(&iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  attr = turn_attr_data_create(buff, 1024, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -464,21 +553,32 @@ int main(int argc, char** argv)
 
   iovec_free_data(iov, index);
   index = 0;
-  sleep(1);
 
 #if 1
-  nb3 = recvfrom(sock, buf, 1024, 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb3 = recvfrom(sock, buf, 1500, 0, (struct sockaddr*)&daddr, &daddr_size);
+  if(nb3 == -1)
+  {
+    perror("recvfrom");
+  }
+
   nb = turn_parse_message(buf, nb3, &message, tabu, &tabu_size);
+
+  if(nb == -1)
+  {
+    printf("Error parsing\n");
+  }
 
   if(message.data)
   {
-    char received[1024];
     printf("Received %u bytes\n", ntohs(message.data->turn_attr_len));
-    memcpy(received, message.data->turn_attr_data, ntohs(message.data->turn_attr_len));
-    received[ntohs(message.data->turn_attr_len)] = 0x00;
-    printf("I receive %s\n", received);
   }
 #endif
+
+#ifdef TEST_BANDWIDTH
+  printf("Sent %u\n", i);
+  }
+#endif
+  sleep(1);
 
   /* ChannelData */
   {
@@ -554,8 +654,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-PROPS */
-  attr = turn_attr_requested_props_create(0x00000000, &iov[index]);
+  /* EVEN-PORT */
+  attr = turn_attr_even_port_create(0x00, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -582,7 +682,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
-  /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
+  /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -597,7 +697,7 @@ int main(int argc, char** argv)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
-  /* index -1, we do not take into account FINGERPRINT attribute */
+  /* index - 1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 #endif
