@@ -56,6 +56,6 @@ private_key_file = "./server.key"
 ## Account method.
 account_method = "file"
 
-## Account file (fi account_method = file).
+## Account file (if account_method = file).
 account_file = "./turnusers.txt"
 

@@ -46,6 +46,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <errno.h>
+#include <syslog.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -264,7 +265,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
  * \param name name of the program
  * \param version version of the program
  */
-static void turnserver_print_help(char* name, char* version)
+static void turnserver_print_help(const char* name, const char* version)
 {
   fprintf(stdout, "TurnServer %s\n", version);
   fprintf(stdout, "Usage: %s [-c file] [-h] [-v]\n", name);
@@ -980,6 +981,11 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   size_t index = 0;
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
+  char str2[INET6_ADDRSTRLEN];
+  char str3[INET6_ADDRSTRLEN];
+  uint16_t port = 0;
+  uint16_t port2 = 0;
+  char buf_syslog[256];
 
   debug(DBG_ATTR, "CreatePermission request received\n");
 
@@ -989,6 +995,29 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     debug(DBG_ATTR, "Too many XOR-PEER-ADDRESS attributes\n");
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, desc->key);
     return -1;
+  }
+
+  /* get string representation of addresses for syslog */
+  if(desc->relayed_addr.ss_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)&desc->relayed_addr)->sin_addr, str3, INET6_ADDRSTRLEN);
+    port = ntohs(((struct sockaddr_in*)&desc->relayed_addr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)&desc->relayed_addr)->sin6_addr, str3, INET6_ADDRSTRLEN);
+    port = ntohs(((struct sockaddr_in6*)&desc->relayed_addr)->sin6_port);
+  }
+
+  if(saddr->sa_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)saddr)->sin_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
   }
 
   /* check address family for all XOR-PEER-ADDRESS attributes against the relayed ones */
@@ -1026,13 +1055,18 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
       return -1;
     }
 
+    inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+
     if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
     {
-      inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
       debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
       /* XXX send response ? */
       continue;
     }
+
+    snprintf(buf_syslog, sizeof(buf_syslog), "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
+    buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
+    syslog(LOG_INFO, buf_syslog);
 
     /* find a permission */
     alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
@@ -1128,6 +1162,11 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   uint8_t* p = (uint8_t*)&cookie;
   ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
+  char str2[INET6_ADDRSTRLEN];
+  char str3[INET6_ADDRSTRLEN];
+  uint16_t port = 0;
+  uint16_t port2 = 0;
+  char buf_syslog[256];
 
   debug(DBG_ATTR, "ChannelBind request received!\n");
 
@@ -1189,9 +1228,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     return -1;
   }
 
-#ifndef NDEBUG
-  debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
-#endif
+  inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+  debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", str, peer_port);
 
   /* check that the transport address is not currently bound to another channel */
   if(allocation_desc_find_channel(desc, len == 4 ? AF_INET : AF_INET6, peer_addr, peer_port))
@@ -1227,6 +1265,33 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
       return -1;
     }
   }
+
+  /* get string representation of addresses for syslog */
+  if(desc->relayed_addr.ss_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)&desc->relayed_addr)->sin_addr, str3, INET6_ADDRSTRLEN);
+    port = ntohs(((struct sockaddr_in*)&desc->relayed_addr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)&desc->relayed_addr)->sin6_addr, str3, INET6_ADDRSTRLEN);
+    port = ntohs(((struct sockaddr_in6*)&desc->relayed_addr)->sin6_port);
+  }
+
+  if(saddr->sa_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)saddr)->sin_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
+  }
+
+  snprintf(buf_syslog, sizeof(buf_syslog), "ChannelBind transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str, peer_port);
+  buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
+  syslog(LOG_INFO, buf_syslog);
 
   /* find a permission */
   alloc_permission = allocation_desc_find_permission(desc, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr);
@@ -1445,7 +1510,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   size_t quit_loop = 0;
   uint8_t reservation_token[8];
   char str[INET6_ADDRSTRLEN];
+  char str2[INET6_ADDRSTRLEN];
+  uint16_t port2 = 0;
   int has_token = 0;
+  char buf_syslog[256];
 
   debug(DBG_ATTR, "Allocate request received!\n");
 
@@ -1560,7 +1628,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->even_port && message->reservation_token)
   {
-    /* cannot have EVEN-PORT and RESERVATION-TOKEN, => error 400 */
+    /* cannot have EVEN-PORT and RESERVATION-TOKEN => error 400 */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
@@ -1694,9 +1762,25 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
+  /* get string representation of address for syslog */
+  if(saddr->sa_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)saddr)->sin_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
+  }
+
   if(account->allocations > turnserver_cfg_max_relay_per_username())
   {
-    /* quota exceeded, => error 486 */
+    /* quota exceeded => error 486 */
+    snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u quota exceeded", transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
+    buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
+    syslog(LOG_INFO, buf_syslog);
+
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
     return -1;
   }
@@ -1724,6 +1808,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   {
     desc->relayed_tls = 1;
   }
+
+  snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
+  buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
+  syslog(LOG_INFO, buf_syslog);
 
   /* assign the sockets to the allocation */
   desc->relayed_sock = relayed_sock;
@@ -1909,7 +1997,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
       if(len != ntohs(message->username->turn_attr_len) ||
          strncmp((char*)message->username->turn_attr_username, account->username, len))
       {
-        /* credentials do not match with those used for allocation, => error 441 */
+        /* credentials do not match with those used for allocation => error 441 */
         debug(DBG_ATTR, "Wrong credentials!\n");
         turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 441, saddr, saddr_size, speer, account->key);
         return 0;
@@ -3256,6 +3344,12 @@ int main(int argc, char** argv)
     }
   }
 
+  debug(DBG_ATTR, "TurnServer start\n");
+
+  /* syslog system */
+  openlog("TurnServer", LOG_PID, LOG_DAEMON);
+  syslog(LOG_INFO, "TurnServer start");
+
   /* initialize listen sockets */
   /* non-DTLS UDP socket */
   sock_udp = socket_create(IPPROTO_UDP, NULL, turnserver_cfg_udp_port());
@@ -3263,6 +3357,7 @@ int main(int argc, char** argv)
   if(sock_udp == -1)
   {
     debug(DBG_ATTR, "UDP socket creation failed\n");
+    syslog(LOG_ERR, "UDP socket creation failed");
   }
 
   sock_tcp = socket_create(IPPROTO_TCP, NULL, turnserver_cfg_tcp_port());
@@ -3272,6 +3367,7 @@ int main(int argc, char** argv)
     if(listen(sock_tcp, 5) == -1)
     {
       debug(DBG_ATTR, "TCP socket failed to listen()\n");
+      syslog(LOG_ERR, "TCP socket failed to listen()");
       close(sock_tcp);
       sock_tcp  = -1;
     }
@@ -3280,6 +3376,7 @@ int main(int argc, char** argv)
   if(sock_tcp == -1)
   {
     debug(DBG_ATTR, "TCP socket creation failed\n");
+    syslog(LOG_ERR, "TCP socket creation failed");
   }
 
   if(turnserver_cfg_tls())
@@ -3295,6 +3392,7 @@ int main(int argc, char** argv)
       if(listen(speer->sock, 5) == -1)
       {
         debug(DBG_ATTR, "TLS socket failed to listen()\n");
+        syslog(LOG_ERR, "TLS socket failed to listen()");
         tls_peer_free(&speer);
         speer = NULL;
       }
@@ -3308,6 +3406,7 @@ int main(int argc, char** argv)
   if(sock_tcp == -1 || sock_udp == -1 || (turnserver_cfg_tls() && !speer))
   {
     debug(DBG_ATTR, "Problem creating listen sockets, exiting\n");
+    syslog(LOG_ERR, "Problem creating listen sockets");
     run = 0;
   }
   else
@@ -3318,7 +3417,6 @@ int main(int argc, char** argv)
   /* initialize rand() */
   srand(time(NULL) + getpid());
 
-  debug(DBG_ATTR, "TurnServer start\n");
   while(run)
   {
     if(!run)
@@ -3400,6 +3498,9 @@ int main(int argc, char** argv)
 
   fprintf(stderr, "\n");
   debug(DBG_ATTR,"Exiting\n");
+  
+  syslog(LOG_INFO, "TurnServer stop");
+  closelog();
 
   /* free the expired allocation list (warning: special version use ->list2) */
   list_iterate_safe(get, n, &expired_allocation_list)
