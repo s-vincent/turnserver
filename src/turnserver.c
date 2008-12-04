@@ -266,8 +266,8 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
  */
 static void turnserver_print_help(char* name, char* version)
 {
-  fprintf(stdout, "%s %s - TURN Server\n", name, version);
-  fprintf(stdout, "Usage: %s [-c file] [-h]\n", name);
+  fprintf(stdout, "TurnServer %s\n", version);
+  fprintf(stdout, "Usage: %s [-c file] [-h] [-v]\n", name);
 }
 
 /**
@@ -290,7 +290,10 @@ static void turnserver_parse_cmdline(int argc, char** argv)
         exit(EXIT_SUCCESS);
         break;
       case 'v': /* version */
-        fprintf(stdout, "turnserver %s\n", PACKAGE_VERSION);
+        fprintf(stdout, "TurnServer %s\n", PACKAGE_VERSION);
+        fprintf(stdout, "Copyright (C) 2008 Sebastien Vincent.\n");
+        fprintf(stdout, "This is free software; see the source for copying conditions.  There is NO\n");
+        fprintf(stdout, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
         exit(EXIT_SUCCESS);
       case 'c': /* configuration file */
         if(optarg)
@@ -776,6 +779,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   int optval = 0;
   int save_val = 0;
   socklen_t optlen = sizeof(int);
+  char str[INET6_ADDRSTRLEN];
 
   debug(DBG_ATTR, "Send indication received!\n");
 
@@ -816,8 +820,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
   if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
   {
-    char str[INET6_ADDRSTRLEN];
-    debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
+    inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+    debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", str);
     return -1;
   }
 
@@ -975,6 +979,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   struct iovec iov[4]; /* header, software, integrity, fingerprint */
   size_t index = 0;
   ssize_t nb = -1;
+  char str[INET6_ADDRSTRLEN];
 
   debug(DBG_ATTR, "CreatePermission request received\n");
 
@@ -1023,8 +1028,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
     if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
     {
-      char str[INET6_ADDRSTRLEN];
-      debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
+      inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+      debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
       /* XXX send response ? */
       continue;
     }
@@ -1035,7 +1040,6 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     /* update or create allocation permission on that peer */
     if(!alloc_permission)
     {
-      char str[INET6_ADDRSTRLEN];
       debug(DBG_ATTR, "Install permission for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
       allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, desc->relayed_addr.ss_family, peer_addr);
     }
@@ -1179,12 +1183,15 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
   {
-    debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN));
+    inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+    debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", str);
     /* XXX send response ? */
     return -1;
   }
 
+#ifndef NDEBUG
   debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
+#endif
 
   /* check that the transport address is not currently bound to another channel */
   if(allocation_desc_find_channel(desc, len == 4 ? AF_INET : AF_INET6, peer_addr, peer_port))

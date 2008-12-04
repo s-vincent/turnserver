@@ -120,7 +120,11 @@ extern "C"
    * Use similary like a variadic macro: debug(DBG_ATTR, format, ...).
    * \warning Respect the use: debug(DBG_ATTR, format, ...).
    */
+#ifndef NDEBUG
 #define debug dbg_print
+#else
+#define debug(...)
+#endif
 
   /**
    * \def debug_hexa
