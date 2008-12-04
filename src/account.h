@@ -61,7 +61,7 @@ enum account_state
  */
 struct account_desc
 {
-  char username[64]; /**< Username */
+  char username[256]; /**< Username */
   char realm[256]; /**< Realm */
   unsigned char key[16]; /**< MD5 hash */
   enum account_state state; /**< Access state */
@@ -122,7 +122,6 @@ void account_list_add(struct list_head* list, struct account_desc* desc);
  * \param desc account to remove
  */
 void account_list_remove(struct list_head* list, struct account_desc* desc);
-
 
 /**
  * \brief Parse account file and fill up a list.

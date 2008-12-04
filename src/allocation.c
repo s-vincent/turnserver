@@ -147,6 +147,7 @@ void allocation_desc_free(struct allocation_desc** desc)
     struct allocation_channel* tmp = list_get(get, struct allocation_channel, list);
     timer_delete(tmp->expire_timer);
     LIST_DEL(&tmp->list);
+    LIST_DEL(&tmp->list2);
     free(tmp);
   }
 
@@ -155,6 +156,7 @@ void allocation_desc_free(struct allocation_desc** desc)
     struct allocation_permission* tmp = list_get(get, struct allocation_permission, list);
     timer_delete(tmp->expire_timer);
     LIST_DEL(&tmp->list);
+    LIST_DEL(&tmp->list2);
     free(tmp);
   }
 
@@ -295,6 +297,7 @@ int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifeti
 
   /* add to the list */
   LIST_ADD(&ret->list, &desc->peers_permissions);
+  INIT_LIST(ret->list2);
   return 0;
 }
 
@@ -368,6 +371,7 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, 
 
   /* add to the list */
   LIST_ADD(&ret->list, &desc->peers_channels);
+  INIT_LIST(ret->list2);
   return 0;
 }
 
