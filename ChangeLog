@@ -11,7 +11,9 @@
                   - Update wireshark parser (packet-stun2.c);
                   - Additionnal configuration parameters;
                   - Allocation number and bandwidth quota;
-                  - Address / port restrictions.
+                  - Address / port restrictions;
+                  - Reconstruct fragmented TCP messages support;
+                  - Prevent allocation hijacking support.
 
 2008-11-22  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 

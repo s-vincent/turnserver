@@ -1117,6 +1117,29 @@ struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, stru
   return error;
 }
 
+struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(441, TURN_ERROR_441, sizeof(TURN_ERROR_441), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
 
 int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size, const struct iovec* iov, size_t iovlen)
 {

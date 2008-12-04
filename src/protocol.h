@@ -232,6 +232,16 @@ struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
+ * \brief Create a complete error 441.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled ith the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
  * \brief Create a TURN (or STUN) message.
  * \param type type of the message
  * \param len length of the message without 20 bytes TURN header

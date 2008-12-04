@@ -12,8 +12,15 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 
 #include "tls_peer.h"
+
+/**
+ * \var run
+ * \brief Running state of the program.
+ */
+static volatile int run = 0;
 
 /**
  * \brief Signal management.
@@ -30,7 +37,7 @@ static void signal_handler(int code)
     case SIGINT:
     case SIGTERM:
       /* stop the program */
-      _exit(EXIT_SUCCESS);
+      run = 0;
       break;
     default:
       break;
@@ -80,9 +87,30 @@ int main(int argc, char** argv)
   memset(&addr, 0x00, sizeof(struct sockaddr));
   memset(buf, 0x00, sizeof(buf));
 
-  while(1)
+  run = 1;
+
+  while(run)
   {
-    nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addr_size);
+    fd_set fdsr;
+    int nsock = sock;
+
+    FD_ZERO(&fdsr);
+    FD_SET(sock, &fdsr);
+
+    nsock++;
+
+    if(select(nsock, &fdsr, NULL, NULL, NULL) > 0)
+    {
+      if(FD_ISSET(sock, &fdsr))
+      {
+        nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addr_size);
+      }
+    }
+    else
+    {
+      perror("select");
+      continue;
+    }
 
     if(nb)
     {
@@ -99,6 +127,8 @@ int main(int argc, char** argv)
   }
 
   close(sock);
+  
+  fprintf(stdout, "Exiting\n");
 
   return EXIT_SUCCESS;
 }

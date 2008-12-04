@@ -427,6 +427,9 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 440: /* Address family not supported */
       hdr = turn_error_response_440(method, id, &iov[index], &index);
       break;
+    case 441: /* Wrong credentials */
+      hdr = turn_error_response_441(method, id, &iov[index], &index);
+      break;
     case 442: /* Unsupported transport protocol */
       hdr = turn_error_response_442(method, id, &iov[index], &index);
       break;
@@ -621,9 +624,10 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 
   msg = (char*)channel_data->turn_channel_data;
 
-  if(channel_number == 0xFFFF)
+  if(channel_number > 0x7FFF)
   {
-    /* channel reserved for future extensions */
+    /* channel reserved for future use */
+    debug(DBG_ATTR, "Channel number reserved for future use!\n");
     return -1;
   }
 
@@ -1133,7 +1137,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   channel = ntohs(message->channel_number->turn_attr_number);
 
-  if(channel < 0x4000 || channel > 0x7FFE)
+  if(channel < 0x4000 || channel > 0x7FFF)
   {
     /* bad channel => error 400 */
     debug(DBG_ATTR, "Channel number is invalid\n");
@@ -1538,13 +1542,20 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   {
     r_flag = message->even_port->turn_attr_flags & 0x80;
 
-    /* test if there are unknown other flags => error 508 */
+    /* test if there are unknown other flags */
     if(message->even_port->turn_attr_flags & (~supported_even_port_flags)) 
     {
       /* unsupported flags => error 508 */
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
       return 0;
     }
+  }
+
+  if(message->even_port && message->reservation_token)
+  {
+    /* cannot have EVEN-PORT and RESERVATION-TOKEN, => error 400 */
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    return 0;
   }
 
   /* check reservation-token and requested-props flags */
@@ -1884,6 +1895,20 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
 
   if(STUN_IS_REQUEST(hdr_msg_type))
   {
+    if(method != TURN_METHOD_ALLOCATE)
+    {
+      /* check to prevent hijacking the client's allocation */
+      size_t len = strlen(account->username);
+      if(len != ntohs(message->username->turn_attr_len) ||
+         strncmp((char*)message->username->turn_attr_username, account->username, len))
+      {
+        /* credentials do not match with those used for allocation, => error 441 */
+        debug(DBG_ATTR, "Wrong credentials!\n");
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 441, saddr, saddr_size, speer, account->key);
+        return 0;
+      }
+    }
+
     switch(method)
     {
       case TURN_METHOD_ALLOCATE:
