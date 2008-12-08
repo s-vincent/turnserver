@@ -51,7 +51,9 @@ II) Code organization
 The code has to follow these recommandations : 
 - Always initialize your variables;
 - Put "static" keyword when functions / global variables is not used outside the file;
-- Try to avoid static variables in functions (try to make reentrant things).
+- Try to avoid static variables in functions (try to make reentrant things);
+- Each global variable must be prefixed with "g_";
+- Put an empty line at the end of each file.
 
 Each file, function, structure and global variable MUST be documented using doxygen. Here is a
 complete example :
@@ -67,6 +69,12 @@ complete example :
 #define MY_FILE_H
 
 /**
+ * \def PROGRAM_NAME
+ * \brief The program name.
+ */
+#define PROGRAM_NAME "MyProgram"
+
+/**
  * \struct my_struct
  * \brief Short description.
  */
@@ -77,10 +85,10 @@ struct my_struct
 };
 
 /**
- * \var my_var
+ * \var g_my_var
  * \brief Description of this global variable.
  */
-struct my_struct* my_var = NULL;
+struct my_struct* g_my_var = NULL;
 
 /**
  * \brief Doing something
@@ -91,4 +99,10 @@ struct my_struct* my_var = NULL;
 int foo(int a, char b);
 
 #endif /* MY_FILE_H */
+
+III) Standards
+---------------
+
+In order to compile and run on many operating systems the code has to be portable. Thus
+it is strongly recommended to write code which respect C99 and POSIX standards.
 

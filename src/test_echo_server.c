@@ -17,10 +17,10 @@
 #include "tls_peer.h"
 
 /**
- * \var run
+ * \var g_run
  * \brief Running state of the program.
  */
-static volatile int run = 0;
+static volatile int g_run = 0;
 
 /**
  * \brief Signal management.
@@ -37,7 +37,7 @@ static void signal_handler(int code)
     case SIGINT:
     case SIGTERM:
       /* stop the program */
-      run = 0;
+      g_run = 0;
       break;
     default:
       break;
@@ -87,9 +87,9 @@ int main(int argc, char** argv)
   memset(&addr, 0x00, sizeof(struct sockaddr));
   memset(buf, 0x00, sizeof(buf));
 
-  run = 1;
+  g_run = 1;
 
-  while(run)
+  while(g_run)
   {
     fd_set fdsr;
     int nsock = sock;

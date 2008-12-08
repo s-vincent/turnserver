@@ -83,67 +83,61 @@
 #endif
 
 /**
- * \var software_description
+ * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-static const char* software_description = "TurnServer 0.2-draft-11 by LSIIT's Network Research Team";
+#define SOFTWARE_DESCRIPTION "TurnServer 0.2 by LSIIT's Network Research Team"
 
 /**
- * \var run
- * \brief Running state of the program.
- */
-static volatile int run = 0;
-
-/**
- * \var default_configuration_file
+ * \def DEFAULT_CONFIGURATION_FILE
  * \brief Default configuration file pathname.
  */
-static const char* default_configuration_file = "/etc/turnserver.conf";
+#define DEFAULT_CONFIGURATION_FILE "/etc/turnserver.conf"
 
 /**
- * \var configuration_file
- * \brief Configuration file.
+ * \var g_run
+ * \brief Running state of the program.
  */
-static const char* configuration_file = NULL;
+static volatile int g_run = 0;
 
 /**
- * \var expired_allocation_list
+ * \var g_expired_allocation_list
  * \brief List which constains expired allocation.
  */
-static struct list_head expired_allocation_list;
+static struct list_head g_expired_allocation_list;
 
 /**
- * \var expired_permission_list
+ * \var g_expired_permission_list
  * \brief List which constains expired permissions.
  */
-static struct list_head expired_permission_list;
+static struct list_head g_expired_permission_list;
 
 /**
- * \var expired_channel_list
+ * \var g_expired_channel_list
  * \brief List which constains expired channels.
  */
-static struct list_head expired_channel_list;
+static struct list_head g_expired_channel_list;
 
 /**
- * \var expired_token_list
+ * \var g_expired_token_list
  * \brief List which contains expired tokens.
  */
-static struct list_head expired_token_list;
+static struct list_head g_expired_token_list;
 
 /**
- * \var token_list
+ * \var g_token_list
  * \brief List of valid tokens.
  */
-static struct list_head token_list;
+static struct list_head g_token_list;
 
 /**
- * \var supported_even_port_flags
+ * \var g_supported_even_port_flags
  * \brief EVEN-PORT flags supported.
  *
  * For the moment the following flags are supported:
- * - R : reserve couple of ports (one pair, one impair).
+ * - R : reserve couple of ports (one even, one odd).
  */
-static const uint8_t supported_even_port_flags = 0x80;
+static const uint8_t g_supported_even_port_flags = 0x80;
 
 /**
  * \struct socket_desc
@@ -154,7 +148,7 @@ static const uint8_t supported_even_port_flags = 0x80;
 struct socket_desc
 {
   int sock; /**< The socket */
-  /* XXX maybe 1500 is not sufficient for all case */
+  /* XXX maybe 1500 is not sufficient for all cases */
   char buf[1500]; /**< Internal buffer for TCP stream reconstruction */
   size_t buf_pos; /**< Position in the internal buffer */
   size_t msg_len; /**< Message length that is not complete */
@@ -176,7 +170,7 @@ static void signal_handler(int code)
     case SIGINT:
     case SIGTERM:
       /* stop the program */
-      run = 0;
+      g_run = 0;
       break;
     default:
       break;
@@ -197,7 +191,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 {
   extra = NULL; /* not used */
 
-  if(!run)
+  if(!g_run)
   {
     return;
   }
@@ -218,7 +212,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     /* add it to the expired list, the next loop will
      * purge it
      */
-    LIST_ADD(&desc->list2, &expired_allocation_list);
+    LIST_ADD(&desc->list2, &g_expired_allocation_list);
   }
   else if(signo == SIGRT_EXPIRE_PERMISSION)
   {
@@ -231,7 +225,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
     debug(DBG_ATTR, "Permission expires: %p\n", desc);
     /* add it to the expired list */
-    LIST_ADD(&desc->list2, &expired_permission_list);
+    LIST_ADD(&desc->list2, &g_expired_permission_list);
   }
   else if(signo == SIGRT_EXPIRE_CHANNEL)
   {
@@ -244,7 +238,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
     debug(DBG_ATTR, "Channel expires: %p\n", desc);
     /* add it to the expired list */
-    LIST_ADD(&desc->list2, &expired_channel_list);
+    LIST_ADD(&desc->list2, &g_expired_channel_list);
   }
   else if(signo == SIGRT_EXPIRE_TOKEN)
   {
@@ -256,7 +250,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     }
 
     debug(DBG_ATTR, "Token expires: %p\n", desc);
-    LIST_ADD(&desc->list2, &expired_token_list);
+    LIST_ADD(&desc->list2, &g_expired_token_list);
   }
 }
 
@@ -275,9 +269,10 @@ static void turnserver_print_help(const char* name, const char* version)
  * \brief Parse the command line arguments.
  * \param argc number of argument
  * \param argv array of argument
+ * \param configuration_file configuration (-c) argument will be filled in if any
  * \return 0 if success, -1 otherwise
  */
-static void turnserver_parse_cmdline(int argc, char** argv)
+static void turnserver_parse_cmdline(int argc, char** argv, char** configuration_file)
 {
   static char* optstr = "c:hv";
   int s = 0;
@@ -299,7 +294,7 @@ static void turnserver_parse_cmdline(int argc, char** argv)
       case 'c': /* configuration file */
         if(optarg)
         {
-          configuration_file = optarg;
+          *configuration_file = optarg;
         }
         break;
       default:
@@ -456,7 +451,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
 
   /* software (not fatal if it cannot be allocated) */
-  if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
   {
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -538,7 +533,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   index++;
 
   /* software (not fatal if it cannot be allocated) */
-  if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
   {
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -1092,7 +1087,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   index++;
 
   /* software (not fatal if it cannot be allocated) */
-  if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
   {
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -1315,7 +1310,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   index++;
 
   /* software (not fatal if it cannot be allocated) */
-  if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
   {
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -1440,7 +1435,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   index++;
 
   /* software (not fatal if it cannot be allocated) */
-  if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
   {
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -1571,7 +1566,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     }
 
     /* software (not fatal if it cannot be allocated) */
-    if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+    if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
     {
       error->turn_msg_len += iov[index].iov_len;
       index++;
@@ -1618,7 +1613,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     r_flag = message->even_port->turn_attr_flags & 0x80;
 
     /* test if there are unknown other flags */
-    if(message->even_port->turn_attr_flags & (~supported_even_port_flags)) 
+    if(message->even_port->turn_attr_flags & (~g_supported_even_port_flags)) 
     {
       /* unsupported flags => error 508 */
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
@@ -1639,7 +1634,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     struct allocation_token* token = NULL;
 
     /* find if the requested reservation-token exists */
-    if((token = allocation_token_list_find(&token_list, message->reservation_token->turn_attr_token)))
+    if((token = allocation_token_list_find(&g_token_list, message->reservation_token->turn_attr_token)))
     {
       relayed_sock = token->sock;
       has_token = 1;
@@ -1647,7 +1642,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       /* suppress from the list */
       allocation_token_set_timer(token, 0); /* stop timer */
       LIST_DEL(&token->list2);
-      allocation_token_list_remove(&token_list, token);
+      allocation_token_list_remove(&g_token_list, token);
       debug(DBG_ATTR, "Take token reserved address!\n");
     }
     /* if the token is not found we ignore it */
@@ -1743,7 +1738,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
         random_bytes_generate(reservation_token, 8);
 
         token = allocation_token_new(reservation_token, reservation_sock, TURN_DEFAULT_TOKEN_LIFETIME);
-        allocation_token_list_add(&token_list, token);
+        allocation_token_list_add(&g_token_list, token);
       }
     }
 
@@ -1893,7 +1888,7 @@ send_success_response:
     }
 
     /* software (not fatal if it cannot be allocated) */
-    if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+    if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
     {
       hdr->turn_msg_len += iov[index].iov_len;
       index++;
@@ -2195,7 +2190,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       }
 
       /* software (not fatal if it cannot be allocated) */
-      if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+      if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
       {
         error->turn_msg_len += iov[index].iov_len;
         index++;
@@ -2257,7 +2252,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       }
 
       /* software (not fatal if it cannot be allocated) */
-      if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+      if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
       {
         error->turn_msg_len += iov[index].iov_len;
         index++;
@@ -2331,7 +2326,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         }
 
         /* software (not fatal if it cannot be allocated) */
-        if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+        if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
         {
           error->turn_msg_len += iov[index].iov_len;
           index++;
@@ -2414,7 +2409,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         }
 
         /* software (not fatal if it cannot be allocated) */
-        if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+        if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
         {
           error->turn_msg_len += iov[index].iov_len;
           index++;
@@ -2468,7 +2463,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     }
 
     /* software (not fatal if it cannot be allocated) */
-    if((attr = turn_attr_software_create(software_description, strlen(software_description), &iov[index])))
+    if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
     {
       error->turn_msg_len += iov[index].iov_len;
       index++;
@@ -2872,7 +2867,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   if(max_fd == -1)
   {
     /* should not happen on a POSIX.1 compliant-system */
-    run = 0;
+    g_run = 0;
     debug(DBG_ATTR, "Cannot determine max open files for this system!\n");
     return;
   }
@@ -2880,7 +2875,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   /* check if we have at least one TCP or UDP socket */
   if(sock_udp < 0 && sock_tcp < 0)
   {
-    run = 0;
+    g_run = 0;
     debug(DBG_ATTR, "No listen sockets!\n");
     return;
   }
@@ -2890,7 +2885,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   /* ensure that FD_SET will not overflow */
   if(sock_udp >= max_fd || sock_tcp >= max_fd || (speer && (speer->sock >= max_fd)))
   {
-    run = 0;
+    g_run = 0;
     debug(DBG_ATTR, "Listen sockets cannot be set for select() (FD_SETSIZE overflow)\n");
     return;
   }
@@ -3196,17 +3191,18 @@ int main(int argc, char** argv)
   struct list_head* n = NULL;
   struct list_head* get = NULL;
   struct tls_peer* speer = NULL;
+  char* configuration_file = NULL;
 
   INIT_LIST(allocation_list);
   INIT_LIST(account_list);
   INIT_LIST(tcp_socket_list);
-  INIT_LIST(token_list);
+  INIT_LIST(g_token_list);
 
   /* initialize expired lists */
-  INIT_LIST(expired_allocation_list);
-  INIT_LIST(expired_permission_list);
-  INIT_LIST(expired_channel_list);
-  INIT_LIST(expired_token_list);
+  INIT_LIST(g_expired_allocation_list);
+  INIT_LIST(g_expired_permission_list);
+  INIT_LIST(g_expired_channel_list);
+  INIT_LIST(g_expired_token_list);
 
 #ifdef NDEBUG
   /* disable core dump in release mode */
@@ -3282,11 +3278,11 @@ int main(int argc, char** argv)
 #endif
 
   /* parse the arguments */
-  turnserver_parse_cmdline(argc, argv);
+  turnserver_parse_cmdline(argc, argv, &configuration_file);
 
   if(!configuration_file)
   {
-    configuration_file = default_configuration_file;
+    configuration_file = DEFAULT_CONFIGURATION_FILE;
   }
 
   /* parse configuration file */
@@ -3407,27 +3403,27 @@ int main(int argc, char** argv)
   {
     debug(DBG_ATTR, "Problem creating listen sockets, exiting\n");
     syslog(LOG_ERR, "Problem creating listen sockets");
-    run = 0;
+    g_run = 0;
   }
   else
   {
-    run = 1;
+    g_run = 1;
   }
 
   /* initialize rand() */
   srand(time(NULL) + getpid());
 
-  while(run)
+  while(g_run)
   {
-    if(!run)
+    if(!g_run)
     {
       break;
     }
 
     /* purge lists if needed */
-    if(expired_allocation_list.next)
+    if(g_expired_allocation_list.next)
     {
-      list_iterate_safe(get, n, &expired_allocation_list)
+      list_iterate_safe(get, n, &g_expired_allocation_list)
       {
         struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
@@ -3447,9 +3443,9 @@ int main(int argc, char** argv)
       }
     }
 
-    if(expired_permission_list.next)
+    if(g_expired_permission_list.next)
     {
-      list_iterate_safe(get, n, &expired_permission_list)
+      list_iterate_safe(get, n, &g_expired_permission_list)
       {
         struct allocation_permission* tmp = list_get(get, struct allocation_permission, list2);
 
@@ -3462,9 +3458,9 @@ int main(int argc, char** argv)
       }
     }
 
-    if(expired_channel_list.next)
+    if(g_expired_channel_list.next)
     {
-      list_iterate_safe(get, n, &expired_channel_list)
+      list_iterate_safe(get, n, &g_expired_channel_list)
       {
         struct allocation_channel* tmp = list_get(get, struct allocation_channel, list2);
 
@@ -3477,9 +3473,9 @@ int main(int argc, char** argv)
       }
     }
 
-    if(expired_token_list.next)
+    if(g_expired_token_list.next)
     {
-      list_iterate_safe(get, n, &expired_token_list)
+      list_iterate_safe(get, n, &g_expired_token_list)
       {
         struct allocation_token* tmp = list_get(get, struct allocation_token, list2);
 
@@ -3502,8 +3498,8 @@ int main(int argc, char** argv)
   syslog(LOG_INFO, "TurnServer stop");
   closelog();
 
-  /* free the expired allocation list (warning: special version use ->list2) */
-  list_iterate_safe(get, n, &expired_allocation_list)
+  /* free the g_expired allocation list (warning: special version use ->list2) */
+  list_iterate_safe(get, n, &g_expired_allocation_list)
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
@@ -3513,7 +3509,7 @@ int main(int argc, char** argv)
     allocation_desc_free(&tmp);
   }
 
-  list_iterate_safe(get, n, &expired_token_list)
+  list_iterate_safe(get, n, &g_expired_token_list)
   {
     struct allocation_token* tmp = list_get(get, struct allocation_token, list2);
     LIST_DEL(&tmp->list2);
@@ -3552,7 +3548,7 @@ int main(int argc, char** argv)
   account_list_free(&account_list);
 
   /* free the token list */
-  allocation_token_list_free(&token_list);
+  allocation_token_list_free(&g_token_list);
 
   if(turnserver_cfg_tls())
   {
