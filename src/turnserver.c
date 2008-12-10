@@ -2858,6 +2858,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   struct sockaddr_storage daddr;
   socklen_t daddr_size = sizeof(struct sockaddr_storage);
   ssize_t nb = -1;
+  char* proto = NULL;
 
   max_fd = SFD_SETSIZE;
 
@@ -2969,7 +2970,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             (!turnserver_cfg_listen_address() && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
             (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
         {
-          char* proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+          proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family : %s\n", proto);
         }
         else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
@@ -3059,7 +3060,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
         {
           /* we don't relay the specified address family so close connection */
-          char* proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+          proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family : %s\n", proto);
           close(sock);
         }
@@ -3103,7 +3104,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
               (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
           {
             /* we don't relay the specified address family so close connection */
-            char* proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+            proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
             debug(DBG_ATTR, "Do not relay family : %s\n", proto);
             close(sock);
           }
