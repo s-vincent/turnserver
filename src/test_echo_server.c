@@ -20,7 +20,7 @@
  * \var g_run
  * \brief Running state of the program.
  */
-static volatile int g_run = 0;
+static volatile sig_atomic_t g_run = 0;
 
 /**
  * \brief Signal management.

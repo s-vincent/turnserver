@@ -144,6 +144,7 @@ typedef struct sfd_set
 {
 #ifndef _WIN32
   fd_mask fds_bits[SFD_SETSIZE / (8 * sizeof(fd_mask)) + 1]; /**< Bitmask */
+
 /**
  * \def __fds_bits
  * \brief Definition of __fds_bits for *BSD.

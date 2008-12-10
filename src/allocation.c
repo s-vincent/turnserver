@@ -392,7 +392,6 @@ void allocation_channel_set_timer(struct allocation_channel* channel, uint32_t l
   {
     return;
   }
-
 }
 
 void allocation_permission_set_timer(struct allocation_permission* permission, uint32_t lifetime)
@@ -534,6 +533,8 @@ struct allocation_token* allocation_token_new(uint8_t* id, int sock, uint32_t li
 void allocation_token_free(struct allocation_token** token)
 {
   timer_delete((*token)->expire_timer);
+  LIST_DEL(&(*token)->list);
+  LIST_DEL(&(*token)->list2);
   free(*token);
   *token = NULL;
 }

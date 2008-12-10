@@ -165,7 +165,7 @@ int turnserver_cfg_parse(const char* file)
     uint8_t mask = cfg_getint(ad, "mask");
     uint16_t port = cfg_getint(ad, "port");
     struct deny_address* denied = NULL;
-    
+
     denied = malloc(sizeof(struct deny_address));
 
     if(!denied)
@@ -374,7 +374,7 @@ int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t por
   {
     struct deny_address* tmp = list_get(get, struct deny_address, list);
     int  diff = 0;
-   
+
     /* compare addresses from same family */
     if((tmp->family == AF_INET6 && addrlen != 16) ||
        (tmp->family == AF_INET && addrlen != 4))

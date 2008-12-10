@@ -107,7 +107,7 @@ extern "C"
        struct rlimit limit;
        getrlimit(RLIMIT_NOFILE, &limit);
        return limit.rlim_cur;
-       */
+     */
 #else
 #ifndef FD_SETSIZE
 #define FD_SETSIZE 256
@@ -440,7 +440,7 @@ extern "C"
     for (i = 0; i < bin_len && (i * 2) < hex_len ; i++) 
     {
       j = (bin[i] >> 4) & 0x0f;
-      
+
       if (j <= 9)
       {
         hex[i*2] = (j + '0');
@@ -449,7 +449,7 @@ extern "C"
       {
         hex[i*2] = (j + 'a' - 10);
       }
-      
+
       j = bin[i] & 0x0f;
 
       if (j <= 9)
@@ -468,19 +468,19 @@ extern "C"
     unsigned int i = 0;
     *t = 0; 
 
-     for(i = 0; i < data_len ; i++)
-     {
-       *t = (*t) * 16;
+    for(i = 0; i < data_len ; i++)
+    {
+      *t = (*t) * 16;
 
-       if(data[i] >= '0' && data[i] <= '9')
-       {
-         *t += data[i] - '0';
-       }
-       else if(data[i] >= 'a' && data[i] <='f')
-       {
-         *t += data[i] - 'a' + 10;
-       }
-     }
+      if(data[i] >= '0' && data[i] <= '9')
+      {
+        *t += data[i] - '0';
+      }
+      else if(data[i] >= 'a' && data[i] <='f')
+      {
+        *t += data[i] - 'a' + 10;
+      }
+    }
   }
 
   void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t)
@@ -488,19 +488,19 @@ extern "C"
     unsigned int i = 0;
     *t = 0; 
 
-     for(i = 0; i < data_len ; i++)
-     {
-       *t = (*t) * 16;
+    for(i = 0; i < data_len ; i++)
+    {
+      *t = (*t) * 16;
 
-       if(data[i] >= '0' && data[i] <= '9')
-       {
-         *t += data[i] - '0';
-       }
-       else if(data[i] >= 'a' && data[i] <='f')
-       {
-         *t += data[i] - 'a' + 10;
-       }
-     }
+      if(data[i] >= '0' && data[i] <= '9')
+      {
+        *t += data[i] - '0';
+      }
+      else if(data[i] >= 'a' && data[i] <='f')
+      {
+        *t += data[i] - 'a' + 10;
+      }
+    }
   }
 
 #ifdef __cplusplus

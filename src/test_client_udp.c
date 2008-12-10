@@ -651,11 +651,6 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* EVEN-PORT */
-  attr = turn_attr_even_port_create(0x00, &iov[index]);
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
 #if 1
   /* RESERVATION-TOKEN */
   attr = turn_attr_reservation_token_create(token, &iov[index]);

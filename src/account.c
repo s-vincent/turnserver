@@ -64,10 +64,6 @@ struct account_desc* account_desc_new(const char* username, const char* password
   /* copy username and realm */
   strncpy(ret->username, username, sizeof(ret->username) -1);
   ret->username[sizeof(ret->username)-1] = 0x00;
-/*
-  strncpy(ret->password, password, sizeof(ret->password) -1);
-  ret->password[sizeof(ret->password)-1] = 0x00;
-*/
   strncpy(ret->realm, realm, sizeof(ret->realm) -1);
   ret->realm[sizeof(ret->realm)-1] = 0x00;
 
@@ -100,7 +96,7 @@ struct account_desc* account_list_find(struct list_head* list, const char* usern
   list_iterate_safe(get, n, list)
   {
     struct account_desc* tmp = list_get(get, struct account_desc, list);
-    
+
     if(!strcmp(tmp->username, username))
     {
       /* if realm is specified, try a match otherwise the peer is found */
@@ -166,14 +162,14 @@ int account_parse_file(struct list_head* list, const char* file)
     {
       continue;
     }
-    
+
     token  = strtok_r(line, delim, &save_ptr);
     if(!token)
     {
       continue;
     }
     login = strdup(token);
-    
+
     token  = strtok_r(NULL, delim, &save_ptr);
     if(!token)
     {
@@ -196,7 +192,7 @@ int account_parse_file(struct list_head* list, const char* file)
     {
       *save_ptr = 0x00;
     }
-    
+
     realm = strdup(token);
 
     /* add it to the list */

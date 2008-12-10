@@ -104,7 +104,6 @@ typedef struct list_head
   (head)->next = (new_entry) ; \
 }while(0);
 
-
 /**
  * \def LIST_ADD_TAIL
  * \brief Add a new entry before the specified head.
@@ -118,7 +117,6 @@ typedef struct list_head
   (new_entry)->prev = prev ; \
   prev->next = (new_entry) ; \
 }while(0);
-
 
 /**
  * \def LIST_DEL

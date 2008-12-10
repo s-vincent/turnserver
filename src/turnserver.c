@@ -98,7 +98,7 @@
  * \var g_run
  * \brief Running state of the program.
  */
-static volatile int g_run = 0;
+static volatile sig_atomic_t g_run = 0;
 
 /**
  * \var g_expired_allocation_list
@@ -252,6 +252,38 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     debug(DBG_ATTR, "Token expires: %p\n", desc);
     LIST_ADD(&desc->list2, &g_expired_token_list);
   }
+}
+
+/**
+ * \brief Block realtime signal used in TurnServer.
+ * This is used to prevent race conditions.
+ */
+static inline void turnserver_block_realtime_signal(void)
+{
+  sigset_t mask;
+
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGRT_EXPIRE_ALLOCATION);
+  sigaddset(&mask, SIGRT_EXPIRE_PERMISSION);
+  sigaddset(&mask, SIGRT_EXPIRE_CHANNEL);
+  sigaddset(&mask, SIGRT_EXPIRE_TOKEN);
+  sigprocmask(SIG_BLOCK, &mask, NULL);
+}
+
+/**
+ * \brief Unblock realtime signal used in TurnServer.
+ * This is used to prevent race conditions.
+ */
+static inline void turnserver_unblock_realtime_signal(void)
+{
+  sigset_t mask;
+
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGRT_EXPIRE_ALLOCATION);
+  sigaddset(&mask, SIGRT_EXPIRE_PERMISSION);
+  sigaddset(&mask, SIGRT_EXPIRE_CHANNEL);
+  sigaddset(&mask, SIGRT_EXPIRE_TOKEN);
+  sigprocmask(SIG_UNBLOCK, &mask, NULL);
 }
 
 /**
@@ -1407,8 +1439,12 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   else 
   {
     /* lifetime = 0 delete the allocation */
+    /* protect the removing of the expired list if any */
+    turnserver_block_realtime_signal();
     allocation_desc_set_timer(desc, 0); /* stop timeout */
     LIST_DEL(&desc->list2); /* in case the allocation has expired during this statement */
+    turnserver_unblock_realtime_signal();
+
     allocation_list_remove(allocation_list, desc);
 
     /* decrement allocations for the account */
@@ -1641,8 +1677,11 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       has_token = 1;
 
       /* suppress from the list */
+      turnserver_block_realtime_signal();
       allocation_token_set_timer(token, 0); /* stop timer */
       LIST_DEL(&token->list2);
+      turnserver_unblock_realtime_signal();
+
       allocation_token_list_remove(&g_token_list, token);
       debug(DBG_ATTR, "Take token reserved address!\n");
     }
@@ -2821,7 +2860,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
     tmp_nb -= tmp_len;
     tmp_buf += tmp_len;
     sock->msg_len = 0;
-    
+
     if(sock->buf_pos != 0)
     {
       /* decrement buffer position */
@@ -3068,7 +3107,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         {
           debug(DBG_ATTR, "Received TCP connection\n");
           sdesc = malloc(sizeof(struct socket_desc));
-          
+
           sdesc->buf_pos = 0;
           sdesc->msg_len = 0;
 
@@ -3421,6 +3460,9 @@ int main(int argc, char** argv)
       break;
     }
 
+    /* avoid signal handling during purge */
+    turnserver_block_realtime_signal();
+
     /* purge lists if needed */
     if(g_expired_allocation_list.next)
     {
@@ -3489,15 +3531,21 @@ int main(int argc, char** argv)
       }
     }
 
+    /* re-enable realtime signal */
+    turnserver_unblock_realtime_signal();
+
     /* wait messages and processing */
     turnserver_main(sock_udp, sock_tcp, &tcp_socket_list, &allocation_list, &account_list, speer);
   }
 
   fprintf(stderr, "\n");
   debug(DBG_ATTR,"Exiting\n");
-  
+
   syslog(LOG_INFO, "TurnServer stop");
   closelog();
+
+  /* avoid signal handling during cleanup */
+  turnserver_block_realtime_signal();
 
   /* free the expired allocation list (warning: special version use ->list2) */
   list_iterate_safe(get, n, &g_expired_allocation_list)
