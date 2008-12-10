@@ -346,11 +346,6 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* EVEN-PORT */
-  attr = turn_attr_even_port_create(0x00, &iov[index]);
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
   /* MESSAGE-INTEGRITY */
   attr = turn_attr_message_integrity_create(NULL, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
@@ -493,9 +488,11 @@ int main(int argc, char** argv)
   index++;
 
   /* XOR-PEER-ADDRESS */
+/*
   attr = turn_attr_xor_peer_address_create((struct sockaddr*)&peer_addr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
+*/
 
   /* MESSAGE-INTEGRITY */
   attr = turn_attr_message_integrity_create(NULL, &iov[index]);

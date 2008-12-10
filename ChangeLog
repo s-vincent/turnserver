@@ -1,4 +1,4 @@
-2008-12-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+2008-12-15  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
   * Version 0.2:  - Add attributes from turn-12 draft;
                   - Add authentication on all TURN responses when possible;

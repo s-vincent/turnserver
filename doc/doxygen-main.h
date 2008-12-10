@@ -15,6 +15,8 @@
  * This protocol allows a client to obtain IP addresses and ports from such a relay. It is most useful for elements 
  * behind symmetric NATs or firewalls that wish to be on the receiving end of a connection to a single peer.
  *
+ * TurnServer supports also the STUN Binding request (RFC5389).
+ *
  * \section section-modules Modules
  *
  * The API is decomposed in several modules: 
@@ -28,11 +30,12 @@
  *
  * There are basics unit tests in tests directory. Note that you have to install check framework in order to use it.
  *
- * There also three programs that can generate a suite of TURN packets (Allocate request, wait for an answer, Refresh requests, ...)
- * using the modules above, one for each protocol supported by STUN / TURN. So we have a UDP, TCP and TLS over TCP basics TURN packet generators.
+ * There also three programs that can generate a suite of TURN packets (Allocate request, wait for an answer, Refresh requests, 
+ * ...) using the modules above, one for each protocol supported by STUN / TURN. So we have a UDP, TCP and TLS over TCP basics 
+ * TURN packet generators.
  *
- * Note that TurnServer uses OpenSSL (for cryptographics and TLS stuff) and Confuse (for parsing configuration file), so you need to have these 
- * libraries on your system.
+ * Note that TurnServer uses OpenSSL (for cryptographics and TLS stuff) and Confuse (for parsing configuration file), so you need 
+ * to have these libraries on your system.
  *
  * \section section-standard Standards
  *
@@ -40,7 +43,8 @@
  * - ISO/IEC 9899 (C99);
  * - IEEE 1003.1 (POSIX).
  *
- * It also uses some realtime capabilities of POSIX.1b. Thus systems have to support these standards and capabilities to support TurnServer.
+ * It also uses some realtime capabilities of POSIX.1b. Thus systems have to support these standards and capabilities to compile 
+ * and use TurnServer.
  *
  * TurnServer is known to run on the following systems: 
  * - GNU/Linux 2.6;

@@ -1509,6 +1509,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t port2 = 0;
   int has_token = 0;
   char buf_syslog[256];
+  char* family_address = NULL;
 
   debug(DBG_ATTR, "Allocate request received!\n");
 
@@ -1669,8 +1670,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   /* draft-ietf-behave-turn-ipv6-05 */
   if(message->requested_addr_type)
   {
-    char* family_address = NULL;
-
     family = message->requested_addr_type->turn_attr_family;
     family_address = (family == STUN_ATTR_FAMILY_IPV4) ? turnserver_cfg_listen_address() : turnserver_cfg_listen_addressv6();
 
@@ -1681,27 +1680,25 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
       return -1;
     }
-
-    strncpy(str, family_address, INET6_ADDRSTRLEN);
-    str[INET6_ADDRSTRLEN - 1] = 0x00;
   }
   else
   {
-    char* family_address = NULL;
-    /* Allocate an address of the same address family as received for the TURN client */
-    if(turnserver_cfg_listen_addressv6() && saddr->sa_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)saddr)->sin6_addr))
+    /* REQUESTED-ADDRESS-TYPE absent so allocate an IPv4 address */
+    family_address = turnserver_cfg_listen_address();
+
+    if(!family_address)
     {
-      /* IPv6 */
-      family_address = turnserver_cfg_listen_addressv6();
+      /* only happen when IPv4 relaying is disabled and try to allocate IPv6 address
+       * without adding REQUESTED-ADDRESS-TYPE attribute.
+       */
+      /* family not supported */
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
+      return -1;
     }
-    else
-    {
-      /* IPv4 */
-      family_address = turnserver_cfg_listen_address();
-    }
-    strncpy(str, turnserver_cfg_listen_address(), INET6_ADDRSTRLEN);
-    str[INET6_ADDRSTRLEN - 1] = 0x00;
   }
+
+  strncpy(str, family_address, INET6_ADDRSTRLEN);
+  str[INET6_ADDRSTRLEN - 1] = 0x00;
 
   /* after all these checks, we can allocate an allocation! */
 
@@ -2972,7 +2969,8 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             (!turnserver_cfg_listen_address() && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
             (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
         {
-          debug(DBG_ATTR, "Do not relay family : %u\n", saddr.ss_family);
+          char* proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+          debug(DBG_ATTR, "Do not relay family : %s\n", proto);
         }
         else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
         {
@@ -3061,7 +3059,8 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
         {
           /* we don't relay the specified address family so close connection */
-          debug(DBG_ATTR, "Do not relay family : %u\n", saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr) ? AF_INET6 : AF_INET);
+          char* proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+          debug(DBG_ATTR, "Do not relay family : %s\n", proto);
           close(sock);
         }
         else
@@ -3104,7 +3103,8 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
               (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
           {
             /* we don't relay the specified address family so close connection */
-            debug(DBG_ATTR, "Do not relay family : %u\n", saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr) ? AF_INET6 : AF_INET);
+            char* proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+            debug(DBG_ATTR, "Do not relay family : %s\n", proto);
             close(sock);
           }
           else
@@ -3299,7 +3299,7 @@ int main(int argc, char** argv)
 
   if(!turnserver_cfg_listen_address() && !turnserver_cfg_listen_addressv6())
   {
-    fprintf(stderr, "Must configure listen_address and / or listen_addressv6 in configuration file.");
+    fprintf(stderr, "Configuration error: must configure listen_address and / or listen_addressv6 in configuration file.\n");
     turnserver_cfg_free();
     exit(EXIT_FAILURE);
   }
@@ -3498,13 +3498,14 @@ int main(int argc, char** argv)
   syslog(LOG_INFO, "TurnServer stop");
   closelog();
 
-  /* free the g_expired allocation list (warning: special version use ->list2) */
+  /* free the expired allocation list (warning: special version use ->list2) */
   list_iterate_safe(get, n, &g_expired_allocation_list)
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
     /* note we don't care about decrementing account, after all we exit */
 
+    LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
     allocation_desc_free(&tmp);
   }
@@ -3512,6 +3513,7 @@ int main(int argc, char** argv)
   list_iterate_safe(get, n, &g_expired_token_list)
   {
     struct allocation_token* tmp = list_get(get, struct allocation_token, list2);
+    LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
     close(tmp->sock);
     allocation_token_free(&tmp);
