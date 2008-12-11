@@ -44,9 +44,10 @@
 #endif
 
 #include <stdint.h>
-#include <limits.h>
 
 #if 0 /* not used for the moment */
+#include <limits.h>
+
 /**
  * \struct turnserver_cfg
  * \brief TurnServer configuration.

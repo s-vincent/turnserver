@@ -1808,7 +1808,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(account->allocations > turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded => error 486 */
-    snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u quota exceeded", transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
+    snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2, account->username, str, port);
     buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
     syslog(LOG_INFO, buf_syslog);
 
