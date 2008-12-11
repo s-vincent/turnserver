@@ -1574,6 +1574,30 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return 0;
   }
 
+  /* get string representation of address for syslog */
+  if(saddr->sa_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)saddr)->sin_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str2, INET6_ADDRSTRLEN);
+    port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
+  }
+
+  /* check for allocation quota */
+  if(account->allocations >= turnserver_cfg_max_relay_per_username())
+  {
+    /* quota exceeded => error 486 */
+    snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2, account->username);
+    buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
+    syslog(LOG_INFO, buf_syslog);
+
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
+    return -1;
+  }
+
   /* check requested-transport */
   if(!message->requested_transport)
   {
@@ -1793,27 +1817,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
-  /* get string representation of address for syslog */
-  if(saddr->sa_family == AF_INET)
+  if(relayed_addr.ss_family == AF_INET)
   {
-    inet_ntop(AF_INET, &((struct sockaddr_in*)saddr)->sin_addr, str2, INET6_ADDRSTRLEN);
-    port2 = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+    port = ntohs(((struct sockaddr_in*)&relayed_addr)->sin_port);
   }
   else /* IPv6 */
   {
-    inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str2, INET6_ADDRSTRLEN);
-    port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
-  }
-
-  if(account->allocations > turnserver_cfg_max_relay_per_username())
-  {
-    /* quota exceeded => error 486 */
-    snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2, account->username, str, port);
-    buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
-    syslog(LOG_INFO, buf_syslog);
-
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
-    return -1;
+    port = ntohs(((struct sockaddr_in6*)&relayed_addr)->sin6_port);
   }
 
   desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm, message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
