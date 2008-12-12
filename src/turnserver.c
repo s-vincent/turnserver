@@ -2973,6 +2973,8 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   socklen_t daddr_size = sizeof(struct sockaddr_storage);
   ssize_t nb = -1;
   char* proto = NULL;
+  char* listen_address = turnserver_cfg_listen_address();
+  char* listen_addressv6 = turnserver_cfg_listen_addressv6();
 
   max_fd = SFD_SETSIZE;
 
@@ -3080,9 +3082,9 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
       if(nb > 0)
       {
-        if((!turnserver_cfg_listen_addressv6() && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!turnserver_cfg_listen_address() && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
+        if((!listen_addressv6 && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
+            (!listen_address && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
+            (!listen_address && saddr.ss_family == AF_INET))
         {
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family : %s\n", proto);
@@ -3169,9 +3171,9 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
       if(sock > 0)
       {
-        if((!turnserver_cfg_listen_addressv6() && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!turnserver_cfg_listen_address() && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
+        if((!listen_addressv6 && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
+            (!listen_address && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
+            (!listen_address && saddr.ss_family == AF_INET))
         {
           /* we don't relay the specified address family so close connection */
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
@@ -3213,9 +3215,9 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
         if(sock > 0)
         {
-          if((!turnserver_cfg_listen_addressv6() && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-              (!turnserver_cfg_listen_address() && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-              (!turnserver_cfg_listen_address() && saddr.ss_family == AF_INET))
+          if((!listen_addressv6 && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
+              (!listen_address && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
+              (!listen_address && saddr.ss_family == AF_INET))
           {
             /* we don't relay the specified address family so close connection */
             proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
