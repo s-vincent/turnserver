@@ -3,11 +3,11 @@
 #
 
 ## public IPv4 address of any relayed address (if not set, no relay for IPv4)
-listen_address = "127.0.0.1"
+listen_address = "172.16.0.1"
 
 ## listening IPv6 address
 ## public IPv6 address of any relayed address (if not set, no relay for IPv6)
-listen_addressv6 = "::1"
+listen_addressv6 = "2001:db8::1"
 
 ## UDP listening port.
 udp_port = 3478
@@ -38,6 +38,21 @@ allocation_lifetime = 1800
 bandwidth_per_allocation = 150
 
 ## Deny list
+
+# disallow relaying to localhost
+deny_address {
+  address = "127.0.0.1"
+  mask = "8"
+  port = 0
+}
+
+# disallow relaying to ip6-localhost
+deny_address {
+  address = "::1"
+  mask = "128"
+  port = 0
+}
+
 #deny_address {
 #  address = "10.1.4.0"
 #  mask = 24

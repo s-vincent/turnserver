@@ -451,7 +451,6 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
   }
   else /* big endian */
   {
-    /* XXX test it on PowerPC */
     ret->turn_attr_reserved_class = class; 
   }
 
@@ -1491,7 +1490,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   /* zeroed structure */
   memset(message, 0x00, sizeof(struct turn_message));
 
-  /* TURN / STUN header MUST be 20 bytes length */
+  /* STUN / TURN header MUST be 20 bytes length */
   if(msg_len < 20)
   {
     /* not a TURN / STUN message */
@@ -1642,6 +1641,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
 
     {
       size_t m = (4 + ntohs(attr->turn_attr_len)) % 4;
+
       if(m)
       {
         len -= (4 - m);

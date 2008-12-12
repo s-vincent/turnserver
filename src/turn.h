@@ -31,7 +31,7 @@
 
 /**
  * \file turn.h
- * \brief Header definition for TURN (and some STUN) messages and attributes.
+ * \brief Header definition for STUN / TURN messages and attributes.
  * \author Sebastien Vincent
  * \date 2008
  */
@@ -224,7 +224,7 @@ typedef unsigned __int64 uint64_t;
 /* default allocation lifetime (in seconds) unless refreshed */
 #define TURN_DEFAULT_ALLOCATION_LIFETIME      600
 
-/* maximum allocation lifetime  (in seconds) unless refreshed */
+/* maximum allocation lifetime (in seconds) unless refreshed */
 #define TURN_MAX_ALLOCATION_LIFETIME          3600
 
 /* default permission lifetime (in seconds) unless refreshed */

@@ -81,6 +81,9 @@ is a number representing the bitmask (i.e. 24 is similar as 255.255.255.0, ...).
 .B port
 is a number representing the network port. The 0 value means all ports.
 
+It is strongly recommended to restrict addresses 127.0.0.1 and ::1 if there are private
+services running on the TURN server.
+
 .TP
 .BR "ca_file " "= string"
 The pathname of the Certification Authority certificate (required when tls=true).
@@ -129,6 +132,20 @@ bandwidth_per_allocation = 150
 deny_address {
   address = "172.1.0.3"
   mask = 24
+  port = 0
+
+}
+
+deny_address {
+  address = "127.0.0.1"
+  mask = 8 
+  port = 0
+
+}
+
+deny_address {
+  address = "::1"
+  mask = 128
   port = 0
 
 }

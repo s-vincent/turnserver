@@ -141,14 +141,13 @@ static const uint8_t g_supported_even_port_flags = 0x80;
 
 /**
  * \struct socket_desc
- * \brief Socket descriptor.
+ * \brief Descriptor for TCP client connected.
  *
- * This element can be added in a list_head.
+ * It contains a buffer for TCP segment reconstruction.
  */
 struct socket_desc
 {
   int sock; /**< The socket */
-  /* XXX maybe 1500 is not sufficient for all cases */
   char buf[1500]; /**< Internal buffer for TCP stream reconstruction */
   size_t buf_pos; /**< Position in the internal buffer */
   size_t msg_len; /**< Message length that is not complete */
@@ -181,8 +180,9 @@ static void signal_handler(int code)
  * \brief Realtime signal management.
  *
  * This is mainly used when a object timer expired. As we cannot use
- * some functions like free() in a signal handler, we put the desired 
- * expired object in an expired list and the main loop will purge it.
+ * functions like free() in a signal handler and to avoid race 
+ * conditions, we put the desired expired object in an expired list 
+ * and the main loop will purge it.
  * \param signo signal number
  * \param info additionnal info
  * \param extra not used
@@ -256,7 +256,10 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
 /**
  * \brief Block realtime signal used in TurnServer.
- * This is used to prevent race conditions.
+ *
+ * This is used to prevent race conditions when adding 
+ * or removing objects in expired list (which is mainly
+ * done in signal handler and in purge loop).
  */
 static inline void turnserver_block_realtime_signal(void)
 {
@@ -272,7 +275,10 @@ static inline void turnserver_block_realtime_signal(void)
 
 /**
  * \brief Unblock realtime signal used in TurnServer.
- * This is used to prevent race conditions.
+ *
+ * This is used to prevent race conditions when adding 
+ * or removing objects in expired list (which is mainly
+ * done in signal handler and in purge loop).
  */
 static inline void turnserver_unblock_realtime_signal(void)
 {
@@ -419,6 +425,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
     }
   }
 
+  /* bandwidth quota not reached */
   return 0;
 }
 
@@ -432,7 +439,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
  * \param saddr_size sizeof address
  * \param error error code
  * \param speer TLS peer, if not NULL, send the error in TLS
- * \param key MD5 hash of account, if present, MESSAGE-INTEGRITY / FINGERPRINT will be added
+ * \param key MD5 hash of account, if present, MESSAGE-INTEGRITY will be added
  * \note Some error codes cannot be sent using this function (420, 438, ...).
  * \return 0 if success, -1 otherwise
  */
@@ -448,9 +455,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   {
     case 400: /* Bad request */
       hdr = turn_error_response_400(method, id, &iov[index], &index);
-      break;
-    case 401: /* Unauthorized */
-      /* hdr = turn_error_response_401(method, id, &iov[index], &index); */
       break;
     case 437: /* Alocation mismatch */
       hdr = turn_error_response_437(method, id, &iov[index], &index);
@@ -506,8 +510,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
   }
 
-  /* finaly send the response */
-  if(speer)
+  /* finally send the response */
+  if(speer) /* TLS */
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index);
   }
@@ -591,9 +595,8 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
-  if(speer)
+  if(speer) /* TLS */
   {
-    /* TLS connection */
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
   else if(transport_protocol == IPPROTO_UDP)
@@ -808,6 +811,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   int save_val = 0;
   socklen_t optlen = sizeof(int);
   char str[INET6_ADDRSTRLEN];
+  int family = 0;
 
   debug(DBG_ATTR, "Send indication received!\n");
 
@@ -818,23 +822,25 @@ static int turnserver_process_send_indication(const struct turn_message* message
     return -1;
   }
 
-  if(desc->relayed_addr.ss_family != (message->peer_addr[0]->turn_attr_family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6))
-  {
-    debug(DBG_ATTR, "Could not relayed from a different family\n");
-    return -1;
-  }
-
   switch(message->peer_addr[0]->turn_attr_family)
   {
     case STUN_ATTR_FAMILY_IPV4:
       len = 4;
+      family = AF_INET;
       break;
     case STUN_ATTR_FAMILY_IPV6:
       len = 16;
+      family = AF_INET6;
       break;
     default:
       return -1;
       break;
+  }
+
+  if(desc->relayed_addr.ss_family != family)
+  {
+    debug(DBG_ATTR, "Could not relayed from a different family\n");
+    return -1;
   }
 
   /* copy peer address */
@@ -848,7 +854,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
   if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
   {
-    inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+    inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
     debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", str);
     return -1;
   }
@@ -1013,6 +1019,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   uint16_t port = 0;
   uint16_t port2 = 0;
   char buf_syslog[256];
+  int family = 0;
 
   debug(DBG_ATTR, "CreatePermission request received\n");
 
@@ -1021,6 +1028,14 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     /* too many XOR-PEER-ADDRESS attributes => error 508 */
     debug(DBG_ATTR, "Too many XOR-PEER-ADDRESS attributes\n");
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+  
+  if(!message->peer_addr[0])
+  {
+    /* no XOR-PEER-ADDRESS => error 400 */
+    debug(DBG_ATTR, "Missing address attribute\n");
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1050,10 +1065,45 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   /* check address family for all XOR-PEER-ADDRESS attributes against the relayed ones */
   for(i = 0 ; i < XOR_PEER_ADDRESS_MAX && message->peer_addr[i] ; i++)
   {
-    if(!message->peer_addr[i] || (desc->relayed_addr.ss_family != (message->peer_addr[i]->turn_attr_family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6)))
+    switch(message->peer_addr[i]->turn_attr_family)
     {
-      /* attribute missing or invalid ones => error 400 */
-      debug(DBG_ATTR, "No peer address or invalid ones\n");
+      case STUN_ATTR_FAMILY_IPV4:
+        len = 4;
+        family = AF_INET;
+        break;
+      case STUN_ATTR_FAMILY_IPV6:
+        len = 16;
+        family = AF_INET6;
+        break;
+      default:
+        return -1;
+    }
+
+    if((desc->relayed_addr.ss_family != family))
+    {
+      /* Invalid attribute => error 400 */
+      debug(DBG_ATTR, "Invalid address\n");
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+      return -1;
+    }
+
+    /* now check that address is not denied */
+    memcpy(peer_addr, message->peer_addr[i]->turn_attr_address, len);
+    peer_port = ntohs(message->peer_addr[i]->turn_attr_port);
+
+    if(turn_xor_address_cookie(message->peer_addr[i]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
+    {
+      return -1;
+    }
+
+    inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
+
+    /* if one of the addresses is denied, directly send a CreatePermission 
+     * error response.
+     */
+    if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+    {
+      debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
       return -1;
     }
@@ -1066,9 +1116,11 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     {
       case STUN_ATTR_FAMILY_IPV4:
         len = 4;
+        family = AF_INET;
         break;
       case STUN_ATTR_FAMILY_IPV6:
         len = 16;
+        family = AF_INET6;
         break;
       default:
         return -1;
@@ -1082,14 +1134,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
       return -1;
     }
 
-    inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
-
-    if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
-    {
-      debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
-      /* XXX send response ? */
-      continue;
-    }
+    inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
     snprintf(buf_syslog, sizeof(buf_syslog), "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
     buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
@@ -1101,7 +1146,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     /* update or create allocation permission on that peer */
     if(!alloc_permission)
     {
-      debug(DBG_ATTR, "Install permission for %s %u\n", inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN), peer_port);
+      debug(DBG_ATTR, "Install permission for %s %u\n", str, peer_port);
       allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, desc->relayed_addr.ss_family, peer_addr);
     }
     else
@@ -1110,6 +1155,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
       allocation_permission_set_timer(alloc_permission, TURN_DEFAULT_PERMISSION_LIFETIME);
     }
   }
+
   /* send a CreatePermission success response */
   if(!(hdr = turn_msg_createpermission_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
@@ -1134,10 +1180,9 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
   debug(DBG_ATTR, "CreatePermission successfull, send success CreatePermission response\n");
 
-  /* finaly send the response */
-  if(speer)
+  /* finally send the response */
+  if(speer) /* TLS */
   {
-    /* TLS connection */
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
   else if(transport_protocol == IPPROTO_UDP)
@@ -1215,10 +1260,23 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     return 0;
   }
 
-  family = message->peer_addr[0]->turn_attr_family;
+  switch(message->peer_addr[0]->turn_attr_family)
+  {
+    case STUN_ATTR_FAMILY_IPV4:
+      len = 4;
+      family = AF_INET;
+      break;
+    case STUN_ATTR_FAMILY_IPV6:
+      len = 16;
+      family = AF_INET6;
+      break;
+    default:
+      return -1;
+      break;
+  }
 
   /* check if the client has allocated a family address that match the peer family address */
-  if(desc->relayed_addr.ss_family != (family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6))
+  if(desc->relayed_addr.ss_family != family)
   {
     debug(DBG_ATTR, "Do not allow requesting a Channel when allocated address family mismatch peer address family\n");
 
@@ -1226,40 +1284,29 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     return -1;
   }
 
-  switch(family)
-  {
-    case STUN_ATTR_FAMILY_IPV4:
-      len = 4;
-      break;
-    case STUN_ATTR_FAMILY_IPV6:
-      len = 16;
-      break;
-    default:
-      return -1;
-      break;
-  }
-
   memcpy(peer_addr, message->peer_addr[0]->turn_attr_address, len);
   peer_port = ntohs(message->peer_addr[0]->turn_attr_port);
 
-  if(turn_xor_address_cookie(family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
+  if(turn_xor_address_cookie(message->peer_addr[0]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
   {
     return -1;
   }
+
+  inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
   if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
   {
-    inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
+    /* permission denied => error 400 */
     debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", str);
-    /* XXX send response ? */
+
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
-  inet_ntop(len == 4 ? AF_INET : AF_INET6, peer_addr, str, INET6_ADDRSTRLEN);
   debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", str, peer_port);
 
   /* check that the transport address is not currently bound to another channel */
-  if(allocation_desc_find_channel(desc, len == 4 ? AF_INET : AF_INET6, peer_addr, peer_port))
+  if(allocation_desc_find_channel(desc, family, peer_addr, peer_port))
   {
     /* transport address already bound to another channel */
     debug(DBG_ATTR, "Transport address already bound to another channel\n");
@@ -1286,8 +1333,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   else
   {
     /* allocate new channel */
-
-    if(allocation_desc_add_channel(desc, channel, TURN_DEFAULT_CHANNEL_LIFETIME, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr, peer_port) == -1)
+    if(allocation_desc_add_channel(desc, channel, TURN_DEFAULT_CHANNEL_LIFETIME, family, peer_addr, peer_port) == -1)
     {
       return -1;
     }
@@ -1321,19 +1367,19 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   syslog(LOG_INFO, buf_syslog);
 
   /* find a permission */
-  alloc_permission = allocation_desc_find_permission(desc, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr);
+  alloc_permission = allocation_desc_find_permission(desc, family, peer_addr);
 
   /* update or create allocation permission on that peer */
   if(!alloc_permission)
   {
-    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, family == STUN_ATTR_FAMILY_IPV4 ? AF_INET : AF_INET6, peer_addr);
+    allocation_desc_add_permission(desc, TURN_DEFAULT_PERMISSION_LIFETIME, family, peer_addr);
   }
   else
   {
     allocation_permission_set_timer(alloc_permission, TURN_DEFAULT_PERMISSION_LIFETIME);
   }
 
-  /* finaly send the response */
+  /* finally send the response */
   if(!(hdr = turn_msg_channelbind_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
@@ -1357,10 +1403,9 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   debug(DBG_ATTR, "ChannelBind successfull, send success ChannelBind response\n");
 
-  /* finaly send the response */
-  if(speer)
+  /* finally send the response */
+  if(speer) /* TLS */
   {
-    /* TLS connection */
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
   else if(transport_protocol == IPPROTO_UDP)
@@ -1486,8 +1531,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   debug(DBG_ATTR, "Refresh successfull, send success refresh response\n");
 
-  /* finaly send the response */
-  if(speer)
+  /* finally send the response */
+  if(speer) /* TLS */
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
@@ -1532,7 +1577,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   struct sockaddr_storage relayed_addr;
   int r_flag = 0;
   uint32_t lifetime =0;
-  int family = 0;
   uint16_t port = 0;
   uint16_t reservation_port = 0;
   int relayed_sock = -1;
@@ -1640,7 +1684,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       return -1;
     }
 
-    if(speer)
+    if(speer) /* TLS */
     {
       nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
     }
@@ -1733,8 +1777,18 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   /* draft-ietf-behave-turn-ipv6-05 */
   if(message->requested_addr_type)
   {
-    family = message->requested_addr_type->turn_attr_family;
-    family_address = (family == STUN_ATTR_FAMILY_IPV4) ? turnserver_cfg_listen_address() : turnserver_cfg_listen_addressv6();
+    switch(message->requested_addr_type->turn_attr_family)
+    {
+      case STUN_ATTR_FAMILY_IPV4:
+        family_address = turnserver_cfg_listen_address();
+        break;
+      case STUN_ATTR_FAMILY_IPV6:
+        family_address = turnserver_cfg_listen_addressv6();
+        break;
+      default:
+        family_address = NULL;
+        break;
+    }
 
     /* check the family requested is supported */
     if(!family_address)
@@ -1949,7 +2003,7 @@ send_success_response:
 
     debug(DBG_ATTR, "Allocation successfull, send success allocate response\n");
 
-    if(speer)
+    if(speer) /* TLS */
     {
       nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
     }
@@ -2036,7 +2090,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
       /* check to prevent hijacking the client's allocation */
       size_t len = strlen(account->username);
       if(len != ntohs(message->username->turn_attr_len) ||
-         strncmp((char*)message->username->turn_attr_username, account->username, len))
+          strncmp((char*)message->username->turn_attr_username, account->username, len))
       {
         /* credentials do not match with those used for allocation => error 441 */
         debug(DBG_ATTR, "Wrong credentials!\n");
@@ -2247,7 +2301,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
-      if(speer)
+      if(speer) /* TLS */
       {
         nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
       }
@@ -2307,7 +2361,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
-      if(speer)
+      if(speer) /* TLS */
       {
         nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
       }
@@ -2383,7 +2437,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
-        if(speer)
+        if(speer) /* TLS */
         {
           nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
         }
@@ -2461,12 +2515,12 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
           index++;
         }
 
-        turn_add_fingerprint(iov, &index); /* not fatal it not successfull */
+        turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
-        if(speer)
+        if(speer) /* TLS */
         {
           nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
         }
@@ -2518,7 +2572,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     /* convert to big endian */
     error->turn_msg_len = htons(error->turn_msg_len);
 
-    if(speer)
+    if(speer) /* TLS */
     {
       nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
     }
@@ -2632,7 +2686,6 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
       index++;
     }
 
-
     /* add padding (MUST be included for TCP, MAY be included for UDP) */
     if(buflen % 4)
     {
@@ -2677,7 +2730,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   /* send it to the tuple (TURN client) */
   debug(DBG_ATTR, "Send data to client\n");
 
-  if(speer)
+  if(speer) /* TLS */
   {
     nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), len, iov, index);
   }
@@ -2774,10 +2827,22 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
   if(sock->buf_pos)
   {
     tmp_buf = sock->buf;
+
+    /* check for buffer size */
+    if(sock->buf_pos + MIN(sizeof(sock->buf), tmp_nb) > sizeof(sock->buf))
+    {
+      /* discard message */
+      debug(DBG_ATTR, "Buffer too small, discard TCP message.\n");
+      sock->buf_pos = 0;
+      sock->msg_len = 0;
+
+      return;
+    }
+
     /* concatenate bytes received */
     memcpy(tmp_buf + sock->buf_pos, buf, MIN(sizeof(sock->buf), tmp_nb));
     sock->buf_pos += tmp_nb;
-    /* printf("Incomplete packet!!!\n"); */
+    /* printf("Incomplete packet!\n"); */
     tmp_nb = sock->buf_pos;
   }
   else
@@ -3064,7 +3129,6 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             /* decode TLS data */
             if((nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
             {
-
               /* TLS over TCP stream may contain multiple STUN / TURN messages */
               turnserver_process_tcp_stream(buf2, nb, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer);
             }
@@ -3082,8 +3146,9 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         }
         else
         {
-          /* 0 : disconnection case
-           * -1 : error */
+          /*  0: disconnection case
+           * -1: error 
+           */
           get_error(errno, error_str, sizeof(error_str));
           debug(DBG_ATTR, "Error : %s\n", error_str);
           close(tmp->sock);
