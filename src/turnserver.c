@@ -2393,6 +2393,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       if(username_len > 513 || realm_len > 256)
       {
         /* some attributes are too long */
+        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
         return -1;
       }
 

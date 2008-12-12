@@ -407,7 +407,7 @@ extern "C"
     else
     {
 #ifdef _POSIX_SAVED_IDS
-      setegid(uid_real);
+      setegid(gid_real);
       return seteuid(uid_real);
 #else
       /* i.e. for *BSD */

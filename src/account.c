@@ -97,10 +97,10 @@ struct account_desc* account_list_find(struct list_head* list, const char* usern
   {
     struct account_desc* tmp = list_get(get, struct account_desc, list);
 
-    if(!strcmp(tmp->username, username))
+    if(!strncmp(tmp->username, username, sizeof(tmp->username) - 1))
     {
       /* if realm is specified, try a match otherwise the peer is found */
-      if(!realm || !strcmp(tmp->realm, realm))
+      if(!realm || !strncmp(tmp->realm, realm, sizeof(tmp->realm) - 1))
       {
         return tmp;
       }

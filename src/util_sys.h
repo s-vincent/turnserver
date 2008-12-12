@@ -76,7 +76,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #else
-/* replace stdint.h type for MS Windows*/
+/* replace stdint.h type for MS Windows */
 typedef __int8 int8_t;
 typedef unsigned __int8 uint8_t;
 typedef __int16 int16_t;
