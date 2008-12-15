@@ -444,7 +444,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
  * \param port port to check
  * \return 1 if address is denied, 0 otherwise
  */
-static int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port)
+static int turnserver_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port)
 {
   struct list_head* get = NULL; 
   struct list_head* n = NULL;
@@ -943,7 +943,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
     return -1;
   }
 
-  if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+  if(turnserver_is_address_denied(peer_addr, len, peer_port))
   {
     inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
     debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", str);
@@ -1192,7 +1192,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     /* if one of the addresses is denied, directly send a CreatePermission 
      * error response.
      */
-    if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+    if(turnserver_is_address_denied(peer_addr, len, peer_port))
     {
       debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
@@ -1385,7 +1385,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
-  if(turnserver_cfg_is_address_denied(peer_addr, len, peer_port))
+  if(turnserver_is_address_denied(peer_addr, len, peer_port))
   {
     /* permission denied => error 400 */
     debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", str);
