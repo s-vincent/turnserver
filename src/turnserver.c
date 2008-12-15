@@ -67,6 +67,7 @@
 #include "util_sys.h"
 #include "util_crypto.h"
 #include "dbg.h"
+#include "turnserver.h"
 
 /* For operating systems that support setting 
  * DF flag from userspace, give them a
@@ -129,6 +130,12 @@ static struct list_head g_expired_token_list;
  * \brief List of valid tokens.
  */
 static struct list_head g_token_list;
+
+/**
+ * \var g_denied_address_list
+ * \brief The denied address list.
+ */
+static struct list_head g_denied_address_list;
 
 /**
  * \var g_supported_even_port_flags
@@ -250,6 +257,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     }
 
     debug(DBG_ATTR, "Token expires: %p\n", desc);
+    /* add it to the expired list */
     LIST_ADD(&desc->list2, &g_expired_token_list);
   }
 }
@@ -426,6 +434,89 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
   }
 
   /* bandwidth quota not reached */
+  return 0;
+}
+
+/**
+ * \brief Verify if address / port is in denied list.
+ * \param addr IPv4 / IPv6 address to check
+ * \param addrlen sizeof the address (IPv4 = 4, IPv6 = 16)
+ * \param port port to check
+ * \return 1 if address is denied, 0 otherwise
+ */
+static int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port)
+{
+  struct list_head* get = NULL; 
+  struct list_head* n = NULL;
+  uint8_t nb = 0;
+  uint8_t mod = 0;
+  size_t i = 0;
+
+  if(addrlen > 16)
+  {
+    return 0;
+  }
+
+  list_iterate_safe(get, n, &g_denied_address_list)
+  {
+    struct denied_address* tmp = list_get(get, struct denied_address, list);
+    int  diff = 0;
+
+    /* compare addresses from same family */
+    if((tmp->family == AF_INET6 && addrlen != 16) ||
+        (tmp->family == AF_INET && addrlen != 4))
+    {
+      continue;
+    }
+
+    nb = (uint8_t)(tmp->mask / 8);
+
+    for(i = 0 ; i < nb ; i++)
+    {
+      if(tmp->addr[i] != addr[i])
+      {
+        diff = 1;
+        break;
+      }
+    }
+
+    /* if mismatch in the addresses */
+    if(diff)
+    {
+      continue;
+    }
+
+    /* OK so now the full bytes from the address are the same, 
+     * check for last bit if any.
+     */
+    mod = (tmp->mask % 8);
+
+    if(mod)
+    {
+      uint8_t b = 0;
+
+      for(i = 0 ; i < mod ; i++)
+      {
+        b |= (1 << (7 - i));
+      }
+
+      if((tmp->addr[nb] & b) == (addr[nb] & b))
+      {
+        if(tmp->port == 0 || tmp->port == port)
+        {
+          return 1;
+        }
+      }
+    }
+    else
+    {
+      if(tmp->port == 0 || tmp->port == port)
+      {
+        return 1;
+      }
+    }
+  }
+
   return 0;
 }
 
@@ -1030,7 +1121,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, desc->key);
     return -1;
   }
-  
+
   if(!message->peer_addr[0])
   {
     /* no XOR-PEER-ADDRESS => error 400 */
@@ -3102,7 +3193,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
       }
     }
 
-    /* remote TCP socket */
+    /* remote TCP sockets */
     list_iterate_safe(get, n, tcp_socket_list)
     {
       struct socket_desc* tmp = list_get(get, struct socket_desc, list);
@@ -3246,7 +3337,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
       }
     }
 
-    /* relayed address */
+    /* relayed addresses */
     list_iterate_safe(get, n, allocation_list)
     {
       struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
@@ -3258,7 +3349,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         saddr_size = sizeof(struct sockaddr_storage);
         daddr_size = sizeof(struct sockaddr_storage);
 
-        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-11 */
+        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-12 */
         nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
         getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
 
@@ -3286,11 +3377,22 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
  */
 static void turnserver_cleanup(void* arg)
 {
+  struct list_head* get = NULL;
+  struct list_head* n = NULL;
+
   list_head* accounts = arg; /* account_list */
 
   /* configuration file */
   turnserver_cfg_free();
   account_list_free(accounts);
+
+  /* free the denied address list */
+  list_iterate_safe(get, n, &g_denied_address_list)
+  {
+    struct denied_address* tmp = list_get(get, struct denied_address, list);
+    LIST_DEL(&tmp->list);
+    free(tmp);
+  }
 }
 
 /**
@@ -3311,10 +3413,12 @@ int main(int argc, char** argv)
   struct tls_peer* speer = NULL;
   char* configuration_file = NULL;
 
+  /* initialize lists */
   INIT_LIST(allocation_list);
   INIT_LIST(account_list);
   INIT_LIST(tcp_socket_list);
   INIT_LIST(g_token_list);
+  INIT_LIST(g_denied_address_list);
 
   /* initialize expired lists */
   INIT_LIST(g_expired_allocation_list);
@@ -3391,7 +3495,7 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-#elif defined(HAVE_SIGNAL)
+#else
 #error "Must have sigaction."
 #endif
 
@@ -3404,10 +3508,17 @@ int main(int argc, char** argv)
   }
 
   /* parse configuration file */
-  if(turnserver_cfg_parse(configuration_file) != 0)
+  if(turnserver_cfg_parse(configuration_file, &g_denied_address_list) != 0)
   {
     fprintf(stderr, "Parse configuration error, exiting...\n");
     turnserver_cfg_free();
+    /* free the denied address list */
+    list_iterate_safe(get, n, &g_denied_address_list)
+    {
+      struct denied_address* tmp = list_get(get, struct denied_address, list);
+      LIST_DEL(&tmp->list);
+      free(tmp);
+    }
     exit(EXIT_FAILURE);
   }
 
@@ -3415,18 +3526,61 @@ int main(int argc, char** argv)
   turnserver_cfg_print();
 #endif
 
+  /* check configuration */
   if(!turnserver_cfg_listen_address() && !turnserver_cfg_listen_addressv6())
   {
     fprintf(stderr, "Configuration error: must configure listen_address and / or listen_addressv6 in configuration file.\n");
     turnserver_cfg_free();
+    /* free the denied address list */
+    list_iterate_safe(get, n, &g_denied_address_list)
+    {
+      struct denied_address* tmp = list_get(get, struct denied_address, list);
+      LIST_DEL(&tmp->list);
+      free(tmp);
+    }
     exit(EXIT_FAILURE);
   }
 
   if(strcmp(turnserver_cfg_account_method(), "file") != 0)
   {
     /* for the moment only file method is implemented */
-    fprintf(stderr, "Method \"%s\" not implemented, exiting...\n", turnserver_cfg_account_method());
+    fprintf(stderr, "Configuration error: method \"%s\" not implemented, exiting...\n", turnserver_cfg_account_method());
     turnserver_cfg_free();
+    /* free the denied address list */
+    list_iterate_safe(get, n, &g_denied_address_list)
+    {
+      struct denied_address* tmp = list_get(get, struct denied_address, list);
+      LIST_DEL(&tmp->list);
+      free(tmp);
+    }
+    exit(EXIT_FAILURE);
+  }
+
+  if(turnserver_cfg_tls() && (!turnserver_cfg_ca_file() || !turnserver_cfg_cert_file() || !turnserver_cfg_private_key_file()))
+  {
+    fprintf(stderr, "Configuration error: TLS enabled but some elements are missing (cert file, ...).\n");
+    turnserver_cfg_free();
+    /* free the denied address list */
+    list_iterate_safe(get, n, &g_denied_address_list)
+    {
+      struct denied_address* tmp = list_get(get, struct denied_address, list);
+      LIST_DEL(&tmp->list);
+      free(tmp);
+    }
+    exit(EXIT_FAILURE);
+  }
+
+  if(!turnserver_cfg_nonce_key())
+  {
+    fprintf(stderr, "Configuration error: nonce_key attribute is missing\n");
+    turnserver_cfg_free();
+    /* free the denied address list */
+    list_iterate_safe(get, n, &g_denied_address_list)
+    {
+      struct denied_address* tmp = list_get(get, struct denied_address, list);
+      LIST_DEL(&tmp->list);
+      free(tmp);
+    }
     exit(EXIT_FAILURE);
   }
 
@@ -3435,6 +3589,13 @@ int main(int argc, char** argv)
   {
     fprintf(stderr, "Failed to parse account file, exiting...\n");
     turnserver_cfg_free();
+    /* free the denied address list */
+    list_iterate_safe(get, n, &g_denied_address_list)
+    {
+      struct denied_address* tmp = list_get(get, struct denied_address, list);
+      LIST_DEL(&tmp->list);
+      free(tmp);
+    }
     exit(EXIT_FAILURE);
   }
 
@@ -3454,6 +3615,13 @@ int main(int argc, char** argv)
       fprintf(stderr, "Failed to start daemon, exiting...\n");
       account_list_free(&account_list);
       turnserver_cfg_free();
+      /* free the denied address list */
+      list_iterate_safe(get, n, &g_denied_address_list)
+      {
+        struct denied_address* tmp = list_get(get, struct denied_address, list);
+        LIST_DEL(&tmp->list);
+        free(tmp);
+      }
       exit(EXIT_FAILURE);
     }
   }
@@ -3693,6 +3861,14 @@ int main(int argc, char** argv)
 
   /* free the configuration parser */
   turnserver_cfg_free();
+
+  /* free the denied address list */
+  list_iterate_safe(get, n, &g_denied_address_list)
+  {
+    struct denied_address* tmp = list_get(get, struct denied_address, list);
+    LIST_DEL(&tmp->list);
+    free(tmp);
+  }
 
   return EXIT_SUCCESS;
 }

@@ -24,6 +24,9 @@ tls = false
 ## Realm value
 realm = "domain.org"
 
+## Nonce key
+nonce_key = "hieKedq"
+
 ## Daemon mode.
 daemon = false
 
@@ -37,23 +40,23 @@ allocation_lifetime = 1800
 # 0 value means bandwidth quota disabled.
 bandwidth_per_allocation = 150
 
-## Deny list
+## Denied addresses
 
 # disallow relaying to localhost
-deny_address {
+denied_address {
   address = "127.0.0.1"
   mask = "8"
   port = 0
 }
 
 # disallow relaying to ip6-localhost
-deny_address {
+denied_address {
   address = "::1"
   mask = "128"
   port = 0
 }
 
-#deny_address {
+#denied_address {
 #  address = "10.1.4.0"
 #  mask = 24
 #  port = 0

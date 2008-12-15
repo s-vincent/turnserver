@@ -790,29 +790,6 @@ struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, s
   return (struct turn_attr_hdr*)ret;
 }
 
-#if 0
-struct turn_attr_hdr* turn_attr_icmp_create(uint8_t type, uint8_t code, struct iovec* iov)
-{
-  struct turn_attr_icmp* ret = NULL;
-
-  if(!(ret = malloc(sizeof(struct turn_attr_icmp))))
-  {
-    return NULL;
-  }
-
-  ret->turn_attr_type = htons(TURN_ATTR_ICMP);
-  ret->turn_attr_len = htons(4);
-  ret->turn_attr_icmp_type = type;
-  ret->turn_attr_icmp_code = code;
-  ret->turn_attr_icmp_reserved = 0;
-
-  iov->iov_base = ret;
-  iov->iov_len = sizeof(struct turn_attr_icmp);
-
-  return (struct turn_attr_hdr*)ret;
-}
-#endif
-
 struct turn_attr_hdr* turn_attr_requested_address_type_create(uint8_t family, struct iovec* iov)
 {
   struct turn_attr_requested_address_type* ret = NULL;
@@ -1493,7 +1470,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   /* STUN / TURN header MUST be 20 bytes length */
   if(msg_len < 20)
   {
-    /* not a TURN / STUN message */
+    /* not a STUN / TURN message */
     return -1;
   }
 
@@ -1611,11 +1588,6 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
       case TURN_ATTR_RESERVATION_TOKEN:
         message->reservation_token = (struct turn_attr_reservation_token*)ptr;
         break;
-#if 0
-      case TURN_ATTR_ICMP:
-        message->icmp = (struct turn_attr_icmp*)ptr;
-        break;
-#endif
       case TURN_ATTR_REQUESTED_ADDRESS_TYPE:
         message->requested_addr_type = (struct turn_attr_requested_address_type*)ptr;
         break;

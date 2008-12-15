@@ -45,7 +45,7 @@
 
 #ifdef _MSC_VER
 #include <windows.h>
-/* replace stdint.h type for MS Windows */
+/* replace stdint.h types for MS Windows */
 typedef __int8 int8_t;
 typedef unsigned __int8 uint8_t;
 typedef __int16 int16_t;
@@ -168,13 +168,6 @@ typedef unsigned __int64 uint64_t;
 /* RESERVATION-TOKEN */
 #define TURN_ATTR_RESERVATION_TOKEN     0x0022
 
-#if 0
-
-/* ICMP */
-#define TURN_ATTR_ICMP                  0x0030
-
-#endif
-
 /* REQUESTED-ADDRESS-TYPE (draft-ietf-behave-turn-ipv6-05) */
 #define TURN_ATTR_REQUESTED_ADDRESS_TYPE          0x0017
 
@@ -209,6 +202,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_442            "Unsupported transport protocol"
 #define TURN_ERROR_486            "Allocation quota reached"
 #define TURN_ERROR_508            "Insufficient capacity"
+/* draft-ietf-behave-turn-ipv6-05 */
 #define TURN_ERROR_440            "Address family not supported"
 
 /* STUN magic cookie */
@@ -499,23 +493,6 @@ struct turn_attr_reservation_token
   uint16_t turn_attr_len; /**< Length of "value" */
   uint8_t turn_attr_token[8]; /**< Token */
 }__attribute__((packed));
-
-#if 0
-
-/**
- * \struct turn_attr_icmp
- * \brief ICMP attribute.
- */
-struct turn_attr_icmp
-{
-  uint16_t turn_attr_type; /**< Attribute type */
-  uint16_t turn_attr_len; /**< Length of "value" */
-  uint8_t turn_attr_icmp_type : ; /**< ICMP type */
-  uint8_t turn_attr_icmp_code; /**< ICMP code */
-  uint16_t turn_attr_icmp_reserved; /**< Reserved, must be 0 */
-}__attribute__((packed));
-
-#endif
 
 /**
  * \struct turn_channel_data

@@ -48,7 +48,7 @@
 #include <netinet/in.h>
 
 #include "allocation.h"
-#include "protocol.h"
+#include "turnserver.h"
 
 struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
 {

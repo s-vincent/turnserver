@@ -76,7 +76,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #else
-/* replace stdint.h type for MS Windows */
+/* replace stdint.h types for MS Windows */
 typedef __int8 int8_t;
 typedef unsigned __int8 uint8_t;
 typedef __int16 int16_t;
@@ -95,7 +95,7 @@ typedef int socklen_t;
 #ifdef _WIN32
 /**
  * \struct iovec
- * \brief iovector structure for win32
+ * \brief iovector structure for win32.
  */
 typedef struct iovec
 {
@@ -127,7 +127,7 @@ typedef long int fd_mask;
 #ifndef SFD_SETSIZE
 /**
  * \def SFD_SETSIZE
- * \brief User defined FD_SETSIZE
+ * \brief User defined FD_SETSIZE.
  */
 #define SFD_SETSIZE FD_SETSIZE
 #endif
@@ -285,8 +285,8 @@ extern "C"
   {
     char* ret = NULL;
 
-    ret = strncpy(dest, src, n-1);
-    dest[n-1]=0x00; /* add the final NULL character */
+    ret = strncpy(dest, src, n - 1);
+    dest[n - 1] = 0x00; /* add the final NULL character */
 
     return ret;
   }
@@ -305,8 +305,8 @@ extern "C"
     int ret = 0;
 
     va_start(args, format);
-    ret = snprintf(str, size-1, format,  args);
-    str[size-1]=0x00; /* add the final character */
+    ret = snprintf(str, size - 1, format,  args);
+    str[size - 1] = 0x00; /* add the final NULL character */
 
     return ret;
   }
@@ -322,18 +322,18 @@ extern "C"
    * \warning It does not return a value (like strncpy does).
    */
 #define s_strncpy(dest, src, n) \
-  do{ strncpy((dest), (src), (n)-1); dest[n-1]=0x00; }while(0);
+  do{ strncpy((dest), (src), (n) - 1); dest[n - 1] = 0x00; }while(0);
 
 #endif
 
 #if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE < 500
   /**
-   * \brief strdup replacement.\n
+   * \brief strdup replacement.
    *
    * strdup() is from X/OPEN (XSI extension).
    * \param s string to duplicate
    * \return pointer on duplicate string
-   * \warning Do not forget to freed the pointer
+   * \warning Do not forget to free the pointer after use
    * \author Sebastien Vincent
    */
   char* strdup(const char* s);
@@ -349,7 +349,7 @@ extern "C"
   void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex, size_t hex_len);
 
   /**
-   * \brief Convert a ascii stream into integer value
+   * \brief Convert a ascii stream into integer value.
    * \param data ascii data
    * \param data_len data length
    * \param t a 32 bit unsigned integer
@@ -357,7 +357,7 @@ extern "C"
   void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t);
 
   /**
-   * \brief Convert a ascii stream into integer value
+   * \brief Convert a ascii stream into integer value.
    * \param data ascii data
    * \param data_len data length
    * \param t a 64 bit unsigned integer

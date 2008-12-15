@@ -134,7 +134,7 @@ typedef struct list_head
 
 /**
  * \def LIST_EMPTY
- * \brief Return wheter or not the list is empty.
+ * \brief Return whether or not the list is empty.
  * \param head pointer on the list to test
  * \return 1 if empty, 0 otherwise
  */

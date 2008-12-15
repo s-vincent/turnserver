@@ -45,6 +45,8 @@
 
 #include <stdint.h>
 
+#include "list.h"
+
 #if 0 /* not used for the moment */
 #include <limits.h>
 
@@ -77,13 +79,14 @@ struct turnserver_cfg
 /**
  * \brief Parse the configuration file.
  * \param file the file name
+ * \param denied_address_list the denied address list that will be filled
  * \return -1 if the file canont be found\n
  * -3 memory problem\n
  * -2 if parse error\n
  *  0 if OK
  * \note Do not forget to call turnserver_cfg_free() to free parser memory.
  */
-int turnserver_cfg_parse(const char* file);
+int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list);
 
 /**
  * \brief Print the options.
@@ -98,14 +101,14 @@ void turnserver_cfg_free(void);
 /**
  * \brief Get the IPv4 listening port.
  * \return listening address 
- * \note If NULL, the server will listen on all addresses.
+ * \note If NULL, the server will not allow IPv4 relaying.
  */
 char* turnserver_cfg_listen_address(void);
 
 /**
  * \brief Get the IPv6 listening address.
  * \return listening address 
- * \note If NULL, the server will listen on all addresses.
+ * \note If NULL, the server will not allow IPv6 relaying.
  */
 char* turnserver_cfg_listen_addressv6(void);
 
@@ -177,7 +180,7 @@ char* turnserver_cfg_ca_file(void);
 char* turnserver_cfg_cert_file(void);
 
 /**
- * \brief Get the private key file.
+ * \brief Get the server private key file.
  * \return private key file
  */
 char* turnserver_cfg_private_key_file(void);
@@ -201,7 +204,7 @@ uint16_t turnserver_cfg_bandwidth_per_allocation(void);
 char* turnserver_cfg_account_method(void);
 
 /**
- * \brief Get the account file (in case of account method is file).
+ * \brief Get the account file (in case of account method is "file").
  * \return file name
  */
 char* turnserver_cfg_account_file(void);
@@ -235,15 +238,6 @@ char* turnserver_cfg_account_db_address(void);
  * \return database network port
  */
 uint16_t turnserver_cfg_account_db_port(void);
-
-/**
- * \brief Verify if address / port is in deny list.
- * \param addr IPv4 / IPv6 address to check
- * \param addrlen sizeof the address (IPv4 = 4, IPv6 = 16)
- * \param port port to check
- * \return 1 if address is denied, 0 otherwise
- */
-int turnserver_cfg_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port);
 
 #endif /* CONF_H */
 

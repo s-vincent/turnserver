@@ -66,7 +66,7 @@ struct allocation_token
 
 /**
  * \struct allocation_tuple
- * \brief Allocation tuple
+ * \brief Allocation tuple.
  */
 struct allocation_tuple
 {
@@ -83,7 +83,6 @@ struct allocation_permission
 {
   int family; /**< Address family */
   uint8_t peer_addr[16]; /**< Peer address */
-  int permission; /**< Permission state of the peer (1 = relay packet, 0 = drop packet from it) */
   timer_t expire_timer; /**< Expire timer */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
@@ -110,7 +109,7 @@ struct allocation_channel
  */
 struct allocation_desc
 {
-  char* username; /**< Username obtained by the TURN client */
+  char* username; /**< Username of client */
   unsigned char key[16]; /**< MD5 hash over username, realm and password */
   char realm[256]; /**< Realm of user */
   unsigned char nonce[32]; /**< Nonce of user */
@@ -151,13 +150,13 @@ struct allocation_desc
 struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime);
 
 /**
- * \brief Free a allocation descriptor.
+ * \brief Free an allocation descriptor.
  * \param desc pointer on pointer allocated by allocation_desc_new
  */
 void allocation_desc_free(struct allocation_desc** desc);
 
 /**
- * \brief Set timer.
+ * \brief Set timer of an allocation descriptor.
  * \param desc allocation descriptor
  * \param lifetime lifetime timer
  */
@@ -235,7 +234,7 @@ void allocation_channel_set_timer(struct allocation_channel* channel, uint32_t l
 void allocation_permission_set_timer(struct allocation_permission* permission, uint32_t lifetime);
 
 /**
- * \brief Free a list of allocation.
+ * \brief Free a list of allocations.
  * \param list list of allocation
  */
 void allocation_list_free(struct list_head* list);
@@ -306,7 +305,7 @@ struct allocation_token* allocation_token_new(uint8_t* id, int sock, uint32_t li
 void allocation_token_free(struct allocation_token** token);
 
 /**
- * \brief Set timer.
+ * \brief Set timer of an allocation token.
  * \param token allocation descriptor
  * \param lifetime lifetime timer
  */

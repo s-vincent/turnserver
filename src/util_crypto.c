@@ -248,3 +248,4 @@ uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
 
   return crc;
 }
+

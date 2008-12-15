@@ -43,43 +43,13 @@
 #include <config.h>
 #endif
 
-#include <unistd.h>
-#include <signal.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 
 #include "turn.h"
 #include "tls_peer.h"
-
-#ifndef _POSIX_REALTIME_SIGNALS
-#error "POSIX realtime signals not supported!"
-#endif
-
-/**
- * \def SIGRT_EXPIRE_ALLOCATION
- * \brief Signal value when an allocation expires.
- */
-#define SIGRT_EXPIRE_ALLOCATION (SIGRTMIN)
-
-/**
- * \def SIGRT_EXPIRE_PERMISSION
- * \brief Signal value when a permission expires.
- */
-#define SIGRT_EXPIRE_PERMISSION (SIGRTMIN + 1)
-
-/**
- * \def SIGRT_EXPIRE_CHANNEL
- * \brief Signal value when channel expires.
- */
-#define SIGRT_EXPIRE_CHANNEL (SIGRTMIN + 2)
-
-/**
- * \def SIGRT_EXPIRE_TOKEN
- * \brief Signal value when token expires.
- */
-#define SIGRT_EXPIRE_TOKEN (SIGRTMIN + 3)
+#include "turnserver.h"
 
 #ifndef XOR_PEER_ADDRESS_MAX
 /**
@@ -95,7 +65,7 @@
  */
 struct turn_message
 {
-  struct turn_msg_hdr* msg; /**< TURN / STUN header */
+  struct turn_msg_hdr* msg; /**< STUN / TURN header */
   struct turn_attr_mapped_address* mapped_addr; /**< MAPPED-ADDRESS attribute */
   struct turn_attr_xor_mapped_address* xor_mapped_addr; /**< XOR-MAPPED-ADDRESS attribute */
   struct turn_attr_alternate_server* alternate_server; /**< ALTERNATE-SERVER attribute */
@@ -116,9 +86,6 @@ struct turn_message
   struct turn_attr_requested_transport* requested_transport; /**< REQUESTED-TRANSPORT attribute */
   struct turn_attr_dont_fragment* dont_fragment; /**< DONT-FRAGMENT attribute */
   struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
-#if 0
-  struct turn_attr_icmp* icmp; /**< ICMP attribute */
-#endif
   struct turn_attr_requested_address_type* requested_addr_type; /**< REQUETED-ADDRESS-TYPE (ietf-draft-behave-turn-ipv6-05) */
   size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
@@ -587,15 +554,6 @@ struct turn_attr_hdr* turn_attr_dont_fragment_create(struct iovec* iov);
 struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, struct iovec* iov);
 
 /**
- * \brief Create a ICMP attribute.
- * \param type ICMP type
- * \param code ICMP code
- * \param iov vector
- * \return pointer on turn_attr_hdr or NULL if problem
- */
-struct turn_attr_hdr* turn_attr_icmp_create(uint8_t type, uint8_t code, struct iovec* iov);
-
-/**
  * \brief Create a REQUESTED-ADDRESS-TYPE attribute.
  * \param family family requested (IPv4 or IPv6)
  * \param iov vector
@@ -743,7 +701,7 @@ int turn_add_fingerprint(struct iovec* iov, size_t* index);
 int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id);
 
 /**
- * \brief Parse a TURN / STUN message.
+ * \brief Parse a STUN / TURN message.
  * \param msg raw buffer containing the message
  * \param msg_len size of buffer
  * \param message structures that will contains pointer on message header and attributes.

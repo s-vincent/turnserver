@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "December 12, 2008" "TurnServer Configuration"
+.TH turnserver.conf 5 "December 15, 2008" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -38,15 +38,19 @@ The TLS port of the server to listen for incoming connection.
 
 .TP
 .BR "tls " "= boolean"
-Wheter or not activate TLS over TCP connection.
+Enable or not TLS over TCP connection.
 
 .TP
 .BR "realm " "= string"
 Realm value (i.e. domain.org).
 
 .TP
+.BR "nonce_key " "= string"
+Key used to hash nonce.
+
+.TP
 .BR "daemon " "= boolean"
-Wheter or not to run the program as daemon.
+Run the program as daemon.
 
 .TP
 .BR "max_relay_per_username " "= number"
@@ -63,14 +67,14 @@ Bandwidth limit for an allocation in KBytes/s.
 
 .TP
 .nf
-.BR "deny_list {"
+.BR "denied_address {"
 .BR " address " "= IPv4 | IPv6 address"
 .BR " mask " "= bitmask number"
 .BR " port " "= number (1 - 65535)"
 .B }
 .fi
 
-Defines an entry for the deny access list. This can appear multiple time. Format is defined as follow:
+Defines an entry for the denied access list. This can appear multiple time. Format is defined as follow:
 .br
 .B address 
 is a string representing an IPv4 or IPv6 address.
@@ -121,6 +125,8 @@ tls = true
 
 realm = "domain.org"
 
+nonce_key = "hieKedq"
+
 daemon = false
 
 max_relay_per_username = 10
@@ -129,21 +135,21 @@ allocation_lifetime = 1800
 
 bandwidth_per_allocation = 150
 
-deny_address {
+denied_address {
   address = "172.1.0.3"
   mask = 24
   port = 0
 
 }
 
-deny_address {
+denied_address {
   address = "127.0.0.1"
   mask = 8 
   port = 0
 
 }
 
-deny_address {
+denied_address {
   address = "::1"
   mask = 128
   port = 0
