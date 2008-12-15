@@ -8,7 +8,8 @@ endif
 
 INCLUDE = -I.
 bin_PROGRAMS = turnserver test_client_udp test_client_tcp test_client_tls test_echo_server
-noinst_HEADERS = turn.h \
+noinst_HEADERS = turnserver.h \
+								 turn.h \
 								 protocol.h \
 								 dbg.h \
 								 util_sys.h \
