@@ -108,7 +108,7 @@ typedef struct iovec
  * \def MAX
  * \brief Maximum number of the two arguments.
  */
-#define	MAX(a, b) ((a) > (b) ? (a) : (b));
+#define	MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /**
  * \def MIN
