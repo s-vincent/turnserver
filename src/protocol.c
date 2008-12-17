@@ -192,7 +192,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   }
 
   /* end of IPv6 address XOR transaction ID */
-  for(i = 4 ;i < len ; i++)
+  for(i = 4 ; i < len ; i++)
   {
     ptr[i] ^= id[i - 4];
   }
@@ -488,7 +488,7 @@ struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknow
   ptr = (uint16_t*)ret->turn_attr_attributes;
   tmp_len = len;
 
-  for(i = 0; i < attr_size ; i++)
+  for(i = 0 ; i < attr_size ; i++)
   {
     *ptr = htons(unknown_attributes[i]);
     tmp_len--;

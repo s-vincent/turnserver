@@ -722,7 +722,7 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port)
     return -1;
   }
 
-  for(p = res; p ; p = p->ai_next)
+  for(p = res ; p ; p = p->ai_next)
   {
     int on = 1;
 

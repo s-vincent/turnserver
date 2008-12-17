@@ -159,7 +159,7 @@ typedef struct list_head
  * \param head the head for your list
  */
 #define list_iterate(pos, head) \
-  for (pos = (head)->next; pos != (head); pos = pos->next)
+  for(pos = (head)->next ; pos != (head) ; pos = pos->next)
 
 /**
  * \def list_iterate_safe
@@ -169,7 +169,7 @@ typedef struct list_head
  * \param head the list.
  */
 #define list_iterate_safe(pos, n, head) \
-  for (pos = (head)->next, n = pos->next; pos != (head); \
+  for(pos = (head)->next, n = pos->next ; pos != (head) ; \
       pos = n, n = pos->next)
 
 /**

@@ -168,7 +168,7 @@ void digest_print(const unsigned char* buf, size_t len)
     return;
   }
 
-  for(i = 0; i < len ; i++)
+  for(i = 0 ; i < len ; i++)
   {
     sprintf(&res[i*2], "%02x", buf[i]);
   }

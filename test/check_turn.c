@@ -425,7 +425,7 @@ START_TEST(test_msg_create)
   fail_unless(hdr != NULL, "header creation failed");
   index++;
 
-  for(i = 0; i < index; i++)
+  for(i = 0 ; i < index ; i++)
   {
     nb = turn_udp_send(sock, (struct sockaddr*)&daddr, sizeof(daddr), &iov[i], 1);
     fail_unless(nb > 0, "sendmsg failed");
@@ -622,7 +622,7 @@ START_TEST(test_message_parse)
   /* put iovec into a raw buffer */
   {
     char* ptr = buf;
-    for(nb = 0; nb < index ; nb++)
+    for(nb = 0 ; nb < index ; nb++)
     {
       memcpy(ptr, iov[nb].iov_base, iov[nb].iov_len);
       ptr += iov[nb].iov_len;

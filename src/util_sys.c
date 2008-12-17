@@ -238,7 +238,7 @@ extern "C"
       return NULL;
     }
 
-    for (i = 0,j = 0;i < len;i++, j++)
+    for(i = 0, j = 0 ; i < len ; i++, j++)
     {
       unsigned int t = (unsigned int)str[i];
 
@@ -294,7 +294,7 @@ extern "C"
       return -1;
     }
 
-    for (i = 0;i < iovcnt;i++)
+    for(i = 0 ; i < iovcnt ; i++)
     {
       winiov[i].len = iov[i].iov_len;
       winiov[i].buf = iov[i].iov_base;
@@ -335,7 +335,7 @@ extern "C"
       return -1;
     }
 
-    for (i = 0 ; i < iovcnt ; i++)
+    for(i = 0 ; i < iovcnt ; i++)
     {
       winiov[i].len = iov[i].iov_len;
       winiov[i].buf = iov[i].iov_base;
@@ -367,7 +367,7 @@ extern "C"
   {
     uint32_t i = 0;
 
-    for (i = 0 ; i < nb ; i++)
+    for(i = 0 ; i < nb ; i++)
     {
       free(iov[i].iov_base);
       iov[i].iov_base = NULL;
@@ -437,7 +437,7 @@ extern "C"
     size_t i = 0;
     unsigned char j = 0;
 
-    for (i = 0; i < bin_len && (i * 2) < hex_len ; i++) 
+    for(i = 0 ; i < bin_len && (i * 2) < hex_len ; i++) 
     {
       j = (bin[i] >> 4) & 0x0f;
 
@@ -468,7 +468,7 @@ extern "C"
     unsigned int i = 0;
     *t = 0; 
 
-    for(i = 0; i < data_len ; i++)
+    for(i = 0 ; i < data_len ; i++)
     {
       *t = (*t) * 16;
 
@@ -488,7 +488,7 @@ extern "C"
     unsigned int i = 0;
     *t = 0; 
 
-    for(i = 0; i < data_len ; i++)
+    for(i = 0 ; i < data_len ; i++)
     {
       *t = (*t) * 16;
 
