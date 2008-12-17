@@ -94,9 +94,9 @@ extern "C"
     fprintf(stderr, "%02d:%02d:%02d.%03u|[%s:%d]", tlt.wHour, tlt.wMinute, tlt.wSecond, tlt.wMilliseconds, f, line);
 #else
     struct timeval lt;
-    struct tm* tlt=NULL;
+    struct tm* tlt = NULL;
     gettimeofday(&lt, NULL);
-    tlt=localtime((time_t*)&lt.tv_sec);
+    tlt = localtime((time_t*)&lt.tv_sec);
     fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d]\t", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, f, line);
 #endif
 
@@ -125,16 +125,16 @@ extern "C"
     fprintf(stderr, "%02d:%02d:%02d.%03u [%s:%d]\t", tlt.wHour, tlt.wMinute, tlt.wSecond, tlt.wMilliseconds, f, line);
 #else
     struct timeval lt;
-    struct tm* tlt=NULL;
+    struct tm* tlt = NULL;
     gettimeofday(&lt, NULL);
-    tlt=localtime((time_t*)&lt.tv_sec);
+    tlt = localtime((time_t*)&lt.tv_sec);
     fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d]\t", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, f, line);
 #endif
 
     va_start(args, format);
     vfprintf(stderr, format, args);
 
-    for (i=0;i<len;i++)
+    for(i = 0 ; i < len ; i++)
     {
       fprintf(stderr, "%02x ", (unsigned char)buf[i]);
     }

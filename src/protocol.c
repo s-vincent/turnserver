@@ -1592,7 +1592,6 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         message->requested_addr_type = (struct turn_attr_requested_address_type*)ptr;
         break;
       default:
-
         if(attr->turn_attr_type <= 0x7fff)
         {
           /* comprehension-required attribute but server does not understand it */

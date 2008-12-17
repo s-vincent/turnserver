@@ -80,8 +80,10 @@ typedef struct list_head
  * \brief Initialize a list.
  * \param name the list to initialize
  */
-#define INIT_LIST(name) \
-  do {name.prev= &name ;name.next = &name ;}while(0);
+#define INIT_LIST(name) do { \
+  (name).prev = &(name); \
+  (name).next = &(name); \
+}while(0);
 
 /**
  * \def LIST_HEAD
@@ -96,12 +98,12 @@ typedef struct list_head
  * \param new_entry new entry to be added
  * \param head list head to add it after
  */
-#define LIST_ADD(new_entry, head) do {\
+#define LIST_ADD(new_entry, head) do { \
   struct list_head* next = (head)->next; \
-  next->prev = new_entry ; \
-  (new_entry)->next = next ; \
-  (new_entry)->prev = head ; \
-  (head)->next = (new_entry) ; \
+  next->prev = (new_entry); \
+  (new_entry)->next = next; \
+  (new_entry)->prev = (head); \
+  (head)->next = (new_entry); \
 }while(0);
 
 /**
@@ -110,12 +112,12 @@ typedef struct list_head
  * \param new_entry new entry to be added
  * \param head list head to add it before
  */
-#define LIST_ADD_TAIL(new_entry, head) do {\
+#define LIST_ADD_TAIL(new_entry, head) do { \
   struct list_head* prev = (head)->prev; \
-  (head)->prev = (new_entry) ; \
-  (new_entry)->next = (head) ; \
-  (new_entry)->prev = prev ; \
-  prev->next = (new_entry) ; \
+  (head)->prev = (new_entry); \
+  (new_entry)->next = (head); \
+  (new_entry)->prev = prev; \
+  prev->next = (new_entry); \
 }while(0);
 
 /**
@@ -126,10 +128,10 @@ typedef struct list_head
  * in an undefined state.
  */
 #define LIST_DEL(rem) do { \
-  (rem)->next->prev=(rem)->prev; \
-  (rem)->prev->next=(rem)->next; \
-  (rem)->next=(rem); \
-  (rem)->prev=(rem); \
+  (rem)->next->prev = (rem)->prev; \
+  (rem)->prev->next = (rem)->next; \
+  (rem)->next = (rem); \
+  (rem)->prev = (rem); \
 }while(0);
 
 /**
@@ -139,7 +141,7 @@ typedef struct list_head
  * \return 1 if empty, 0 otherwise
  */
 #define LIST_EMPTY(head) \
-  ((head)->next == (head) )
+  ((head)->next == (head))
 
 /**
  * \def list_get
@@ -150,7 +152,7 @@ typedef struct list_head
  * \return pointer on the structure for this entry
  */
 #define list_get(ptr, type, member) \
-  (type *)( (char *)(ptr) - offsetof(type, member) )
+  (type *)((char *)(ptr) - offsetof(type, member))
 
 /**
  * \def list_iterate
@@ -159,7 +161,7 @@ typedef struct list_head
  * \param head the head for your list
  */
 #define list_iterate(pos, head) \
-  for(pos = (head)->next ; pos != (head) ; pos = pos->next)
+  for((pos) = (head)->next ; (pos) != (head) ; (pos) = (pos)->next)
 
 /**
  * \def list_iterate_safe
@@ -169,8 +171,8 @@ typedef struct list_head
  * \param head the list.
  */
 #define list_iterate_safe(pos, n, head) \
-  for(pos = (head)->next, n = pos->next ; pos != (head) ; \
-      pos = n, n = pos->next)
+  for((pos) = (head)->next, (n) = (pos)->next ; (pos) != (head) ; \
+      (pos) = (n), (n) = (pos)->next)
 
 /**
  * \brief Get the number of element in the list.
@@ -179,8 +181,8 @@ typedef struct list_head
  */
 static inline int list_size(struct list_head* head)
 {
-  struct list_head* lp=NULL;
-  size_t size=0;
+  struct list_head* lp = NULL;
+  size_t size = 0;
 
   list_iterate(lp, head)
   {

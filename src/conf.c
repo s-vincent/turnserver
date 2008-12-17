@@ -90,6 +90,7 @@ static cfg_opt_t opts[]=
   CFG_INT("tls_port", 5349, CFGF_NONE),
   CFG_BOOL("tls", cfg_false, CFGF_NONE),
   CFG_BOOL("daemon", cfg_false, CFGF_NONE),
+  CFG_STR("unpriv_user", NULL, CFGF_NONE),
   CFG_INT("max_client", 50, CFGF_NONE),
   CFG_INT("max_relay_per_username", 10, CFGF_NONE),
   CFG_INT("allocation_lifetime", 1800, CFGF_NONE),
@@ -244,6 +245,11 @@ int turnserver_cfg_tls(void)
 int turnserver_cfg_daemon(void)
 {
   return cfg_getbool(g_cfg, "daemon");
+}
+
+char* turnserver_cfg_unpriv_user(void)
+{
+  return cfg_getstr(g_cfg, "unpriv_user");
 }
 
 uint16_t turnserver_cfg_max_client(void)

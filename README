@@ -77,3 +77,21 @@ login:password:realm
 
 Note: realm have to match realm parameter defined in TurnServer configuration file.
 
+4) Security
+------------
+
+If TurnServer is launched as root / or set-uid root, it is possible to drop privileges.
+
+One possibility is to create a special user (which have less privileges). To create such 
+a user named turnserver:
+# adduser --system --group turnserver
+
+Then you have to tell configuration file to choose this user:
+unpriv_user = turnserver
+
+if TurnServer is setuid root and unpriv_user is not set, TurnServer will drop
+privileges to the user who launched the binary.
+
+Note: if turnserver is launched as root and unpriv_user not set, the program will not
+loose its root privileges.
+

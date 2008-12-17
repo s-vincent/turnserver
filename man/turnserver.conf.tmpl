@@ -41,16 +41,24 @@ The TLS port of the server to listen for incoming connection.
 Enable or not TLS over TCP connection.
 
 .TP
+.BR "daemon " "= boolean"
+Run the program as daemon.
+
+.TP
+.BR "unpriv_user " "= string"
+If the program is run as root or setuid root, the program will drop its privileges
+to the unpriv_user privileges.
+
+To use this feature, create a special user with the adduser command:
+adduser --system --group turnserver
+
+.TP
 .BR "realm " "= string"
 Realm value (i.e. domain.org).
 
 .TP
 .BR "nonce_key " "= string"
 Key used to hash nonce.
-
-.TP
-.BR "daemon " "= boolean"
-Run the program as daemon.
 
 .TP
 .BR "max_relay_per_username " "= number"
@@ -123,11 +131,13 @@ tls_port = 5349
 
 tls = true
 
+daemon = false
+
+unpriv_user = turnserver
+
 realm = "domain.org"
 
 nonce_key = "hieKedq"
-
-daemon = false
 
 max_relay_per_username = 10
 

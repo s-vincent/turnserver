@@ -179,7 +179,9 @@ void digest_print(const unsigned char* buf, size_t len)
 
 uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
 {
-  /* from draft-ietf-tsvwg-sctpcsum-00.txt and adapted */
+  /* http://fxr.watson.org/fxr/source/libkern/crc32.c?v=DFBSD 
+   * formal specification http://www.itu.int/rec/T-REC-V.42-200203-I/en
+   */
   static uint32_t crc32_tab[] = {
     0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
     0x706af48fL, 0xe963a535L, 0x9e6495a3L, 0x0edb8832L, 0x79dcb8a4L,
@@ -235,7 +237,7 @@ uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
     0x2d02ef8dL
   };
 
-  uint32_t crc = prev;
+  uint32_t crc = ~prev;
   size_t i = 0;
   const unsigned char* c = NULL;
 
@@ -246,6 +248,6 @@ uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
     crc = crc32_tab[((uint32_t)crc ^ (*c)) & 0xff] ^ ( crc >> 8);
   }
 
-  return crc;
+  return crc ^ 0xffffffff;
 }
 

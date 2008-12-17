@@ -144,6 +144,12 @@ int turnserver_cfg_tls(void);
 int turnserver_cfg_daemon(void);
 
 /**
+ * \brief Get the unprivileged username.
+ * \return unprivileged username
+ */
+char* turnserver_cfg_unpriv_user(void);
+
+/**
  * \brief Get the maximum number of simulanous client.
  * \return max client
  */

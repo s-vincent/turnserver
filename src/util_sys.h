@@ -134,7 +134,7 @@ typedef long int fd_mask;
 
 /**
  * \struct sfd_set
- * \brief fd_set-like structure.
+ * \brief An fd_set-like structure.
  *
  * Replacement for the classic fd_set.
  * Ensure that select() can manage the maximum open files
@@ -243,17 +243,18 @@ extern "C"
   /**
    * \brief Drop privileges.
    *
-   * If the program is executed by root or sudoers,
-   * We change our privileges to those of the user_name account.
-   * If the program is setuid root, we change the UID/GID to
-   * those of the function parameters.
+   * If the program is executed by setuid-root and the user_name
+   * is NULL, we change privileges to the real UID / GID.
+   * Otherwise we change privileges to the user_name account
    * \param uid_real the real UID of the user
    * \param gid_real the real GID of the user
-   * \param user_name user name of the account we want to switch.
+   * \param uid_eff the effective UID of the user
+   * \param gid_eff the effective GID of the user
+   * \param user_name user name of the account we want to switch
    * \return 0 if success, -1 otherwise
    * \note Should work on POSIX and *BSD systems.
    */
-  int uid_drop_privileges(uid_t uid_real, gid_t gid_real, const char* user_name);
+  int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid_eff, const char* user_name);
 
   /**
    * \brief Gain lost privileges.
@@ -321,8 +322,10 @@ extern "C"
    * \param n maximum size to copy
    * \warning It does not return a value (like strncpy does).
    */
-#define s_strncpy(dest, src, n) \
-  do{ strncpy((dest), (src), (n) - 1); dest[n - 1] = 0x00; }while(0);
+#define s_strncpy(dest, src, n) do { \
+  strncpy((dest), (src), (n) - 1); \
+  dest[n - 1] = 0x00; \
+}while(0);
 
 #endif
 
@@ -375,7 +378,7 @@ extern "C"
    * \return number of bytes written or -1 if error
    * \warning this function work only with socket!
    */
-  ssize_t sock_writev(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t addr_size);
+  ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t addr_size);
 
   /**
    * \brief The readv() function for win32 socket.
@@ -387,7 +390,7 @@ extern "C"
    * \return number of bytes read or -1 if error
    * \warning this function work only with socket!
    */
-  ssize_t sock_readv(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t* addr_size);
+  ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size);
 #endif
 
 #ifdef __cplusplus

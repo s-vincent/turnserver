@@ -21,14 +21,19 @@ tls_port = 5349
 ## TLS support.
 tls = false
 
+## Daemon mode.
+daemon = false
+
+## Unprivileged user (if you want to use
+## this features create a system user:
+## adduser --system --group turnserver)
+#unpriv_user = turnserver
+
 ## Realm value
 realm = "domain.org"
 
 ## Nonce key
 nonce_key = "hieKedq"
-
-## Daemon mode.
-daemon = false
 
 ## Max relay per username.
 max_relay_per_username = 5 

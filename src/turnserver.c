@@ -2260,7 +2260,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   if(transport_protocol != IPPROTO_UDP && transport_protocol != IPPROTO_TCP)
   {
     debug(DBG_ATTR, "Transport protocol mismatch\n");
-    return-1;
+    return -1;
   }
 
   if(buflen < 4)
@@ -3698,6 +3698,14 @@ int main(int argc, char** argv)
 
   /* initialize rand() */
   srand(time(NULL) + getpid());
+
+  /* drop privileges if we are root */
+  if(geteuid() == 0 && uid_drop_privileges(getuid(), getgid(), geteuid(), getegid(), turnserver_cfg_unpriv_user()) == -1)
+  {
+    debug(DBG_ATTR, "Cannot drop privileges\n");
+  }
+
+  debug(DBG_ATTR, "Run with uid_real=%u gid_real=%u uid_eff=%u gid_eff=%u\n", getuid(), getgid(), geteuid(), getegid());
 
   while(g_run)
   {

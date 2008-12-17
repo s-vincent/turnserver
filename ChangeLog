@@ -1,3 +1,7 @@
+2008-12-17  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+  * Version 0.2.1 - Fix CRC32 generation;
+                  - Drop privileges if run as root / setuid root.
+
 2008-12-15  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
   * Version 0.2:  - Add attributes from turn-12 draft;

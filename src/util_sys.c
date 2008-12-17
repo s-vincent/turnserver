@@ -73,10 +73,11 @@
 #include "util_sys.h"
 
 /**
- * \var error_unknown_str
- * \brief When no other error string can be used.
+ * \def UNKNOWN_ERROR
+ * \brief Error string used when no other error string
+ * are available.
  */
-const char* error_unknown_str = "Unknown error!";
+#define UNKNOWN_ERROR "Unknown error!"
 
 #ifdef __cplusplus
 extern "C"
@@ -88,8 +89,8 @@ extern "C"
     unsigned long sec = 0;
     struct timeval tv;
 
-    sec = (unsigned long)usec/1000000;
-    usec = (unsigned long)usec%1000000;
+    sec = (unsigned long)usec / 1000000;
+    usec = (unsigned long)usec % 1000000;
 
     tv.tv_sec = sec;
     tv.tv_usec = usec;
@@ -124,7 +125,8 @@ extern "C"
 
   int is_little_endian(void)
   {
-    return !is_big_endian();
+    long one = 1;
+    return (*((char *)(&one)));
   }
 
   char* get_error(int errnum, char* buf, size_t buflen)
@@ -136,8 +138,8 @@ extern "C"
     ret = strerror_r(errnum, buf, buflen);
     if (ret == -1)
     {
-      strncpy(buf, error_unknown_str, buflen - 1);
-      buf[buflen-1] = 0x00;
+      strncpy(buf, UNKNOWN_ERROR, buflen - 1);
+      buf[buflen - 1] = 0x00;
     }
     error = buf;
 #elif defined(_GNU_SOURCE)
@@ -263,21 +265,21 @@ extern "C"
   char* strdup(const char* str)
   {
     char* ret = NULL;
-    size_t nb = strlen(str)+1;
+    size_t nb = strlen(str);
 
     ret = malloc(nb + 1);
     if (!ret)
     {
       return NULL;
     }
-    memcpy(ret, str, nb);
+    memcpy(ret, str, nb); /* also copy the NULL character */
     return ret;
   }
 #endif
 
 #ifdef _WIN32
 
-  ssize_t sock_readv(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t* addr_size)
+  ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size)
   {
     /* it should be sufficient.
      * the dynamically allocation is timecost.
@@ -285,11 +287,11 @@ extern "C"
      * non reentrant.
      */
     WSABUF winiov[50];
-    int winiov_len = 0;
-    int i = 0;
+    DWORD winiov_len = iovcnt;
+    size_t i = 0;
     DWORD ret = 0;
 
-    if (iovcnt > (int)sizeof(winiov))
+    if (iovcnt > sizeof(winiov))
     {
       return -1;
     }
@@ -318,7 +320,7 @@ extern "C"
     return (ssize_t)ret;
   }
 
-  ssize_t sock_writev(int fd, const struct iovec *iov, int iovcnt, struct sockaddr* addr, socklen_t addr_size)
+  ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t addr_size)
   {
     /* it should be sufficient.
      * the dynamically allocation is timecost.
@@ -326,11 +328,11 @@ extern "C"
      * non reentrant.
      */
     WSABUF winiov[50];
-    int winiov_len = 0;
-    int i = 0;
+    DWORD winiov_len = iovcnt;
+    size_t i = 0;
     DWORD ret = 0; /* number of byte read or written */
 
-    if (iovcnt > (int)sizeof(winiov))
+    if (iovcnt > sizeof(winiov))
     {
       return -1;
     }
@@ -365,7 +367,7 @@ extern "C"
 
   void iovec_free_data(struct iovec* iov, uint32_t nb)
   {
-    uint32_t i = 0;
+    size_t i = 0;
 
     for(i = 0 ; i < nb ; i++)
     {
@@ -374,12 +376,14 @@ extern "C"
     }
   }
 
-  int uid_drop_privileges(uid_t uid_real, gid_t gid_real, const char* user_name)
+  int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid_eff, const char* user_name)
   {
 #ifdef _WIN32
     return -1;
 #endif
-    if (uid_real == 0 && gid_real == 0) /* we are root or sudoers */
+    gid_eff = 0; /* not used for the moment */
+
+    if (uid_real == 0 || uid_eff == 0) /* we are root or sudoers */
     {
       struct passwd user;
       struct passwd* tmpUser = &user;
@@ -388,33 +392,39 @@ extern "C"
 
       if (!user_name)
       {
-        user_name = "nobody";
+        if(uid_real == uid_eff)
+        {
+          /* we are root and no user_name specified,
+           * cannot drop privileges.
+           */
+          return -1;
+        }
+
+#ifdef _POSIX_SAVED_IDS
+        setegid(gid_real);
+        return seteuid(uid_real);
+#else
+        /* i.e. for *BSD */
+        setregid(-1, gid_real);
+        return setreuid(-1, uid_real);
+#endif
       }
 
+      /* get user_name information (UID and GID) */
       if (getpwnam_r(user_name, tmpUser, buf, sizeof(buf), &tmp) == 0)
       {
-        int ret = -1;
         setegid(user.pw_uid);
-        ret = seteuid(user.pw_gid);
-        return ret;
+        return seteuid(user.pw_gid);
       }
       else
       {
-        /* cannot lost our privileges */
+        /* user does not exist, cannot lost our privileges */
         return -1;
       }
     }
-    else
-    {
-#ifdef _POSIX_SAVED_IDS
-      setegid(gid_real);
-      return seteuid(uid_real);
-#else
-      /* i.e. for *BSD */
-      setregid(-1, gid_real);
-      return setreuid(-1, uid_real);
-#endif
-    }
+
+    /* cannot lost our privileges */
+    return -1;
   }
 
   int uid_gain_privileges(uid_t uid_eff, gid_t gid_eff)
@@ -443,22 +453,22 @@ extern "C"
 
       if (j <= 9)
       {
-        hex[i*2] = (j + '0');
+        hex[i * 2] = (j + '0');
       }
       else
       {
-        hex[i*2] = (j + 'a' - 10);
+        hex[i * 2] = (j + 'a' - 10);
       }
 
       j = bin[i] & 0x0f;
 
       if (j <= 9)
       {
-        hex[i*2 + 1] = (j + '0');
+        hex[i * 2 + 1] = (j + '0');
       }
       else
       {
-        hex[i*2 + 1] = (j + 'a' - 10);
+        hex[i * 2 + 1] = (j + 'a' - 10);
       }
     }
   }

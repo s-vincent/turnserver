@@ -168,7 +168,7 @@ static struct ssl_peer* tls_peer_find_connection(struct tls_peer* peer, const st
 
   list_iterate_safe(get, n, &peer->remote_peers)
   {
-    struct ssl_peer* tmp=NULL;
+    struct ssl_peer* tmp = NULL;
     tmp = list_get(get, struct ssl_peer, list);
     if(!memcmp(&tmp->addr, addr, addrlen))
     {
@@ -214,7 +214,7 @@ static void tls_peer_clear_connection(struct tls_peer* peer)
   list_iterate_safe(get, n, &peer->remote_peers)
   {
     struct ssl_peer* tmp = NULL;
-    tmp=list_get(get, struct ssl_peer, list);
+    tmp = list_get(get, struct ssl_peer, list);
     tls_peer_remove_connection(peer, tmp);
     return;
   }
@@ -432,8 +432,8 @@ void tls_peer_print_connection(struct tls_peer* peer)
 
   list_iterate_safe(get, n, &peer->remote_peers)
   {
-    struct ssl_peer* tmp=NULL;
-    tmp=list_get(get, struct ssl_peer, list);
+    struct ssl_peer* tmp = NULL;
+    tmp = list_get(get, struct ssl_peer, list);
     if(getnameinfo((struct sockaddr*)&tmp->addr, sizeof(tmp->addr), buf, INET6_ADDRSTRLEN, NULL, 0, NI_NUMERICHOST) != 0)
     {
       continue;
