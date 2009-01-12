@@ -956,7 +956,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
   if(!alloc_permission)
   {
     /* no permission so packet dropped! */
-    debug(DBG_ATTR, "No permission for this peer\n");
+    inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
+    debug(DBG_ATTR, "No permission for this peer (%s)\n", str);
     return -1;
   }
 
@@ -2716,6 +2717,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   uint32_t padding = 0;
   ssize_t nb = -1;
   size_t len = 0; /* for TLS */
+  char str[INET6_ADDRSTRLEN];
 
   /* find the allocation associated with the relayed transport address */
   desc = allocation_list_find_relayed(allocation_list, daddr, saddr_size);
@@ -2744,7 +2746,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   if(!allocation_desc_find_permission_sockaddr(desc, saddr))
   {
     /* no permission, discard */
-    debug(DBG_ATTR, "No permission installed\n");
+    debug(DBG_ATTR, "No permission installed (%s)\n", inet_ntop(saddr->sa_family, peer_addr, str, INET6_ADDRSTRLEN));
     return -1;
   }
 

@@ -83,8 +83,8 @@ static cfg_opt_t denied_address_opts[] =
  */
 static cfg_opt_t opts[]=
 {
-  CFG_STR("listen_address", NULL, CFGF_NONE),
-  CFG_STR("listen_addressv6", NULL, CFGF_NONE),
+  CFG_STR("listen_address", NULL, CFGF_LIST),
+  CFG_STR("listen_addressv6", NULL, CFGF_LIST),
   CFG_INT("udp_port", 3478, CFGF_NONE),
   CFG_INT("tcp_port", 3478, CFGF_NONE),
   CFG_INT("tls_port", 5349, CFGF_NONE),
@@ -122,6 +122,7 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
 {
   int ret = 0;
   size_t i = 0;
+  size_t nb = 0;
   g_cfg = cfg_init(opts, CFGF_NONE);
 
   ret = cfg_parse(g_cfg, file);
@@ -137,8 +138,33 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
     return -2;
   }
 
+  /* check IPv4 listen addresses to be valid IPv4 ones */
+  nb = cfg_size(g_cfg, "listen_address");
+  for(i = 0 ; i < nb ; i++)
+  {
+    struct sockaddr_storage addr;
+    char* str = cfg_getnstr(g_cfg, "listen_address", i);
+    if(inet_pton(AF_INET, str, &addr) != 1)
+    {
+      return -2;
+    }
+  }
+
+  /* check IPv6 listen addresses to be valid IPv6 ones */
+  nb = cfg_size(g_cfg, "listen_addressv6");
+  for(i = 0 ; i < nb ; i++)
+  {
+    struct sockaddr_storage addr;
+    char* str = cfg_getnstr(g_cfg, "listen_addressv6", i);
+    if(inet_pton(AF_INET6, str, &addr) != 1)
+    {
+      return -2;
+    }
+  }
+
   /* add the denied address */
-  for(i = 0 ; i < cfg_size(g_cfg, "denied_address") ; i++)
+  nb = cfg_size(g_cfg, "denied_address");
+  for(i = 0 ; i < nb ; i++)
   {
     cfg_t* ad = cfg_getnsec(g_cfg, "denied_address", i);
     char* addr = cfg_getstr(ad, "address");
@@ -214,12 +240,32 @@ void turnserver_cfg_free(void)
 
 char* turnserver_cfg_listen_address(void)
 {
-  return cfg_getstr(g_cfg, "listen_address");
+  size_t nb = cfg_size(g_cfg, "listen_address");
+
+  if(nb)
+  {
+    size_t l = (size_t)(rand() % nb);
+    return cfg_getnstr(g_cfg, "listen_address", l);
+  }
+  else
+  {
+    return NULL;
+  }
 }
 
 char* turnserver_cfg_listen_addressv6(void)
 {
-  return cfg_getstr(g_cfg, "listen_addressv6");
+  size_t nb = cfg_size(g_cfg, "listen_addressv6");
+
+  if(nb)
+  {
+    size_t l = (size_t)(rand() % nb);
+    return cfg_getnstr(g_cfg, "listen_addressv6", l);
+  }
+  else
+  {
+    return NULL;
+  }
 }
 
 uint16_t turnserver_cfg_udp_port(void)

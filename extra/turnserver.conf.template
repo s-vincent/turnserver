@@ -2,12 +2,15 @@
 # TurnServer configuration file.
 #
 
-## public IPv4 address of any relayed address (if not set, no relay for IPv4)
-listen_address = "172.16.0.1"
+## Public IPv4 address of any relayed address (if not set, no relay for IPv4).
+## To have multiple address, separate addresses with a comma 
+## (i.e. listen_address = { "172.16.0.1", "172.17.0.1" }).
+listen_address = { "172.16.0.1" }
 
-## listening IPv6 address
-## public IPv6 address of any relayed address (if not set, no relay for IPv6)
-listen_addressv6 = "2001:db8::1"
+## Public IPv6 address of any relayed address (if not set, no relay for IPv6).
+## To have multiple address, separate address with a comma
+## (i.e. listen_addressv6 = { "2001:db8:1::1", "2001:db8:2::1" }).
+listen_addressv6 = { "2001:db8::1" }
 
 ## UDP listening port.
 udp_port = 3478
@@ -24,15 +27,15 @@ tls = false
 ## Daemon mode.
 daemon = false
 
-## Unprivileged user (if you want to use
-## this features create a system user:
-## adduser --system --group turnserver)
+## Unprivileged user 
+## if you want to use this feature create a system user.
+## On Linux: adduser --system --group turnserver
 #unpriv_user = turnserver
 
-## Realm value
+## Realm value.
 realm = "domain.org"
 
-## Nonce key
+## Nonce key.
 nonce_key = "hieKedq"
 
 ## Max relay per username.
@@ -45,7 +48,7 @@ allocation_lifetime = 1800
 # 0 value means bandwidth quota disabled.
 bandwidth_per_allocation = 150
 
-## Denied addresses
+## Denied addresses.
 
 # disallow relaying to localhost
 denied_address {
@@ -70,7 +73,7 @@ denied_address {
 ## Certification Authority file.
 ca_file = "./ca.crt"
 
-## Server certificate  file.
+## Server certificate file.
 cert_file = "./server.crt"
 
 ## Private key file.

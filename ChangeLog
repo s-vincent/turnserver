@@ -1,4 +1,9 @@
+2009-xx-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+  * Version 0.x   - Load sharing with multiple uplink addresses.
+
 2008-12-17  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
   * Version 0.2.1 - Fix CRC32 generation;
                   - Drop privileges if run as root / setuid root.
 
@@ -35,8 +40,8 @@
 
 2008-09-02	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-	* Version 0.1.2:  - Fix bug (infinite loop) when receiving unknown
-										-	comprehension-required attribute.
+	* Version 0.1.2:  - Fix bug (infinite loop) when receiving unknown 
+                      comprehension-required attribute.
 
 2008-08-16	Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 

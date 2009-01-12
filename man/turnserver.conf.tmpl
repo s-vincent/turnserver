@@ -19,10 +19,20 @@ The file contains the following definitions:
 .TP
 .BR "listen_address " "=  IPv4 address"
 The public IPv4 address of any relayed address (if not set, no relay for IPv4).
+You can set more than one address, example:
+.BR
+listen_address = { "172.16.2.1", "173.17.2.1" }
+
+The main advantage to have multiple public IPv4 addresses is to do load sharing.
 
 .TP
 .BR "listen_addressv6 " "= IPv6 address"
 The public IPv6 address of any relayed address (if not set, no relay for IPv6).
+You can set more than one address, example:
+.BR
+listen_addressv6 = { "2001:db8:1::1", "2001:db8:2::1" }
+
+The main advantage to have multiple public IPv6 addresses is to do load sharing.
 
 .TP
 .BR "udp_port " "= number"
@@ -119,9 +129,9 @@ The pathname of the account file (required when account_method=file).
 
 .SH EXAMPLE
 
-listen_address = "172.16.0.1"
+listen_address = { "172.16.0.1" }
 
-listen_addressv6 = "2001:db8::1"
+listen_addressv6 = { "2001:db8::1" }
 
 udp_port = 3478
 
