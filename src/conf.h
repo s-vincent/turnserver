@@ -99,14 +99,22 @@ void turnserver_cfg_print(void);
 void turnserver_cfg_free(void);
 
 /**
- * \brief Get the IPv4 listening port.
- * \return listening address 
+ * \brief Get IPv4 listening address.
+ * 
+ * In case of many IPv4 addresses are set in configuration
+ * file (for load sharing), this function choose one of
+ * them and return it.
+ * \return listening address
  * \note If NULL, the server will not allow IPv4 relaying.
  */
 char* turnserver_cfg_listen_address(void);
 
 /**
- * \brief Get the IPv6 listening address.
+ * \brief Get IPv6 listening address.
+ * 
+ * In case of many IPv6 addresses are set in configuration 
+ * file (for load sharing), this function choose one of
+ * them and return it.
  * \return listening address 
  * \note If NULL, the server will not allow IPv6 relaying.
  */

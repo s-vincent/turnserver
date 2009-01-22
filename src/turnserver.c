@@ -444,7 +444,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
  * \param port port to check
  * \return 1 if address is denied, 0 otherwise
  */
-static int turnserver_is_address_denied(uint8_t* addr, size_t addrlen, uint16_t port)
+static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uint16_t port)
 {
   struct list_head* get = NULL; 
   struct list_head* n = NULL;
@@ -2746,7 +2746,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   if(!allocation_desc_find_permission_sockaddr(desc, saddr))
   {
     /* no permission, discard */
-    debug(DBG_ATTR, "No permission installed (%s)\n", inet_ntop(saddr->sa_family, peer_addr, str, INET6_ADDRSTRLEN));
+    inet_ntop(saddr->sa_family, peer_addr, str, INET6_ADDRSTRLEN);
+    debug(DBG_ATTR, "No permission installed (%s)\n", str);
     return -1;
   }
 
@@ -3457,7 +3458,9 @@ int main(int argc, char** argv)
     debug(DBG_ATTR, "SIGPIPE will not be catched\n");
   }
 
-  /* we catch SIGUSR1 and SIGUSR2 to avoid being killed if someone send this signals */
+  /* we catch SIGUSR1 and SIGUSR2 to avoid being killed 
+   *if someone send these signals 
+   */
   if(sigaction(SIGUSR1, &sa, NULL) == -1)
   {
     debug(DBG_ATTR, "SIGUSR1 will not be catched\n");
