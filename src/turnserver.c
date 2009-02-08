@@ -1110,7 +1110,6 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   char str3[INET6_ADDRSTRLEN];
   uint16_t port = 0;
   uint16_t port2 = 0;
-  char buf_syslog[256];
   int family = 0;
 
   debug(DBG_ATTR, "CreatePermission request received\n");
@@ -1228,9 +1227,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
     inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
-    snprintf(buf_syslog, sizeof(buf_syslog), "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
-    buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
-    syslog(LOG_INFO, buf_syslog);
+    syslog(LOG_INFO, "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
 
     /* find a permission */
     alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
@@ -1330,7 +1327,6 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   char str3[INET6_ADDRSTRLEN];
   uint16_t port = 0;
   uint16_t port2 = 0;
-  char buf_syslog[256];
 
   debug(DBG_ATTR, "ChannelBind request received!\n");
 
@@ -1454,9 +1450,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
   }
 
-  snprintf(buf_syslog, sizeof(buf_syslog), "ChannelBind transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str, peer_port);
-  buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
-  syslog(LOG_INFO, buf_syslog);
+  syslog(LOG_INFO, "ChannelBind transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str, peer_port);
 
   /* find a permission */
   alloc_permission = allocation_desc_find_permission(desc, family, peer_addr);
@@ -1680,7 +1674,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   char str2[INET6_ADDRSTRLEN];
   uint16_t port2 = 0;
   int has_token = 0;
-  char buf_syslog[256];
   char* family_address = NULL;
 
   debug(DBG_ATTR, "Allocate request received!\n");
@@ -1726,10 +1719,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(account->allocations >= turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded => error 486 */
-    snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2, account->username);
-    buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
-    syslog(LOG_INFO, buf_syslog);
-
+    syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2, account->username);
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
     return -1;
   }
@@ -1996,9 +1986,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     desc->relayed_tls = 1;
   }
 
-  snprintf(buf_syslog, sizeof(buf_syslog), "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
-  buf_syslog[sizeof(buf_syslog) - 1] = 0x00;
-  syslog(LOG_INFO, buf_syslog);
+  syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
 
   /* assign the sockets to the allocation */
   desc->relayed_sock = relayed_sock;
@@ -3459,7 +3447,7 @@ int main(int argc, char** argv)
   }
 
   /* we catch SIGUSR1 and SIGUSR2 to avoid being killed 
-   *if someone send these signals 
+   * if someone send these signals
    */
   if(sigaction(SIGUSR1, &sa, NULL) == -1)
   {
