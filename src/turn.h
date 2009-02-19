@@ -228,7 +228,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_DEFAULT_CHANNEL_LIFETIME         600
 
 /* lifetime of a nonce (in seconds) */
-#define TURN_DEFAULT_NONCE_LIFETIME           180
+#define TURN_DEFAULT_NONCE_LIFETIME           1800
 
 /* lifetime of a token (in seconds) */
 #define TURN_DEFAULT_TOKEN_LIFETIME           60

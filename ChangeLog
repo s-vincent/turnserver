@@ -1,6 +1,8 @@
 2009-xx-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
-  * Version 0.x   - Load sharing with multiple uplink addresses.
+  * Version 0.2.2 - Load sharing with multiple uplink addresses;
+                  - Increase nonce lifetime to 30 minutes;
+                  - Fix ChannelBind refresh.
 
 2008-12-17  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 

@@ -1327,6 +1327,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   char str3[INET6_ADDRSTRLEN];
   uint16_t port = 0;
   uint16_t port2 = 0;
+  uint32_t channel_use = 0; /* if we refresh an existing ChannelBind */
 
   debug(DBG_ATTR, "ChannelBind request received!\n");
 
@@ -1394,7 +1395,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   debug(DBG_ATTR, "Client request a ChannelBinding for %s %u\n", str, peer_port);
 
   /* check that the transport address is not currently bound to another channel */
-  if(allocation_desc_find_channel(desc, family, peer_addr, peer_port))
+  channel_use = allocation_desc_find_channel(desc, family, peer_addr, peer_port);
+  if(channel_use && channel_use != channel)
   {
     /* transport address already bound to another channel */
     debug(DBG_ATTR, "Transport address already bound to another channel\n");
