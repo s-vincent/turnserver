@@ -547,6 +547,9 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 400: /* Bad request */
       hdr = turn_error_response_400(method, id, &iov[index], &index);
       break;
+    case 403: /* Forbidden */
+      hdr = turn_error_response_403(method, id, &iov[index], &index);
+      break;
     case 437: /* Alocation mismatch */
       hdr = turn_error_response_437(method, id, &iov[index], &index);
       break;
@@ -1195,7 +1198,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     if(turnserver_is_address_denied(peer_addr, len, peer_port))
     {
       debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403, saddr, saddr_size, speer, desc->key);
       return -1;
     }
   }
@@ -1385,10 +1388,10 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   if(turnserver_is_address_denied(peer_addr, len, peer_port))
   {
-    /* permission denied => error 400 */
+    /* permission denied => error 403 */
     debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", str);
 
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403, saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -3342,7 +3345,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         saddr_size = sizeof(struct sockaddr_storage);
         daddr_size = sizeof(struct sockaddr_storage);
 
-        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-12 */
+        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-13 */
         nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
         getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
 

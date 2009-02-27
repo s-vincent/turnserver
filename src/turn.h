@@ -180,6 +180,7 @@ typedef unsigned __int64 uint64_t;
 #define STUN_ERROR_SERVER_ERROR         500
 
 /* TURN error codes */
+#define TURN_ERROR_FORBIDDEN                      403
 #define TURN_ERROR_ALLOCATION_MISMATCH            437
 #define TURN_ERROR_WRONG_CREDENTIALS              441
 #define TURN_ERROR_UNSUPPORTED_TRANSPORT_PROTOCOL 442
@@ -197,6 +198,7 @@ typedef unsigned __int64 uint64_t;
 #define STUN_ERROR_500            "Server error"
 
 /* TURN error recommended reasons */
+#define TURN_ERROR_403            "Forbidden"
 #define TURN_ERROR_437            "Allocation mismatch"
 #define TURN_ERROR_441            "Wrong credentials"
 #define TURN_ERROR_442            "Unsupported transport protocol"
@@ -228,7 +230,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_DEFAULT_CHANNEL_LIFETIME         600
 
 /* lifetime of a nonce (in seconds) */
-#define TURN_DEFAULT_NONCE_LIFETIME           1800
+#define TURN_DEFAULT_NONCE_LIFETIME           3600
 
 /* lifetime of a token (in seconds) */
 #define TURN_DEFAULT_TOKEN_LIFETIME           60

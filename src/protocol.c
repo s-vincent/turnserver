@@ -973,7 +973,7 @@ struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -986,7 +986,7 @@ struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(442, TURN_ERROR_442, sizeof(TURN_ERROR_442), &iov[*index])))
+  if(!(attr = turn_attr_error_create(403, TURN_ERROR_403, sizeof(TURN_ERROR_403), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1011,54 +1011,6 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, stru
 
   /* error-code */
   if(!(attr = turn_attr_error_create(437, TURN_ERROR_437, sizeof(TURN_ERROR_437), &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  return error;
-}
-
-struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, struct iovec* iov, size_t* index)
-{
-  struct turn_msg_hdr* error = NULL;
-  struct turn_attr_hdr* attr = NULL;
-
-  /* header */
-  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
-  {
-    return NULL;
-  }
-  (*index)++;
-
-  /* error-code */
-  if(!(attr = turn_attr_error_create(486, TURN_ERROR_486, sizeof(TURN_ERROR_486), &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  return error;
-}
-
-struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, struct iovec* iov, size_t* index)
-{
-  struct turn_msg_hdr* error = NULL;
-  struct turn_attr_hdr* attr = NULL;
-
-  /* header */
-  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
-  {
-    return NULL;
-  }
-  (*index)++;
-
-  /* error-code */
-  if(!(attr = turn_attr_error_create(508, TURN_ERROR_508, sizeof(TURN_ERROR_508), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1107,6 +1059,78 @@ struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, stru
 
   /* error-code */
   if(!(attr = turn_attr_error_create(441, TURN_ERROR_441, sizeof(TURN_ERROR_441), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(442, TURN_ERROR_442, sizeof(TURN_ERROR_442), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(486, TURN_ERROR_486, sizeof(TURN_ERROR_486), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(508, TURN_ERROR_508, sizeof(TURN_ERROR_508), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;

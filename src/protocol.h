@@ -90,6 +90,8 @@ struct turn_message
   size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
 
+/* STUN specific error message */
+
 /**
  * \brief Create a complete error 400.
  * \param method method used
@@ -126,26 +128,6 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, cons
 struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, const uint16_t* unknown, size_t unknown_size, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 437.
- * \param method method used
- * \param id transaction ID
- * \param iov vector
- * \param index will be filled with the number of element added
- * \return pointer on turn_msg_hdr or NULL if problem
- */
-struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, struct iovec* iov, size_t* index);
-
-/**
- * \brief Create a complete error 500.
- * \param method method used
- * \param id transaction ID
- * \param iov vector
- * \param index will be filled with the number of element added
- * \return pointer on turn_msg_hdr or NULL if problem
- */
-struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, struct iovec* iov, size_t* index);
-
-/**
  * \brief Create a complete error 438.
  * \param method method used
  * \param id transaction ID
@@ -157,6 +139,58 @@ struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, stru
  * \return pointer on turn_msg_hdr or NULL if problem
  */
 struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, const char* realm, const uint8_t* nonce, size_t nonce_len, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 500.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/* TURN specific error message */
+
+/**
+ * \brief Create a complete error 403.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 437.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 440.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 441.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
  * \brief Create a complete error 442.
@@ -187,26 +221,6 @@ struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, stru
  * \return pointer on turn_msg_hdr or NULL if problem
  */
 struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, struct iovec* iov, size_t* index);
-
-/**
- * \brief Create a complete error 440.
- * \param method method used
- * \param id transaction ID
- * \param iov vector
- * \param index will be filled with the number of element added
- * \return pointer on turn_msg_hdr or NULL if problem
- */
-struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, struct iovec* iov, size_t* index);
-
-/**
- * \brief Create a complete error 441.
- * \param method method used
- * \param id transaction ID
- * \param iov vector
- * \param index will be filled ith the number of element added
- * \return pointer on turn_msg_hdr or NULL if problem
- */
-struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
  * \brief Create a TURN (or STUN) message.
