@@ -38,7 +38,7 @@ void foo(int barc, char** barv)
   } while(run);
 }
 
-It is recommended to use only the C-style comments : 
+It is recommended to use only the C-style comments:
 
 /* my short comment */
 
@@ -50,7 +50,7 @@ It is recommended to use only the C-style comments :
 II) Code organization
 ----------------------
 
-The code has to follow these recommendations : 
+The code has to follow these recommendations:
 - Always initialize your variables;
 - Put "static" keyword when functions / global variables is not used outside the file;
 - Try to avoid static variables in functions (try to make reentrant things);
@@ -58,7 +58,7 @@ The code has to follow these recommendations :
 - Put an empty line at the end of each file.
 
 Each file, function, structure and global variable MUST be documented using doxygen. Here is a
-complete example :
+complete example:
 
 /**
  * \file my_file.h

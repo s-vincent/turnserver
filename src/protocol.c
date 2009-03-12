@@ -1524,7 +1524,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
     /* FINGERPRINT MUST be the last attributes if present */
     if(message->fingerprint)
     {
-      /*  When present, the FINGERPRINT attribute MUST be the last attribute */
+      /* When present, the FINGERPRINT attribute MUST be the last attribute */
       /* ignore other message */
       return 0;
     }

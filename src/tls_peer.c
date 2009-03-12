@@ -283,7 +283,7 @@ static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file, const c
 
   SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
   SSL_CTX_set_verify_depth(ctx, 1);
-  /*  SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU); */
+  /* SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU); */
 
   if(SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) != 1)
   { 

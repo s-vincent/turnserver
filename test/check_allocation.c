@@ -154,7 +154,7 @@ START_TEST(test_allocation_add)
   nb = allocation_desc_add_permission(ret, 19, client_addr.sin_family, (char*)&client_addr.sin_addr);
   fail_unless(nb == 0, "add permission failed");
 
-  /*  nb = allocation_desc_add_channel(ret, 58, 18, (struct sockaddr*)&client_addr, sizeof(client_addr)); */
+  /* nb = allocation_desc_add_channel(ret, 58, 18, (struct sockaddr*)&client_addr, sizeof(client_addr)); */
   nb = allocation_desc_add_channel(ret, 58, 18, client_addr.sin_family, (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
   fail_unless(nb == 0, "add channel failed");
 

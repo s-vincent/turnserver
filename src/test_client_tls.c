@@ -148,7 +148,7 @@ int main(int argc, char** argv)
 
   /* libssl initialization */
   SSL_library_init();
-  /*  OpenSSL_add_all_algorithms(); */
+  /* OpenSSL_add_all_algorithms(); */
   SSL_load_error_strings();
   ERR_load_crypto_strings();
 

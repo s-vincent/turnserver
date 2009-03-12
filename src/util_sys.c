@@ -352,7 +352,7 @@ extern "C"
         return -1;
       }
     }
-    else  /* TCP case */
+    else /* TCP case */
     {
       if (WSASend(fd, winiov, winiov_len, &ret, 0, NULL, NULL) != 0)
       {

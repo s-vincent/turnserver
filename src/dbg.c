@@ -77,6 +77,7 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 #include <time.h>
+
 #include "dbg.h"
 
 #ifdef __cplusplus
@@ -103,7 +104,7 @@ extern "C"
     va_start(args, format);
     vfprintf(stderr, format, args);
 
-    /*	fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d] %s", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, file, line, msg); */
+    /* fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d] %s", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, file, line, msg); */
   }
 
   void dbg_print_null(const char* f, int line, const char* format, ...)

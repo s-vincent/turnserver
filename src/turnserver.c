@@ -142,7 +142,7 @@ static struct list_head g_denied_address_list;
  * \brief EVEN-PORT flags supported.
  *
  * For the moment the following flags are supported:
- * - R : reserve couple of ports (one even, one odd).
+ * - R: reserve couple of ports (one even, one odd).
  */
 static const uint8_t g_supported_even_port_flags = 0x80;
 
@@ -866,7 +866,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   else /* TCP */
   {
     /* Relaying with TCP is not in the standard TURN specification.
-     * draft-ietf-behave-turn-tcp-01 specify a TURN extension to do this.
+     * draft-ietf-behave-turn-tcp-02 specify a TURN extension to do this.
      * It is currently not supported.
      */
     return -1;
@@ -1065,7 +1065,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
     else /* TCP */
     {
       /* Relaying with TCP is not in the standard TURN specification.
-       * draft-ietf-behave-turn-tcp-01 specify a TURN extension to do this.
+       * draft-ietf-behave-turn-tcp-02 specify a TURN extension to do this.
        * It is currently not supported.
        */
       return -1;
@@ -1544,7 +1544,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   debug(DBG_ATTR, "Refresh request received!\n");
 
-  /* draft-ietf-behave-turn-ipv6-05 : at this stage we know the 5-tuple and the allocation associated.
+  /* draft-ietf-behave-turn-ipv6-05: at this stage we know the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
    * no need to have a REQUESTED-ADDRESS-TYPE attribute in Refresh request.
    */
@@ -1553,7 +1553,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   {
     lifetime = htonl(message->lifetime->turn_attr_lifetime);
 
-    debug(DBG_ATTR, "lifetime : %u seconds\n", lifetime);
+    debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
     /* adjust lifetime */
     if(lifetime > TURN_MAX_ALLOCATION_LIFETIME)
@@ -1585,7 +1585,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
     /* decrement allocations for the account */
     account->allocations--;
-    debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
+    debug(DBG_ATTR, "Account %s, allocations used: %u\n", account->username, account->allocations);
 
     debug(DBG_ATTR, "Explicit delete of allocation\n");
   }
@@ -1847,7 +1847,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   {
     lifetime = htonl(message->lifetime->turn_attr_lifetime);
 
-    debug(DBG_ATTR, "lifetime : %u seconds\n", lifetime);
+    debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
     /* adjust lifetime */
     if(lifetime > TURN_MAX_ALLOCATION_LIFETIME)
@@ -1984,7 +1984,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   /* increment number of allocations */
   account->allocations++;
-  debug(DBG_ATTR, "Account %s, allocations used : %u\n", account->username, account->allocations);
+  debug(DBG_ATTR, "Account %s, allocations used: %u\n", account->username, account->allocations);
 
   if(speer)
   {
@@ -3175,7 +3175,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             (!listen_address && saddr.ss_family == AF_INET))
         {
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
-          debug(DBG_ATTR, "Do not relay family : %s\n", proto);
+          debug(DBG_ATTR, "Do not relay family: %s\n", proto);
         }
         else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
         {
@@ -3185,7 +3185,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
       else
       {
         get_error(errno, error_str, sizeof(error_str));
-        debug(DBG_ATTR, "Error : %s\n", error_str);
+        debug(DBG_ATTR, "Error: %s\n", error_str);
       }
     }
 
@@ -3225,7 +3225,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             else
             {
               get_error(errno, error_str, sizeof(error_str));
-              debug(DBG_ATTR, "Error : %s\n", error_str);
+              debug(DBG_ATTR, "Error: %s\n", error_str);
             }
           } 
           else /* non-encrypted TCP data */
@@ -3236,11 +3236,11 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         }
         else
         {
-          /*  0: disconnection case
+          /* 0: disconnection case
            * -1: error 
            */
           get_error(errno, error_str, sizeof(error_str));
-          debug(DBG_ATTR, "Error : %s\n", error_str);
+          debug(DBG_ATTR, "Error: %s\n", error_str);
           close(tmp->sock);
           tmp->sock = -1;
           LIST_DEL(&tmp->list);
@@ -3265,7 +3265,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         {
           /* we don't relay the specified address family so close connection */
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
-          debug(DBG_ATTR, "Do not relay family : %s\n", proto);
+          debug(DBG_ATTR, "Do not relay family: %s\n", proto);
           close(sock);
         }
         else
@@ -3291,7 +3291,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
       }
     }
 
-    /*  main TLS listen socket */
+    /* main TLS listen socket */
     if(speer)
     {
       if(speer->sock > 0 && speer->sock < max_fd && SFD_ISSET(speer->sock, &fdsr))
@@ -3309,7 +3309,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
           {
             /* we don't relay the specified address family so close connection */
             proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
-            debug(DBG_ATTR, "Do not relay family : %s\n", proto);
+            debug(DBG_ATTR, "Do not relay family: %s\n", proto);
             close(sock);
           }
           else
@@ -3363,7 +3363,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   else if(ret == -1)
   {
     get_error(errno, error_str, sizeof(error_str));
-    debug(DBG_ATTR, "select() failed : %s\n", error_str);
+    debug(DBG_ATTR, "select() failed: %s\n", error_str);
   }
 }
 
