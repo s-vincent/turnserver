@@ -237,7 +237,8 @@ START_TEST(test_attr_create)
   {
     unsigned char buf[40];
     uint32_t crc = 0;
-    uint32_t crc_hello = htonl(0x9b5132f0);
+    uint32_t crc_hello = htonl(0x86a61036);
+    
     strncpy(buf, "hello", 40);
     buf[39] = 0x00;
 

@@ -790,22 +790,22 @@ struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, s
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_requested_address_type_create(uint8_t family, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, struct iovec* iov)
 {
-  struct turn_attr_requested_address_type* ret = NULL;
+  struct turn_attr_requested_address_family* ret = NULL;
 
-  if(!(ret = malloc(sizeof(struct turn_attr_requested_address_type))))
+  if(!(ret = malloc(sizeof(struct turn_attr_requested_address_family))))
   {
     return NULL;
   }
 
-  ret->turn_attr_type = htons(TURN_ATTR_REQUESTED_ADDRESS_TYPE);
+  ret->turn_attr_type = htons(TURN_ATTR_REQUESTED_ADDRESS_FAMILY);
   ret->turn_attr_len = htons(4);
   ret->turn_attr_family = family;
   ret->turn_attr_reserved = 0;
 
   iov->iov_base = ret;
-  iov->iov_len = sizeof(struct turn_attr_requested_address_type);
+  iov->iov_len = sizeof(struct turn_attr_requested_address_family);
 
   return (struct turn_attr_hdr*)ret;
 }
@@ -1035,6 +1035,30 @@ struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, stru
 
   /* error-code */
   if(!(attr = turn_attr_error_create(440, TURN_ERROR_440, sizeof(TURN_ERROR_440), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(443, TURN_ERROR_443, sizeof(TURN_ERROR_443), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1612,8 +1636,8 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
       case TURN_ATTR_RESERVATION_TOKEN:
         message->reservation_token = (struct turn_attr_reservation_token*)ptr;
         break;
-      case TURN_ATTR_REQUESTED_ADDRESS_TYPE:
-        message->requested_addr_type = (struct turn_attr_requested_address_type*)ptr;
+      case TURN_ATTR_REQUESTED_ADDRESS_FAMILY:
+        message->requested_addr_family = (struct turn_attr_requested_address_family*)ptr;
         break;
       default:
         if(attr->turn_attr_type <= 0x7fff)

@@ -713,8 +713,8 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port)
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = type == TCP ? SOCK_STREAM : SOCK_DGRAM;
-  hints.ai_protocol = type == TCP ? IPPROTO_TCP : IPPROTO_UDP;
+  hints.ai_socktype = (type == TCP ? SOCK_STREAM : SOCK_DGRAM);
+  hints.ai_protocol = (type == TCP ? IPPROTO_TCP : IPPROTO_UDP);
   hints.ai_flags = AI_PASSIVE;
 
   if(getaddrinfo(addr, service, &hints, &res) != 0)

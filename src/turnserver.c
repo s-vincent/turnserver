@@ -1175,9 +1175,9 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
     if((desc->relayed_addr.ss_family != family))
     {
-      /* Invalid attribute => error 400 */
-      debug(DBG_ATTR, "Invalid address\n");
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+      /* peer family mismatch => error 443 */
+      debug(DBG_ATTR, "Peer family mismatch\n");
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443, saddr, saddr_size, speer, desc->key);
       return -1;
     }
 
@@ -1371,8 +1371,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   if(desc->relayed_addr.ss_family != family)
   {
     debug(DBG_ATTR, "Do not allow requesting a Channel when allocated address family mismatch peer address family\n");
-
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443, saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1544,9 +1543,9 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   debug(DBG_ATTR, "Refresh request received!\n");
 
-  /* draft-ietf-behave-turn-ipv6-05: at this stage we know the 5-tuple and the allocation associated.
+  /* draft-ietf-behave-turn-ipv6-06: at this stage we know the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
-   * no need to have a REQUESTED-ADDRESS-TYPE attribute in Refresh request.
+   * no need to have a REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
 
   if(message->lifetime)
@@ -1586,7 +1585,6 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     /* decrement allocations for the account */
     account->allocations--;
     debug(DBG_ATTR, "Account %s, allocations used: %u\n", account->username, account->allocations);
-
     debug(DBG_ATTR, "Explicit delete of allocation\n");
   }
 
@@ -1820,6 +1818,15 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return 0;
   }
 
+  if(message->requested_addr_family && message->reservation_token)
+  {
+    /* draft-ietf-behave-turn-ipv6-06: cannot have both REQUESTED-ADDRESS-FAMILY 
+     * and RESERVATION-TOKEN => error 400 
+     */
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    return 0;
+  }
+
   /* check reservation-token and requested-props flags */
   if(message->reservation_token)
   {
@@ -1861,10 +1868,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     lifetime = turnserver_cfg_allocation_lifetime() > TURN_MAX_ALLOCATION_LIFETIME ? TURN_MAX_ALLOCATION_LIFETIME : turnserver_cfg_allocation_lifetime();
   }
 
-  /* draft-ietf-behave-turn-ipv6-05 */
-  if(message->requested_addr_type)
+  /* draft-ietf-behave-turn-ipv6-06 */
+  if(message->requested_addr_family)
   {
-    switch(message->requested_addr_type->turn_attr_family)
+    switch(message->requested_addr_family->turn_attr_family)
     {
       case STUN_ATTR_FAMILY_IPV4:
         family_address = turnserver_cfg_listen_address();
@@ -1887,13 +1894,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   }
   else
   {
-    /* REQUESTED-ADDRESS-TYPE absent so allocate an IPv4 address */
+    /* REQUESTED-ADDRESS-FAMILY absent so allocate an IPv4 address */
     family_address = turnserver_cfg_listen_address();
 
     if(!family_address)
     {
       /* only happen when IPv4 relaying is disabled and try to allocate IPv6 address
-       * without adding REQUESTED-ADDRESS-TYPE attribute.
+       * without adding REQUESTED-ADDRESS-FAMILY attribute.
        */
       /* family not supported */
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
@@ -2463,6 +2470,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       {
         debug(DBG_ATTR, "turn_*_send failed\n");
       }
+
       /* free sent data */
       iovec_free_data(iov, index);
       return 0;
@@ -2923,7 +2931,6 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
       debug(DBG_ATTR, "Buffer too small, discard TCP message.\n");
       sock->buf_pos = 0;
       sock->msg_len = 0;
-
       return;
     }
 
@@ -3004,7 +3011,6 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
       debug(DBG_ATTR, "Incomplete message\n");
 
       sock->msg_len = tmp_len;
-
       sock->buf_pos = MIN(sizeof(sock->buf), tmp_nb);
       if(sock->buf != tmp_buf)
       {

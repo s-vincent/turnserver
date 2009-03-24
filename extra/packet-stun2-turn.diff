@@ -14,7 +14,7 @@
   *
 - * Please refer to draft-ietf-behave-rfc3489bis-07 for protocol detail.
 + * Please refer to rfc5389 for STUN protocol detail.
-+ * Please refer to draft-ietf-behave-turn-12 and draft-ietf-behave-turn-ipv6-05 
++ * Please refer to draft-ietf-behave-turn-13 and draft-ietf-behave-turn-ipv6-06 
 + * for TURN protocol detail.
   */
  
@@ -34,8 +34,8 @@
 +static int stun2_att_even_port_r_flag = -1;
 +static int stun2_att_requested_transport_protocol = -1;
 +static int stun2_att_requested_transport_reserved = -1;
-+static int stun2_att_requested_address_type = -1;
-+static int stun2_att_requested_address_type_reserved = -1;
++static int stun2_att_requested_address_family = -1;
++static int stun2_att_requested_address_family_reserved = -1;
 +static int stun2_att_reservation_token = -1;
  static int stun2_att_value = -1;
  
@@ -48,14 +48,14 @@
 +#define BINDING     0x0001  /* rfc5389 */
 +
 +/* TURN Request/Response Transactions */
-+#define ALLOCATE    0x0003 /* draft-ietf-behave-turn-12 */
-+#define REFRESH     0x0004 /* draft-ietf-behave-turn-12 */
-+#define CREATEPERMISSION 0x0008 /* draft-ietf-behave-turn-12 */
-+#define CHANNELBIND 0x0009 /* draft-ietf-behave-turn-12 */
++#define ALLOCATE    0x0003 /* draft-ietf-behave-turn-13 */
++#define REFRESH     0x0004 /* draft-ietf-behave-turn-13 */
++#define CREATEPERMISSION 0x0008 /* draft-ietf-behave-turn-13 */
++#define CHANNELBIND 0x0009 /* draft-ietf-behave-turn-13 */
 +
 +/* TURN Indications */
-+#define SEND        0x0006 /* draft-ietf-behave-turn-12 */
-+#define DATA_INDICATION        0x0007 /* draft-ietf-behave-turn-12 */
++#define SEND        0x0006 /* draft-ietf-behave-turn-13 */
++#define DATA_INDICATION        0x0007 /* draft-ietf-behave-turn-13 */
 +
 + /* Attribute Types */
 +#define MAPPED_ADDRESS    0x0001  /* rfc5389 */
@@ -71,16 +71,16 @@
 +#define FINGERPRINT   0x8028  /* rfc5389 */
 +
 +/* TURN attribute types */
-+#define CHANNEL_NUMBER        0x000c /* draft-ietf-behave-turn-12 */
-+#define LIFETIME              0x000d /* draft-ietf-behave-turn-12 */
-+#define DONT_FRAGMENT         0x001A /* draft-ietf-behave-turn-12 */
-+#define PEER_ADDRESS          0x0012 /* draft-ietf-behave-turn-12 */
-+#define DATA                  0x0013 /* draft-ietf-behave-turn-12 */
-+#define RELAYED_ADDRESS       0x0016 /* draft-ietf-behave-turn-12 */
-+#define EVEN_PORT             0x0018 /* draft-ietf-behave-turn-12 */
-+#define REQUESTED_TRANSPORT   0x0019 /* draft-ietf-behave-turn-12 */
-+#define RESERVATION_TOKEN     0x0022 /* draft-ietf-behave-turn-12 */
-+#define REQUESTED_ADDRESS_TYPE 0x0017 /* draft-ietf-behave-turn-ipv6-05 */
++#define CHANNEL_NUMBER        0x000c /* draft-ietf-behave-turn-13 */
++#define LIFETIME              0x000d /* draft-ietf-behave-turn-13 */
++#define DONT_FRAGMENT         0x001A /* draft-ietf-behave-turn-13 */
++#define PEER_ADDRESS          0x0012 /* draft-ietf-behave-turn-13 */
++#define DATA                  0x0013 /* draft-ietf-behave-turn-13 */
++#define RELAYED_ADDRESS       0x0016 /* draft-ietf-behave-turn-13 */
++#define EVEN_PORT             0x0018 /* draft-ietf-behave-turn-13 */
++#define REQUESTED_TRANSPORT   0x0019 /* draft-ietf-behave-turn-13 */
++#define RESERVATION_TOKEN     0x0022 /* draft-ietf-behave-turn-13 */
++#define REQUESTED_ADDRESS_FAMILY 0x0017 /* draft-ietf-behave-turn-ipv6-06 */
  
 -/* Attribute Types */
 -#define MAPPED_ADDRESS		0x0001	/* draft-ietf-behave-rfc3489bis-07 */
@@ -128,7 +128,7 @@
 +  {REQUESTED_TRANSPORT, "REQUESTED-TRANSPORT"},
 +  {DONT_FRAGMENT, "DONT-FRAGMENT"},
 +  {RESERVATION_TOKEN, "RESERVATION-TOKEN"},
-+  {REQUESTED_ADDRESS_TYPE, "REQUESTED-ADDRESS-TYPE"},
++  {REQUESTED_ADDRESS_FAMILY, "REQUESTED-ADDRESS-FAMILY"},
  	{0x00, NULL}
  };
  
@@ -308,14 +308,14 @@
 +        proto_tree_add_item(att_tree, stun2_att_requested_transport_reserved, tvb, offset+1, 3, FALSE);
 +        break;
 +
-+     case REQUESTED_ADDRESS_TYPE:
++     case REQUESTED_ADDRESS_FAMILY:
 +        if(att_length < 4)
 +          break;
 +        /* address type */
-+        proto_tree_add_item(att_tree, stun2_att_requested_address_type, tvb, offset, 1, FALSE);
++        proto_tree_add_item(att_tree, stun2_att_requested_address_family, tvb, offset, 1, FALSE);
 +
 +        /* reserved */
-+        proto_tree_add_item(att_tree, stun2_att_requested_address_type_reserved, tvb, offset+1, 3, FALSE);
++        proto_tree_add_item(att_tree, stun2_att_requested_address_family_reserved, tvb, offset+1, 3, FALSE);
 +        break;
 +
 +     case RESERVATION_TOKEN:
@@ -388,12 +388,12 @@
 +      { "Reserved", "stun2.att.requested_transport.reserved", FT_BYTES,
 +      BASE_HEX, NULL, 0x00, "", HFILL}
 +    },
-+    { &stun2_att_requested_address_type,
-+      { "Address type", "stun2.att.requested_address_type.type", FT_UINT8, BASE_HEX, 
++    { &stun2_att_requested_address_family,
++      { "Address type", "stun2.att.requested_address_family.family", FT_UINT8, BASE_HEX, 
 +        VALS(attributes_family), 0x00, "", HFILL}
 +    },
-+    { &stun2_att_requested_address_type_reserved,
-+      { "Reserved", "stun2.att.requested_address_type.reserved", FT_BYTES,
++    { &stun2_att_requested_address_family_reserved,
++      { "Reserved", "stun2.att.requested_address_family.reserved", FT_BYTES,
 +      BASE_HEX, NULL, 0x00, "", HFILL}
 +    },
 +    { &stun2_att_reservation_token,

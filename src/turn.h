@@ -168,8 +168,8 @@ typedef unsigned __int64 uint64_t;
 /* RESERVATION-TOKEN */
 #define TURN_ATTR_RESERVATION_TOKEN     0x0022
 
-/* REQUESTED-ADDRESS-TYPE (draft-ietf-behave-turn-ipv6-05) */
-#define TURN_ATTR_REQUESTED_ADDRESS_TYPE          0x0017
+/* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-06) */
+#define TURN_ATTR_REQUESTED_ADDRESS_FAMILY  0x0017
 
 /* STUN error codes */
 #define STUN_ERROR_TRY_ALTERNATE        300
@@ -186,8 +186,10 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_UNSUPPORTED_TRANSPORT_PROTOCOL 442
 #define TURN_ERROR_ALLOCATION_QUOTA_REACHED       486
 #define TURN_ERROR_INSUFFICIENT_CAPACITY          508
-/* draft-ietf-behave-turn-ipv6-05 */
+
+/* draft-ietf-behave-turn-ipv6-06 */
 #define TURN_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED   440
+#define TURN_ERROR_PEER_ADDRESS_FAMILY_MISMATCH   443
 
 /* STUN error recommended reasons */
 #define STUN_ERROR_300            "Try Alternate"
@@ -204,8 +206,10 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_442            "Unsupported transport protocol"
 #define TURN_ERROR_486            "Allocation quota reached"
 #define TURN_ERROR_508            "Insufficient capacity"
-/* draft-ietf-behave-turn-ipv6-05 */
+
+/* draft-ietf-behave-turn-ipv6-06 */
 #define TURN_ERROR_440            "Address family not supported"
+#define TURN_ERROR_443            "Peer address family mismatch"
 
 /* STUN magic cookie */
 #define STUN_MAGIC_COOKIE               0x2112A442
@@ -508,10 +512,10 @@ struct turn_channel_data
 }__attribute__((packed));
 
 /**
- * \struct turn_attr_requested_address_type.
- * \brief REQUESTED-ADDRESS-TYPE attribute (draft-ietf-behave-turn-ipv6-05).
+ * \struct turn_attr_requested_address_family.
+ * \brief REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-06).
  */
-struct turn_attr_requested_address_type
+struct turn_attr_requested_address_family
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */

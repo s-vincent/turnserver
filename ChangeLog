@@ -1,3 +1,7 @@
+2009-xx-xx  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+
+  * Version x.x   - Add turn-ipv6-06 draft support.
+
 2009-03-09  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
   * Version 0.2.2 - Load sharing with multiple uplink addresses;

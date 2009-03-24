@@ -220,8 +220,8 @@ int main(int argc, char** argv)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* REQUESTED-ADDRESS-TYPE */
-  attr = turn_attr_requested_address_type_create(peer_addr.ss_family == AF_INET ? STUN_ATTR_FAMILY_IPV4 : STUN_ATTR_FAMILY_IPV6, &iov[index]);
+  /* REQUESTED-ADDRESS-FAMILY */
+  attr = turn_attr_requested_address_family_create(peer_addr.ss_family == AF_INET ? STUN_ATTR_FAMILY_IPV4 : STUN_ATTR_FAMILY_IPV6, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -658,10 +658,12 @@ int main(int argc, char** argv)
   index++;
 #endif
 
-  /* REQUESTED-ADDRESS-TYPE */
-  attr = turn_attr_requested_address_type_create(STUN_ATTR_FAMILY_IPV4, &iov[index]);
+#if 0 /* no REQUESTED-ADDRESS-FAMILY with RESERVATION-TOKEN (see draft-ietf-behave-turn-ipv6-06) */
+  /* REQUESTED-ADDRESS-FAMILY */
+  attr = turn_attr_requested_address_family_create(STUN_ATTR_FAMILY_IPV4, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
+#endif
 
   /* MESSAGE-INTEGRITY */
   attr = turn_attr_message_integrity_create(NULL, &iov[index]);

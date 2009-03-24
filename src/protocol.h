@@ -86,7 +86,7 @@ struct turn_message
   struct turn_attr_requested_transport* requested_transport; /**< REQUESTED-TRANSPORT attribute */
   struct turn_attr_dont_fragment* dont_fragment; /**< DONT-FRAGMENT attribute */
   struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
-  struct turn_attr_requested_address_type* requested_addr_type; /**< REQUETED-ADDRESS-TYPE (ietf-draft-behave-turn-ipv6-05) */
+  struct turn_attr_requested_address_family* requested_addr_family; /**< REQUESTED-ADDRESS-FAMILY (ietf-draft-behave-turn-ipv6-06) */
   size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
 
@@ -181,6 +181,16 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, stru
  * \return pointer on turn_msg_hdr or NULL if problem
  */
 struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 443.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
  * \brief Create a complete error 441.
@@ -568,12 +578,12 @@ struct turn_attr_hdr* turn_attr_dont_fragment_create(struct iovec* iov);
 struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, struct iovec* iov);
 
 /**
- * \brief Create a REQUESTED-ADDRESS-TYPE attribute.
+ * \brief Create a REQUESTED-ADDRESS-FAMILY attribute.
  * \param family family requested (IPv4 or IPv6)
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
-struct turn_attr_hdr* turn_attr_requested_address_type_create(uint8_t family, struct iovec* iov);
+struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, struct iovec* iov);
 
 /**
  * \brief Send TURN message (which may contains attributes) over UDP.
