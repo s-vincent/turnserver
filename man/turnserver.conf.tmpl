@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "December 15, 2008" "TurnServer Configuration"
+.TH turnserver.conf 5 "April 6, 2009" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -17,7 +17,7 @@ Here are the configuration options supported.
 The file contains the following definitions:
 
 .TP
-.BR "listen_address " "=  IPv4 address"
+.BR "listen_address " "=  { IPv4 address, ... }"
 The public IPv4 address of any relayed address (if not set, no relay for IPv4).
 You can set more than one address, example:
 .BR
@@ -26,7 +26,7 @@ listen_address = { "172.16.2.1", "173.17.2.1" }
 The main advantage to have multiple public IPv4 addresses is to do load sharing.
 
 .TP
-.BR "listen_addressv6 " "= IPv6 address"
+.BR "listen_addressv6 " "= { IPv6 address, ...}"
 The public IPv6 address of any relayed address (if not set, no relay for IPv6).
 You can set more than one address, example:
 .BR
@@ -188,7 +188,7 @@ account_file = "/etc/turnusers.txt
 
 .SH AUTHOR
 
-Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+Sebastien Vincent <sebastien.vincent@turnserver.org>
 
 .SH "SEE ALSO"
 .BR turnserver (1)

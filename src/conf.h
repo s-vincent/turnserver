@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008 Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+ *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
  * \file conf.h
  * \brief Configuration parsing.
  * \author Sebastien Vincent
- * \date 2008
+ * \date 2008-2009
  */
 
 #ifndef CONF_H

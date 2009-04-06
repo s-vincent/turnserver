@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008 Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+ *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- *  Copyright (C) 2006-2008 Sebastien Vincent.
+ *  Copyright (C) 2006-2009 Sebastien Vincent.
  *
  *  Permission to use, copy, modify, and distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file util_sys.c
  * \brief Some helper system functions.
  * \author Sebastien Vincent
- * \date 2006-2008
+ * \date 2006-2009
  */
 
 #ifdef HAVE_CONFIG_H
@@ -244,7 +244,12 @@ extern "C"
     {
       unsigned int t = (unsigned int)str[i];
 
-      if (t < 42 || t == ',' || (t >= 58  && t < 64) || (t >= 91 && t < 95) || t == '`' || t > 122 || t == '+' || t == '&' || t == ',' || t == ';' || t == '/' || t == '?' || t == '@' || t == '$' || t == '=' || t == ':' )
+      if (t < 42 || t == ',' || (t >= 58  && t < 64) || 
+         (t >= 91 && t < 95) || t == '`' || 
+         t > 122 || t == '+' || t == '&' || 
+         t == ',' || t == ';' || t == '/' || 
+         t == '?' || t == '@' || t == '$' || 
+         t == '=' || t == ':' )
       {
         /* replace */
         sprintf(p + j, "%%%02X", t);
@@ -281,7 +286,7 @@ extern "C"
 
   ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size)
   {
-    /* it should be sufficient.
+    /* it should be sufficient,
      * the dynamically allocation is timecost.
      * We could use a static WSABUF* winiov but the function would be
      * non reentrant.
@@ -322,7 +327,7 @@ extern "C"
 
   ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t addr_size)
   {
-    /* it should be sufficient.
+    /* it should be sufficient,
      * the dynamically allocation is timecost.
      * We could use a static WSABUF* winiov but the function would be
      * non reentrant.
@@ -362,7 +367,6 @@ extern "C"
     }
     return (ssize_t)ret;
   }
-
 #endif
 
   void iovec_free_data(struct iovec* iov, uint32_t nb)

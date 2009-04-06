@@ -4,8 +4,8 @@ TurnServer
 TurnServer is an OpenSource implementation of Traversal Using Relays around NAT (TURN). 
 It aims to be compliant with RFC5389 (STUN) and latest TURN draft.
 
-TURN clients can connect to TurnServer with the following protocols: UDP, TCP and TLS over TCP.
-For the moment relaying messages can only be done with UDP protocol.
+TURN clients can connect to TurnServer with the following protocols: UDP, TCP and TLS 
+over TCP. For the moment relaying messages can only be done with UDP protocol.
 
 TurnServer is known to work on the following systems:
 - GNU/Linux 2.6;
@@ -14,37 +14,41 @@ TurnServer is known to work on the following systems:
 1) Build / install
 ------------------
 
-TurnServer requires some libraries: 
+TurnServer requires following libraries: 
 - libconfuse development files;
 - libssl development files;
-- librt (normally included with Linux and *BSD).
+- librt (normally included in Linux and *BSD distribution).
 
 TurnServer is written in pure C according to the C99 and POSIX + XSI standards. Thus it 
 should be compiled on all POSIX systems which have realtime signals support.
 
 Note for *BSD users, install the required libconfuse ports in /usr/ prefix, otherwise you 
 have to set the PKG_CONFIG_PATH variable or make symlinks before running ./configure script:
-# ln -sf /usr/local/lib/libconfuse.so /usr/lib/ && ln -sf /usr/local/include/confuse.h /usr/include/
+ # ln -sf /usr/local/lib/libconfuse.so /usr/lib/ && ln -sf /usr/local/include/confuse.h /usr/include/
 
 To build TurnServer, run following commands: 
-$ aclocal
-$ autoheader
-$ autoconf 
-$ automake --add-missing
+$ autoreconf -i
 $ ./configure
 $ make
 # make install
 
-You have to set a configuration file and accounts database file (see next sections) before 
-launching the server.
+./configure can take options:
+--enable-debug-build                 : allow to compile with debug informations default=no
+--enable-fdsetsize=number            : allow to preconfigure FD_SETSIZE macro (must be a number >=32) default=no
+--enable-xor-peer-address-max=number : allow to preconfigure XOR_PEER_ADDRESS_MAX macro (must be a number > 0) default=5
+
+Copy the template configuration file (extra/turnserver.conf.template) and template accounts 
+database file (extra/turnusers.txt) to a directory of your choice (i.e. /etc/ or /usr/local/etc/). 
+Do not forget the accounts database file pathname has to be populated in configuration file 
+(attribute account_file). See next sections to know how to setup configuration and accounts files.
+
+To generate the API documentation:
+$ make doxygen-run
+
+The HTML generated documentation is located in doc/html/ directory of TurnServer sources. 
 
 Launch the server: 
 $ turnserver -c /path/to/config/file
-
-To build doxygen documentation:
-$ doxygen Doxyfile
-
-The documentation will be generated in doc/html/ directory.
 
 2) Configuration file
 ---------------------
@@ -52,19 +56,19 @@ The documentation will be generated in doc/html/ directory.
 In extra/ directory you will find a configuration template file (turnserver.conf.template). 
 Change settings according to your environment.
 
-Important parameters are: 
-- listen_address: public IPv4 address;
-- listen_addressv6: public IPv6 address;
-- realm: realm (i.e. domain.org) of the server;
-- account_file: specify the location of the accounts database file;
-- tcp_port and udp_port: bind the service on the specified port;
+Here are Important parameters,
+- listen_address        : public IPv4 address;
+- listen_addressv6      : public IPv6 address;
+- realm                 : realm (i.e. domain.org) of the server;
+- account_file          : specify the location of the accounts database file;
+- tcp_port and udp_port : bind the service on the specified port.
 
 If you want to use TLS over TCP you have to set "tls = true" in the configuration file as 
-well as the pathnames of the Certificate Authority (CA), server certificate and associated
-private key.
+well as the pathnames of the Certificate Authority (ca_file), server certificate (cert_file) 
+and associated private key (private_key_file).
 
 Other parameters such as allocations number quota can be configured. For more details about 
-configuration parameters, see man files:
+configuration parameters, see man page:
 $ man turnserver.conf 
 
 3) Accounts database file
@@ -75,7 +79,8 @@ TurnServer uses (for the moment) a basic text file which contains accounts infor
 The format of each line is:
 login:password:realm
 
-Note: realm have to match realm parameter defined in TurnServer configuration file.
+Note: realm have to match realm parameter defined in TurnServer configuration file. The
+":" character is also forbidden in login, password or realm fields.
 
 4) Security
 ------------
@@ -89,7 +94,7 @@ a user named turnserver:
 Then you have to tell configuration file to choose this user:
 unpriv_user = turnserver
 
-if TurnServer is setuid root and unpriv_user is not set, TurnServer will drop
+If TurnServer is set-uid root and unpriv_user is not set, TurnServer will drop
 privileges to the user who launched the binary.
 
 Note: if turnserver is launched as root and unpriv_user not set, the program will not

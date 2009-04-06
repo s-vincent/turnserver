@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008 Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+ *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- *  Copyright (C) 2006-2008 Sebastien Vincent.
+ *  Copyright (C) 2006-2009 Sebastien Vincent.
  *
  *  Permission to use, copy, modify, and distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file util_sys.h
  * \brief Some helper system functions.
  * \author Sebastien Vincent
- * \date 2008
+ * \date 2008-2009
  */
 
 #ifndef UTIL_SYS_H
@@ -274,7 +274,6 @@ extern "C"
   char* encode_http_string(const char* str);
 
 #if __STDC_VERSION__ >= 199901L /* C99 */
-
   /**
    * \brief Secure version of strncpy.
    * \param dest destination buffer
@@ -312,7 +311,6 @@ extern "C"
     return ret;
   }
 #else
-
 #undef s_strncpy
   /**
    * \def s_strncpy

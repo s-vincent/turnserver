@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008 Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
+ *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- *  Copyright (C) 2008 Sebastien Vincent.
+ *  Copyright (C) 2008-2009 Sebastien Vincent.
  *
  *  Permission to use, copy, modify, and distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@
  * \file tls_peer.h
  * \brief (D)TLS peer implementation.
  * \author Sebastien Vincent
- * \date 2008
+ * \date 2008-2009
  */
 
 #ifndef TLS_PEER_H
