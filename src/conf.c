@@ -127,12 +127,12 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
 
   ret = cfg_parse(g_cfg, file);
 
-  if (ret == CFG_FILE_ERROR)
+  if(ret == CFG_FILE_ERROR)
   {
     fprintf(stderr, "Cannot find configuration file %s\n", file);
     return -1;
   }
-  else if (ret == CFG_PARSE_ERROR)
+  else if(ret == CFG_PARSE_ERROR)
   {
     fprintf(stderr, "Parse error in configuration file %s\n", file);
     return -2;
@@ -228,7 +228,7 @@ void turnserver_cfg_print(void)
 
 void turnserver_cfg_free(void)
 {
-  if (g_cfg)
+  if(g_cfg)
   {
     cfg_free(g_cfg);
     g_cfg = NULL;

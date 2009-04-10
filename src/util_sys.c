@@ -136,7 +136,7 @@ extern "C"
     /* POSIX version */
     int ret = 0;
     ret = strerror_r(errnum, buf, buflen);
-    if (ret == -1)
+    if(ret == -1)
     {
       strncpy(buf, UNKNOWN_ERROR, buflen - 1);
       buf[buflen - 1] = 0x00;
@@ -166,7 +166,7 @@ extern "C"
 
     pid = fork();
 
-    if (pid > 0) /* father */
+    if(pid > 0) /* father */
     {
       if(cleanup)
       {
@@ -174,7 +174,7 @@ extern "C"
       }
       _exit(EXIT_SUCCESS);
     }
-    else if (pid == -1) /* error */
+    else if(pid == -1) /* error */
     {
       return -1;
     }
@@ -193,7 +193,7 @@ extern "C"
     }
 
     /* change directory */
-    if (!dir)
+    if(!dir)
     {
       dir = "/";
     }
@@ -235,7 +235,7 @@ extern "C"
 
     p = malloc(sizeof(char) * (3 * len + 1)); /* in the worst case, it take 3x (%20) the size */
 
-    if (!p)
+    if(!p)
     {
       return NULL;
     }
@@ -244,7 +244,7 @@ extern "C"
     {
       unsigned int t = (unsigned int)str[i];
 
-      if (t < 42 || t == ',' || (t >= 58  && t < 64) || 
+      if(t < 42 || t == ',' || (t >= 58  && t < 64) || 
          (t >= 91 && t < 95) || t == '`' || 
          t > 122 || t == '+' || t == '&' || 
          t == ',' || t == ';' || t == '/' || 
@@ -273,7 +273,7 @@ extern "C"
     size_t nb = strlen(str);
 
     ret = malloc(nb + 1);
-    if (!ret)
+    if(!ret)
     {
       return NULL;
     }
@@ -296,7 +296,7 @@ extern "C"
     size_t i = 0;
     DWORD ret = 0;
 
-    if (iovcnt > sizeof(winiov))
+    if(iovcnt > sizeof(winiov))
     {
       return -1;
     }
@@ -307,16 +307,16 @@ extern "C"
       winiov[i].buf = iov[i].iov_base;
     }
 
-    if (addr) /* UDP case */
+    if(addr) /* UDP case */
     {
-      if (WSARecvFrom(fd, winiov, winiov_len, &ret, NULL, (struct sockaddr*)addr, addr_size, NULL, NULL) != 0)
+      if(WSARecvFrom(fd, winiov, winiov_len, &ret, NULL, (struct sockaddr*)addr, addr_size, NULL, NULL) != 0)
       {
         return -1;
       }
     }
     else /* TCP case */
     {
-      if (WSARecv(fd, winiov, winiov_len, &ret, NULL, NULL, NULL) != 0)
+      if(WSARecv(fd, winiov, winiov_len, &ret, NULL, NULL, NULL) != 0)
       {
         return -1;
       }
@@ -337,7 +337,7 @@ extern "C"
     size_t i = 0;
     DWORD ret = 0; /* number of byte read or written */
 
-    if (iovcnt > sizeof(winiov))
+    if(iovcnt > sizeof(winiov))
     {
       return -1;
     }
@@ -349,9 +349,9 @@ extern "C"
     }
 
     /* UDP case */
-    if (addr)
+    if(addr)
     {
-      if (WSASendTo(fd, winiov, winiov_len, &ret, 0, (struct sockaddr*)addr, addr_size, NULL, NULL) != 0)
+      if(WSASendTo(fd, winiov, winiov_len, &ret, 0, (struct sockaddr*)addr, addr_size, NULL, NULL) != 0)
       {
         /* error send */
         return -1;
@@ -359,7 +359,7 @@ extern "C"
     }
     else /* TCP case */
     {
-      if (WSASend(fd, winiov, winiov_len, &ret, 0, NULL, NULL) != 0)
+      if(WSASend(fd, winiov, winiov_len, &ret, 0, NULL, NULL) != 0)
       {
         /* error send */
         return -1;
@@ -387,14 +387,14 @@ extern "C"
 #endif
     gid_eff = 0; /* not used for the moment */
 
-    if (uid_real == 0 || uid_eff == 0) /* we are root or sudoers */
+    if(uid_real == 0 || uid_eff == 0) /* we are root or sudoers */
     {
       struct passwd user;
       struct passwd* tmpUser = &user;
       struct passwd* tmp = NULL;
       char buf[1024];
 
-      if (!user_name)
+      if(!user_name)
       {
         if(uid_real == uid_eff)
         {
@@ -415,7 +415,7 @@ extern "C"
       }
 
       /* get user_name information (UID and GID) */
-      if (getpwnam_r(user_name, tmpUser, buf, sizeof(buf), &tmp) == 0)
+      if(getpwnam_r(user_name, tmpUser, buf, sizeof(buf), &tmp) == 0)
       {
         setegid(user.pw_uid);
         return seteuid(user.pw_gid);
@@ -455,7 +455,7 @@ extern "C"
     {
       j = (bin[i] >> 4) & 0x0f;
 
-      if (j <= 9)
+      if(j <= 9)
       {
         hex[i * 2] = (j + '0');
       }
@@ -466,7 +466,7 @@ extern "C"
 
       j = bin[i] & 0x0f;
 
-      if (j <= 9)
+      if(j <= 9)
       {
         hex[i * 2 + 1] = (j + '0');
       }
