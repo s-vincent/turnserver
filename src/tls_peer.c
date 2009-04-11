@@ -100,6 +100,11 @@
 
 #include "tls_peer.h"
 
+#ifdef __cplusplus
+extern "C" 
+{ /* } */
+#endif
+
 /* This file has been inspired by the OpenSource's vpmn  and resiprocate projects */
 
 /**
@@ -812,4 +817,8 @@ struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr, uint16_
 
   return ret;
 }
+
+#ifdef __cplusplus
+}
+#endif
 

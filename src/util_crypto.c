@@ -72,6 +72,11 @@
 
 #include "util_crypto.h"
 
+#ifdef __cplusplus
+extern "C"
+{ /* } */
+#endif
+
 int seed_prng_init(void)
 {
 #ifndef _WIN32
@@ -250,4 +255,8 @@ uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
 
   return crc ^ 0xffffffff;
 }
+
+#ifdef __cplusplus
+}
+#endif
 

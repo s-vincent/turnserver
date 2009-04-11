@@ -54,6 +54,11 @@
 #include "util_crypto.h"
 #include "protocol.h"
 
+#ifdef __cplusplus
+extern "C"
+{ /* } */
+#endif
+
 /**
  * \brief Helper function to create MAPPED-ADDRESS like.
  * \param type type
@@ -1673,4 +1678,8 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
 
   return ret;
 }
+
+#ifdef __cplusplus
+}
+#endif
 

@@ -71,6 +71,10 @@
 
 #include "list.h"
 
+#ifdef __cplusplus
+extern "C" { /* } */
+#endif
+
 /**
  * \def LIBSSL_INIT
  * \brief Initialize libssl.
@@ -201,6 +205,10 @@ int tls_peer_is_encrypted(const char* buf, size_t len);
  * \return socket descriptor, -1 otherwise
  */
 int socket_create(enum protocol_type type, const char* addr, uint16_t port);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* TLS_PEER_H */
 

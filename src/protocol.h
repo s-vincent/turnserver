@@ -50,6 +50,11 @@
 #include "turn.h"
 #include "tls_peer.h"
 #include "turnserver.h"
+ 
+#ifdef __cplusplus
+extern "C"
+{ /* } */
+#endif
 
 #ifndef XOR_PEER_ADDRESS_MAX
 /**
@@ -735,6 +740,10 @@ int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
  * \warning If there are more than unknown_size attributes, they will not be put in the array.
  */
 int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown, size_t* unknown_size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PROTOCOL_H */
 

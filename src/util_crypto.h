@@ -64,6 +64,11 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C"
+{ /* } */
+#endif
+
 /**
  * \brief Initialize the PRNG.
  * \return 0 if successfull, -1 if seed is cryptographically weak
@@ -139,6 +144,10 @@ uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev);
  * \param len length of buffer
  */
 void digest_print(const unsigned char* buf, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* UTIL_CRYPTO_H */
 
