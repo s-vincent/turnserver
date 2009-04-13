@@ -87,7 +87,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.2 by LSIIT's Network Research Team"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.2.2"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
@@ -637,7 +637,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_binding_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
+static int turnserver_process_binding_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
 {
   struct iovec iov[4]; /* header, software, xor-address, fingerprint */
   size_t index = 0;
@@ -1091,7 +1091,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_createpermission_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
+static int turnserver_process_createpermission_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1307,7 +1307,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_channelbind_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
+static int turnserver_process_channelbind_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1530,7 +1530,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_refresh_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list, struct allocation_desc* desc, struct account_desc* account, struct tls_peer* speer)
+static int turnserver_process_refresh_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list, struct allocation_desc* desc, struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1555,14 +1555,12 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
     /* adjust lifetime */
-    if(lifetime > TURN_MAX_ALLOCATION_LIFETIME)
-    {
-      lifetime = TURN_MAX_ALLOCATION_LIFETIME;
-    }
+    lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
   }
   else
   {
-    lifetime = TURN_DEFAULT_ALLOCATION_LIFETIME;
+    /* cannot override default max value for allocation time */
+    lifetime = MIN(turnserver_cfg_allocation_lifetime(), TURN_DEFAULT_ALLOCATION_LIFETIME);
   }
 
   if(lifetime > 0)
@@ -1657,7 +1655,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_allocate_request(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+static int turnserver_process_allocate_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
 {
   struct allocation_desc* desc = NULL;
   struct itimerspec t; /* time before expire */
@@ -1798,22 +1796,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return 0;
   }
 
-  if(message->even_port)
-  {
-    r_flag = message->even_port->turn_attr_flags & 0x80;
-
-    /* test if there are unknown other flags */
-    if(message->even_port->turn_attr_flags & (~g_supported_even_port_flags)) 
-    {
-      /* unsupported flags => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
-      return 0;
-    }
-  }
-
   if(message->even_port && message->reservation_token)
   {
-    /* cannot have EVEN-PORT and RESERVATION-TOKEN => error 400 */
+    /* cannot have both EVEN-PORT and RESERVATION-TOKEN => error 400 */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
   }
@@ -1827,12 +1812,12 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return 0;
   }
 
-  /* check reservation-token and requested-props flags */
+  /* check reservation-token */
   if(message->reservation_token)
   {
     struct allocation_token* token = NULL;
 
-    /* find if the requested reservation-token exists */
+    /* check if the requested reservation-token exists */
     if((token = allocation_token_list_find(&g_token_list, message->reservation_token->turn_attr_token)))
     {
       relayed_sock = token->sock;
@@ -1847,7 +1832,25 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       allocation_token_list_remove(&g_token_list, token);
       debug(DBG_ATTR, "Take token reserved address!\n");
     }
-    /* if the token is not found we ignore it */
+    else
+    {
+      /* token does not exists so token not valid => error 508 */
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
+      return 0;
+    }
+  }
+  
+  if(message->even_port)
+  {
+    r_flag = message->even_port->turn_attr_flags & 0x80;
+
+    /* check if there are unknown other flags */
+    if(message->even_port->turn_attr_flags & (~g_supported_even_port_flags)) 
+    {
+      /* unsupported flags => error 508 */
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
+      return 0;
+    }
   }
 
   if(message->lifetime)
@@ -1857,15 +1860,12 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
     /* adjust lifetime */
-    if(lifetime > TURN_MAX_ALLOCATION_LIFETIME)
-    {
-      lifetime = TURN_MAX_ALLOCATION_LIFETIME;
-    }
+    lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
   }
   else
   {
-    /* cannot override max value for allocation time */
-    lifetime = turnserver_cfg_allocation_lifetime() > TURN_MAX_ALLOCATION_LIFETIME ? TURN_MAX_ALLOCATION_LIFETIME : turnserver_cfg_allocation_lifetime();
+    /* cannot override default max value for allocation time */
+    lifetime = MIN(turnserver_cfg_allocation_lifetime(), TURN_MAX_ALLOCATION_LIFETIME);
   }
 
   /* draft-ietf-behave-turn-ipv6-06 */
@@ -1913,8 +1913,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   /* after all these checks, we can allocate an allocation! */
 
-  /* allocate the relayed address or skip this, if we have a token */
-  while(!has_token && (relayed_sock == -1 && quit_loop < 5)) /* we try 5 times to find a free port */
+  /* allocate the relayed address or skip this if we have a token,
+   * we try 5 times to find a free port or couple of free ports.
+   */
+  while(!has_token && (relayed_sock == -1 && quit_loop < 5))
   {
     /* pick up a port between 49152 - 65535 */
     port = (uint16_t) (rand() % 16383) + 49152;
@@ -2066,8 +2068,9 @@ send_success_response:
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
-    if(reservation_port) /* we have store a socket / port */
+    if(reservation_port) 
     {
+      /* we have store a socket / port */
       debug(DBG_ATTR, "Send a reservation-token attribute\n");
       if(!(attr = turn_attr_reservation_token_create(reservation_token, &iov[index])))
       {
@@ -2132,7 +2135,7 @@ send_success_response:
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_turn(int transport_protocol, int sock, struct turn_message* message, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+static int turnserver_process_turn(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = 0;
   uint16_t method = 0;
@@ -2159,7 +2162,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, struct turn
       /* reject with error 437 if it a request, ignored otherwise */
       if(STUN_IS_REQUEST(hdr_msg_type)) /* the refresh function will handle this case */
       {
-        /* => error 437 */ 
+        /* allocation mismatch => error 437 */ 
         turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, account->key);
         return 0;
       }

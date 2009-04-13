@@ -387,8 +387,9 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid
 #endif
   gid_eff = 0; /* not used for the moment */
 
-  if(uid_real == 0 || uid_eff == 0) /* we are root or sudoers */
+  if(uid_real == 0 || uid_eff == 0) 
   {
+    /* we are root or sudoers */
     struct passwd user;
     struct passwd* tmpUser = &user;
     struct passwd* tmp = NULL;

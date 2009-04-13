@@ -482,7 +482,8 @@ struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknow
    */
   len = attr_size + (attr_size % 2);
 
-  if(!(ret = malloc(sizeof(struct turn_attr_unknown_attribute) + (len * 2) ))) /* each attribute has 2 bytes length */
+  /* each attribute has 2 bytes length */
+  if(!(ret = malloc(sizeof(struct turn_attr_unknown_attribute) + (len * 2) ))) 
   {
     return NULL;
   }

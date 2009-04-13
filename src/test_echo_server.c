@@ -100,14 +100,15 @@ int main(int argc, char** argv)
 
   port = argv[1] ? atol(argv[1]) : 4588;
 
-  if(port == 0) /* incorrect value */
+  /* incorrect value */
+  if(port == 0)
   {
     port = 4588;
   }
 
   sock = socket_create(UDP, NULL, port);
 
-  printf("UDP Echo server started on port %u\n", port);
+  fprintf(stdout, "UDP Echo server started on port %u\n", port);
 
   if(sock == -1)
   {

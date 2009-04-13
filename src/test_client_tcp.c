@@ -216,7 +216,7 @@ int main(int argc, char** argv)
   index++;
 
   /* USERNAME */
-  attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
+  attr = turn_attr_username_create("toto", strlen("toto"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -257,7 +257,7 @@ int main(int argc, char** argv)
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
   /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
+  md5_generate(md_buf, (unsigned char*)"toto:domain.org:password", strlen("toto:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
 
@@ -354,7 +354,7 @@ int main(int argc, char** argv)
   index++;
 
   /* USERNAME */
-  attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
+  attr = turn_attr_username_create("toto", strlen("toto"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -385,7 +385,7 @@ int main(int argc, char** argv)
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
   /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
+  md5_generate(md_buf, (unsigned char*)"toto:domain.org:password", strlen("toto:domain.org:password"));
 
   turn_calculate_integrity_hmac_iov(iov + 11, index -11 - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
@@ -432,7 +432,7 @@ int main(int argc, char** argv)
   index++;
 
   /* USERNAME */
-  attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
+  attr = turn_attr_username_create("toto", strlen("toto"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -463,7 +463,7 @@ int main(int argc, char** argv)
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
   /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
+  md5_generate(md_buf, (unsigned char*)"toto:domain.org:password", strlen("toto:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov + 1, index - 1 - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
 
@@ -507,7 +507,7 @@ int main(int argc, char** argv)
   index++;
 
   /* USERNAME */
-  attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
+  attr = turn_attr_username_create("toto", strlen("toto"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -538,7 +538,7 @@ int main(int argc, char** argv)
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
   /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
+  md5_generate(md_buf, (unsigned char*)"toto:domain.org:password", strlen("toto:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
 
@@ -652,7 +652,7 @@ int main(int argc, char** argv)
   index++;
 
   /* USERNAME */
-  attr = turn_attr_username_create("ping6", strlen("ping6"), &iov[index]);
+  attr = turn_attr_username_create("toto", strlen("toto"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -702,7 +702,7 @@ int main(int argc, char** argv)
 
   /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
   /* index - 1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, (unsigned char*)"ping6:domain.org:password", strlen("ping6:domain.org:password"));
+  md5_generate(md_buf, (unsigned char*)"toto:domain.org:password", strlen("toto:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
 
