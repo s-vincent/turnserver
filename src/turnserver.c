@@ -3417,6 +3417,7 @@ int main(int argc, char** argv)
   struct list_head* get = NULL;
   struct tls_peer* speer = NULL;
   char* configuration_file = NULL;
+  char* listen_addr = NULL;
 
   /* initialize lists */
   INIT_LIST(allocation_list);
@@ -3639,9 +3640,21 @@ int main(int argc, char** argv)
   openlog("TurnServer", LOG_PID, LOG_DAEMON);
   syslog(LOG_INFO, "TurnServer start");
 
+  /* some version of getaddrinfo do not prefer IPv6+IPv4 addresses over
+   * IPv4 only when passing NULL as "node" parameter.
+   * 
+   * Here is a work around that check if we are configured to use IPv6
+   * relaying, if so we force listen to IPv6+IPv4 mode by passing "::" address,
+   * otherwise we force IPv4 only address.
+   *
+   * Note that for *BSD, you have to disable IPV6ONLY socket option (see tls_peer.c)
+   * to enable IPv6+IPv4 mode, else "::" address only listen on all IPv6 addresses.
+   */
+  listen_addr = turnserver_cfg_listen_addressv6() ? "::" : "0.0.0.0";
+
   /* initialize listen sockets */
   /* non-DTLS UDP socket */
-  sock_udp = socket_create(IPPROTO_UDP, NULL, turnserver_cfg_udp_port());
+  sock_udp = socket_create(IPPROTO_UDP, listen_addr, turnserver_cfg_udp_port());
 
   if(sock_udp == -1)
   {
@@ -3649,7 +3662,7 @@ int main(int argc, char** argv)
     syslog(LOG_ERR, "UDP socket creation failed");
   }
 
-  sock_tcp = socket_create(IPPROTO_TCP, NULL, turnserver_cfg_tcp_port());
+  sock_tcp = socket_create(IPPROTO_TCP, listen_addr, turnserver_cfg_tcp_port());
 
   if(sock_tcp > 0)
   {
@@ -3674,7 +3687,7 @@ int main(int argc, char** argv)
     LIBSSL_INIT;
 
     /* TLS TCP socket */
-    speer = tls_peer_new(IPPROTO_TCP, NULL, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
+    speer = tls_peer_new(IPPROTO_TCP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
 
     if(speer)
     {

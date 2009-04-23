@@ -106,9 +106,15 @@ int main(int argc, char** argv)
     port = 4588;
   }
 
-  sock = socket_create(UDP, NULL, port);
+  /* try to bind on all addresses (IPv6+IPv4 mode) */
+  sock = socket_create(IPPROTO_UDP, "::", port);
 
-  fprintf(stdout, "UDP Echo server started on port %u\n", port);
+  if(sock == -1)
+  {
+    perror("socket");
+    fprintf(stderr, "Maybe IPv6 is not available, try IPv4 only mode\n");
+    sock = socket_create(IPPROTO_UDP, "0.0.0.0", port);
+  }
 
   if(sock == -1)
   {
@@ -120,6 +126,8 @@ int main(int argc, char** argv)
   memset(buf, 0x00, sizeof(buf));
 
   g_run = 1;
+  
+  fprintf(stdout, "UDP Echo server started on port %u\n", port);
 
   while(g_run)
   {
