@@ -180,6 +180,10 @@ int main(int argc, char** argv)
   printf("Send OK\n");
 
   hdr->turn_msg_len = 0;
+  /* free memory for SOFTWARE attribute since it will be added
+   * later.
+   */
+  free(iov[i - 1].iov_base);
   index--;
 
   if(nb == -1)
@@ -229,7 +233,7 @@ int main(int argc, char** argv)
   attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
+  
   /* REQUESTED-TRANSPORT */
   attr = turn_attr_requested_transport_create(IPPROTO_UDP, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
@@ -408,6 +412,7 @@ int main(int argc, char** argv)
   printf("Send refresh request\n");
   nb = turn_tcp_send(sock, iov, index - 1);
 
+  iovec_free_data(iov, index - 1);
   iov[0] = iov[index - 1];
   index = 1;
 /* 

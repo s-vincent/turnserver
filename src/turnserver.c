@@ -708,7 +708,6 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   }
 
   iovec_free_data(iov, index);
-
   return 0;
 }
 
@@ -1077,6 +1076,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
       debug(DBG_ATTR, "turn_*_send failed\n");
     }
   }
+  
   return 0;
 }
 
@@ -1292,7 +1292,6 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   }
 
   iovec_free_data(iov, index);
-
   return 0;
 }
 
@@ -1513,7 +1512,6 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   }
 
   iovec_free_data(iov, index);
-
   return 0;
 }
 
@@ -1638,7 +1636,6 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   }
 
   iovec_free_data(iov, index);
-
   return 0;
 }
 
@@ -1701,6 +1698,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       /* allocation mismatch => error 437 */
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, desc->key);
     }
+    
     return 0;
   }
 
@@ -1782,7 +1780,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     /* free sent data */
     iovec_free_data(iov, index);
-
     return 0;
   }
 #endif
@@ -2416,7 +2413,6 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       /* free sent data */
       iovec_free_data(iov, index);
-
       return 0;
     }
 
@@ -2554,7 +2550,6 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         /* free sent data */
         iovec_free_data(iov, index);
-
         return 0;
       }
     }
@@ -2684,7 +2679,6 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
     /* free sent data */
     iovec_free_data(iov, index);
-
     return 0;
   }
 
@@ -3044,6 +3038,31 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
 }
 
 /**
+ * \brief Check if server can relay specific address with
+ * its current configuration.
+ * 
+ * For example if IPv6 is disabled, the server will
+ * drop immediately packets coming from an IPv6-only client.
+ * \param listen_address IPv4 listen address
+ * \param listen_addressv6 IPv6 listen_address (could be NULL
+ * if IPv6 is disabled)
+ * \param saddr source address of client
+ * \return 1 if the server can relay data for this client, 
+ * 0 otherwise
+ */
+static inline int turnserver_check_relay_address(char* listen_address, char* listen_addressv6, struct sockaddr_storage* saddr)
+{
+  if((!listen_addressv6 && (saddr->ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)saddr)->sin6_addr))) ||
+     (!listen_address && (saddr->ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)saddr)->sin6_addr))) ||
+     (!listen_address && saddr->ss_family == AF_INET))
+  {
+    return 0;
+  }
+  
+  return 1;
+}
+
+/**
  * \brief Wait messages and process it.
  * \param sock_tcp listen TCP socket
  * \param sock_udp listen UDP socket
@@ -3179,9 +3198,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
       if(nb > 0)
       {
-        if((!listen_addressv6 && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!listen_address && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!listen_address && saddr.ss_family == AF_INET))
+        if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
         {
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family: %s\n", proto);
@@ -3268,9 +3285,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
       if(sock > 0)
       {
-        if((!listen_addressv6 && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!listen_address && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-            (!listen_address && saddr.ss_family == AF_INET))
+        if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
         {
           /* we don't relay the specified address family so close connection */
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
@@ -3312,9 +3327,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
         if(sock > 0)
         {
-          if((!listen_addressv6 && (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-              (!listen_address && (saddr.ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr))) ||
-              (!listen_address && saddr.ss_family == AF_INET))
+          if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
           {
             /* we don't relay the specified address family so close connection */
             proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
@@ -3334,7 +3347,6 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             {
               /* add it to the list */
               sdesc->sock = sock;
-
               LIST_ADD(&sdesc->list, tcp_socket_list);
             }
           }
