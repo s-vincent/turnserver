@@ -86,21 +86,5 @@ struct denied_address
   struct list_head list; /**< For list management */
 };
 
-/**
- * \union sockaddr_aliasing
- * \brief Union of all sockaddr types.
- *
- * It is used to correctly have strict-aliasing when 
- * casting struct sockaddr_storage a to another type of sockaddr
- * like struct sockaddr_in6.
- */
-union sockaddr_aliasing
-{
-  struct sockaddr s; /**< The struct sockaddr part */
-  struct sockaddr_storage ss; /**< The struct sockaddr_storage part */
-  struct sockaddr_in in; /**< The struct sockaddr_in part */
-  struct sockaddr_in6 in6; /**< The struct sockaddr_in6 part */
-};
-
 #endif /* TURNSERVER_H */
 
