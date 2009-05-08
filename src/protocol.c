@@ -138,7 +138,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   uint8_t* ptr = NULL; /* pointer on the address (IPv4 or IPv6) */
   uint8_t* p = (uint8_t*)&cookie;
   size_t i = 0;
-  struct sockaddr_storage storage;
+  union sockaddr_aliasing storage;
   uint16_t port = 0;
   uint8_t family = 0;
   uint16_t msb_cookie = 0;
@@ -147,28 +147,28 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   {
     case AF_INET:
       memcpy(&storage, address, sizeof(struct sockaddr_in));
-      ptr = (uint8_t*)&((struct sockaddr_in*)&storage)->sin_addr;
-      port = ntohs(((struct sockaddr_in*)&storage)->sin_port);
+      ptr = (uint8_t*)&storage.in.sin_addr;
+      port = ntohs(storage.in.sin_port);
       family = STUN_ATTR_FAMILY_IPV4;
       len = 4;
       break;
     case AF_INET6:
       if(IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)address)->sin6_addr))
       {
-        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, &((struct sockaddr_in6*)address)->sin6_addr.s6_addr[12], 4);
-        ptr = (uint8_t*)&((struct sockaddr_in*)&storage)->sin_addr;
-        ((struct sockaddr_in*)&storage)->sin_port = ((struct sockaddr_in6*)address)->sin6_port;
-        memset(((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof(((struct sockaddr_in*)&storage)->sin_zero));
-        port = ntohs(((struct sockaddr_in*)&storage)->sin_port);
+        storage.in.sin_family = AF_INET;
+        memcpy(&storage.in.sin_addr, &((struct sockaddr_in6*)address)->sin6_addr.s6_addr[12], 4);
+        ptr = (uint8_t*)&storage.in.sin_addr;
+        storage.in.sin_port = ((struct sockaddr_in6*)address)->sin6_port;
+        memset(&storage.in.sin_zero, 0x00, sizeof(storage.in.sin_zero));
+        port = ntohs(storage.in.sin_port);
         family = STUN_ATTR_FAMILY_IPV4;
         len = 4;
       }
       else
       {
         memcpy(&storage, address, sizeof(struct sockaddr_in6));
-        ptr = (uint8_t*)&((struct sockaddr_in6*)&storage)->sin6_addr;
-        port = ntohs(((struct sockaddr_in6*)&storage)->sin6_port);
+        ptr = (uint8_t*)&storage.in6.sin6_addr;
+        port = ntohs(storage.in6.sin6_port);
         family = STUN_ATTR_FAMILY_IPV6;
         len = 16;
       }

@@ -562,6 +562,9 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 442: /* Unsupported transport protocol */
       hdr = turn_error_response_442(method, id, &iov[index], &index);
       break;
+    case 443: /* Peer address family mismatch */
+      hdr = turn_error_response_443(method, id, &iov[index], &index);
+      break;
     case 486: /* Allocation quota reached */
       hdr = turn_error_response_486(method, id, &iov[index], &index);
       break;
@@ -795,17 +798,17 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 
   if(desc->relayed_transport_protocol == IPPROTO_UDP)
   {
-    struct sockaddr_storage storage;
+    union sockaddr_aliasing storage;
     uint8_t* peer_addr = alloc_channel->peer_addr;
     uint16_t peer_port = alloc_channel->peer_port;
 
     switch(desc->relayed_addr.ss_family)
     {
       case AF_INET:
-        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
-        ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
-        memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+        storage.in.sin_family = AF_INET;
+        memcpy(&storage.in.sin_addr, peer_addr, 4);
+        storage.in.sin_port = htons(peer_port);
+        memset(&storage.in.sin_zero, 0x00, sizeof(storage.in.sin_zero));
 
 #ifdef OS_SET_DF_SUPPORT
         /* prepare value for setsockopt: set DF flag to 0 */
@@ -815,13 +818,13 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 #endif
         break;
       case AF_INET6:
-        ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
-        memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
-        ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
-        ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
-        ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+        storage.in6.sin6_family = AF_INET6;
+        memcpy(&storage.in6.sin6_addr, peer_addr, 16);
+        storage.in6.sin6_port = htons(peer_port);
+        storage.in6.sin6_flowinfo = htonl(0);
+        storage.in6.sin6_scope_id = htonl(0);
 #ifdef SIN6_LEN
-        ((struct sockaddr_in6*)storage)->sin6_len = sizeof(struct sockaddr_in6);
+        storage.in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 
 #ifdef OS_SET_DF_SUPPORT
@@ -978,15 +981,15 @@ static int turnserver_process_send_indication(const struct turn_message* message
 
     if(desc->relayed_transport_protocol == IPPROTO_UDP)
     {
-      struct sockaddr_storage storage;
+      union sockaddr_aliasing storage;
 
       switch(desc->relayed_addr.ss_family)
       {
         case AF_INET:
-          ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-          memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
-          ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
-          memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+          storage.in.sin_family = AF_INET;
+          memcpy(&storage.in.sin_addr, peer_addr, 4);
+          storage.in.sin_port = htons(peer_port);
+          memset(&storage.in.sin_zero, 0x00, sizeof(storage.in.sin_zero));
 
 #ifdef OS_SET_DF_SUPPORT
           /* DF flag */
@@ -995,13 +998,13 @@ static int turnserver_process_send_indication(const struct turn_message* message
 #endif
           break;
         case AF_INET6:
-          ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
-          memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
-          ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
-          ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
-          ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+          storage.in6.sin6_family = AF_INET6;
+          memcpy(&storage.in6.sin6_addr, peer_addr, 16);
+          storage.in6.sin6_port = htons(peer_port);
+          storage.in6.sin6_flowinfo = htonl(0);
+          storage.in6.sin6_scope_id = htonl(0);
 #ifdef SIN6_LEN
-          ((struct sockaddr_in6*)storage)->sin6_len = sizeof(struct sockaddr_in6);
+          storage.in6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 
 #ifdef OS_SET_DF_SUPPORT
@@ -1658,7 +1661,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   struct itimerspec t; /* time before expire */
   uint16_t hdr_msg_type = ntohs(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
-  struct sockaddr_storage relayed_addr;
+  union sockaddr_aliasing relayed_addr;
   int r_flag = 0;
   uint32_t lifetime =0;
   uint16_t port = 0;
@@ -1964,13 +1967,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     return -1;
   }
 
-  if(relayed_addr.ss_family == AF_INET)
+  if(relayed_addr.ss.ss_family == AF_INET)
   {
-    port = ntohs(((struct sockaddr_in*)&relayed_addr)->sin_port);
+    port = ntohs(relayed_addr.in.sin_port);
   }
   else /* IPv6 */
   {
-    port = ntohs(((struct sockaddr_in6*)&relayed_addr)->sin6_port);
+    port = ntohs(relayed_addr.in6.sin6_port);
   }
 
   desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm, message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
@@ -2716,6 +2719,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   ssize_t nb = -1;
   size_t len = 0; /* for TLS */
   char str[INET6_ADDRSTRLEN];
+  union sockaddr_aliasing* aliasing = (union sockaddr_aliasing*)saddr;
 
   /* find the allocation associated with the relayed transport address */
   desc = allocation_list_find_relayed(allocation_list, daddr, saddr_size);
@@ -2726,15 +2730,15 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     return -1;
   }
 
-  switch(saddr->sa_family)
+  switch(aliasing->s.sa_family)
   {
     case AF_INET:
-      memcpy(peer_addr, &((struct sockaddr_in*)saddr)->sin_addr, 4);
-      peer_port = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+      memcpy(peer_addr, &aliasing->in.sin_addr, 4);
+      peer_port = ntohs(aliasing->in.sin_port);
       break;
     case AF_INET6:
-      memcpy(peer_addr, &((struct sockaddr_in6*)saddr)->sin6_addr, 16);
-      peer_port = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
+      memcpy(peer_addr, &aliasing->in6.sin6_addr, 16);
+      peer_port = ntohs(aliasing->in6.sin6_port);
       break;
     default:
       return -1;
@@ -2744,7 +2748,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   if(!allocation_desc_find_permission_sockaddr(desc, saddr))
   {
     /* no permission, discard */
-    inet_ntop(saddr->sa_family, peer_addr, str, INET6_ADDRSTRLEN);
+    inet_ntop(aliasing->s.sa_family, peer_addr, str, INET6_ADDRSTRLEN);
     debug(DBG_ATTR, "No permission installed (%s)\n", str);
     return -1;
   }
@@ -2757,7 +2761,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   }
 
   /* see if a channel is bound to the peer */
-  channel = allocation_desc_find_channel(desc, saddr->sa_family, peer_addr, peer_port);
+  channel = allocation_desc_find_channel(desc, aliasing->s.sa_family, peer_addr, peer_port);
 
   if(channel != 0)
   {
