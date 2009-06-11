@@ -87,7 +87,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.2.2"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.2.3"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
@@ -154,12 +154,25 @@ static const uint8_t g_supported_even_port_flags = 0x80;
  */
 struct socket_desc
 {
-  int sock; /**< The socket */
+  int sock; /**< Socket descriptor */
   char buf[1500]; /**< Internal buffer for TCP stream reconstruction */
   size_t buf_pos; /**< Position in the internal buffer */
   size_t msg_len; /**< Message length that is not complete */
   struct list_head list; /**< For list management */
 };
+
+/**
+ * \brief Get sockaddr structure size according to its type.
+ * \param ss sockaddr_storage structure
+ * \return size of sockaddr_in or sockaddr_in6
+ */
+static inline socklen_t sockaddr_get_size(struct sockaddr_storage* ss)
+{
+  /* assume address type is IPv4 or IPv6 as TURN specification 
+   * supports only these two types of address
+   */
+  return (ss->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
+}
 
 /**
  * \brief Signal management.
@@ -857,7 +870,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 #endif
 
     debug(DBG_ATTR, "Send ChannelData to peer\n");
-    nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, desc->relayed_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
+    nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
     if(optlen)
     {
@@ -1056,7 +1069,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
 #endif
 
       debug(DBG_ATTR, "Send data to peer\n");
-      nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, desc->relayed_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
+      nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
       if(optlen)
       {
@@ -2828,7 +2841,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 
   if(speer) /* TLS */
   {
-    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), len, iov, index);
+    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), len, iov, index);
   }
   else if(desc->tuple.transport_protocol == IPPROTO_UDP)
   {
@@ -2874,7 +2887,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     optval = 0;
 #endif
 
-    nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, desc->tuple.client_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6), iov, index);
+    nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), iov, index);
 
     if(optlen)
     {
@@ -3053,7 +3066,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
  * \return 1 if the server can relay data for this client, 
  * 0 otherwise
  */
-static inline int turnserver_check_relay_address(char* listen_address, char* listen_addressv6, struct sockaddr_storage* saddr)
+static int turnserver_check_relay_address(char* listen_address, char* listen_addressv6, struct sockaddr_storage* saddr)
 {
   if((!listen_addressv6 && (saddr->ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)saddr)->sin6_addr))) ||
      (!listen_address && (saddr->ss_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)saddr)->sin6_addr))) ||
