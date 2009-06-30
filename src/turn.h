@@ -31,7 +31,7 @@
 
 /**
  * \file turn.h
- * \brief Header definition for STUN / TURN messages and attributes.
+ * \brief Header definition for STUN/TURN messages and attributes.
  * \author Sebastien Vincent
  * \date 2008-2009
  */
@@ -241,7 +241,7 @@ typedef unsigned __int64 uint64_t;
 
 /**
  * \struct turn_msg_hdr
- * \brief STUN / TURN message header.
+ * \brief STUN/TURN message header.
  */
 struct turn_msg_hdr
 {
@@ -253,7 +253,7 @@ struct turn_msg_hdr
 
 /**
  * \struct turn_attr_hdr
- * \brief STUN / TURN attribute header.
+ * \brief STUN/TURN attribute header.
  */
 struct turn_attr_hdr
 {

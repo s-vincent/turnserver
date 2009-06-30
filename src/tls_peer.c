@@ -85,7 +85,7 @@
 
 #if defined(__FreeBSD__) || defined(__OpenBSD) || defined(__NetBSD__)
 #ifndef IPPROTO_IPV6
-/* This macro should be declared in netinet/in.h even in POSIX compilation */
+/* macro should be declared in netinet/in.h even in POSIX compilation */
 #define IPPROTO_IPV6 41	
 #endif
 #endif
@@ -105,7 +105,7 @@ extern "C"
 { /* } */
 #endif
 
-/* This file has been inspired by the OpenSource's vpmn  and resiprocate projects */
+/* this file has been inspired by the OpenSource's vpmn  and resiprocate projects */
 
 /**
  * \struct ssl_peer
@@ -145,8 +145,7 @@ static struct ssl_peer* ssl_peer_new(struct sockaddr* addr, socklen_t addrlen, S
 {
   struct ssl_peer* ret = NULL;
 
-  ret = malloc(sizeof(struct ssl_peer));
-  if(!ret)
+  if(!(ret = malloc(sizeof(struct ssl_peer))))
   {
     return NULL;
   }
@@ -238,8 +237,7 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl, u
     case SSL_ERROR_NONE:
       break;
     case SSL_ERROR_SSL:
-      printf("SSL_ERROR_SSL: %s\n",
-          ERR_reason_error_string(ERR_get_error()));
+      printf("SSL_ERROR_SSL: %s\n", ERR_reason_error_string(ERR_get_error()));
       /* big problem, remove the connection */
       tls_peer_remove_connection(peer, ssl);
       break;
@@ -255,7 +253,6 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl, u
       break;
     case SSL_ERROR_ZERO_RETURN: /* connection closed */
       printf("SSL_ERROR_ZERO_RETURN\n");
-
       /* big problem, remove the connection */
       tls_peer_remove_connection(peer, ssl);
       break;
@@ -353,7 +350,6 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
   }
 
   peer->bio_fake = BIO_new(BIO_s_mem());
-
   if(!peer->bio_fake)
   {
     return -1;
@@ -370,16 +366,15 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
     }
 
     calist = SSL_load_client_CA_file(ca_file);
-
     if(calist == NULL)
     {
       return -1;
     } 
+    
     SSL_CTX_set_client_CA_list(peer->ctx_server, calist);
   }
 
   peer->sock = socket_create(type, addr, port);
-
   peer->type = type;
 
   return (peer->sock > 0)  ? 0 : -1;
@@ -415,7 +410,7 @@ static int tls_peer_read(struct tls_peer* peer, char* buf, size_t buflen, char* 
 
   if(!speer->handshake_complete && SSL_is_init_finished(speer->ssl))
   {
-    /* at this point, we can send data */
+    /* at this point, socket can send data */
     speer->handshake_complete = 1;
   }
 
@@ -437,8 +432,8 @@ void tls_peer_print_connection(struct tls_peer* peer)
 
   list_iterate_safe(get, n, &peer->remote_peers)
   {
-    struct ssl_peer* tmp = NULL;
-    tmp = list_get(get, struct ssl_peer, list);
+    struct ssl_peer* tmp = list_get(get, struct ssl_peer, list);
+    
     if(getnameinfo((struct sockaddr*)&tmp->addr, sizeof(tmp->addr), buf, INET6_ADDRSTRLEN, NULL, 0, NI_NUMERICHOST) != 0)
     {
       continue;
@@ -517,7 +512,7 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
     }
     else
     {
-      /* if timeout or syscall error we break */
+      /* if timeout or syscall error, break loop */
       break;
     }
   }
@@ -552,7 +547,7 @@ int tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
 
     /* associate the SSL pointer with the socket descriptor */
     SSL_set_fd(ssl, sock);
-
+    
     speer = ssl_peer_new((struct sockaddr*)addr, addrlen, ssl);
     if(!speer)
     {
@@ -616,7 +611,7 @@ int tls_peer_write(struct tls_peer* peer, const char* buf, size_t buflen, const 
   unsigned long err = 0;
   struct ssl_peer* speer = NULL;
 
-  /* printf("dtls_write\n"); */
+  /* printf("tls_write\n"); */
 
   speer = tls_peer_find_connection(peer, addr, addrlen);
 
@@ -750,7 +745,7 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port)
       continue;
     }
 
-    /* ok so now we have a socket bound, break the loop */
+    /* socket bound, break the loop */
     break;
   }
 
@@ -782,7 +777,7 @@ void tls_peer_free(struct tls_peer** peer)
   {
     BUF_MEM* ptr = NULL;
     BIO_get_mem_ptr(ret->bio_fake, &ptr);
-    (void)BIO_set_close(ret->bio_fake, BIO_NOCLOSE); /* So BIO_free() leaves BUF_MEM alone */
+    (void)BIO_set_close(ret->bio_fake, BIO_NOCLOSE); /* so BIO_free() leaves BUF_MEM alone */
     BIO_free(ret->bio_fake);
     BUF_MEM_free(ptr);
   }
@@ -801,8 +796,7 @@ struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr, uint16_
 {
   struct tls_peer* ret = NULL;
 
-  ret = malloc(sizeof(struct tls_peer));
-  if(!ret)
+  if(!(ret = malloc(sizeof(struct tls_peer))))
   {
     return NULL;
   }

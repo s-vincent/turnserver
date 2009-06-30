@@ -244,13 +244,13 @@ extern "C"
    * \brief Drop privileges.
    *
    * If the program is executed by setuid-root and the user_name
-   * is NULL, we change privileges to the real UID / GID.
-   * Otherwise we change privileges to the user_name account
+   * is NULL, change privileges to the real UID / GID.
+   * Otherwise change privileges to the user_name account
    * \param uid_real the real UID of the user
    * \param gid_real the real GID of the user
    * \param uid_eff the effective UID of the user
    * \param gid_eff the effective GID of the user
-   * \param user_name user name of the account we want to switch
+   * \param user_name user name of the account to switch
    * \return 0 if success, -1 otherwise
    * \note Should work on POSIX and *BSD systems.
    */

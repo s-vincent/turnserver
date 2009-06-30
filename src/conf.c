@@ -59,7 +59,7 @@
  * \brief Free the resources used by the lex parser.
  *
  * This function comes from libconfuse and is not called 
- * in cfg_free(), that's why we call it here.
+ * in cfg_free(), that's why call it here.
  * \return 0
  */
 extern int cfg_yylex_destroy(void);
@@ -172,9 +172,7 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
     uint16_t port = cfg_getint(ad, "port");
     struct denied_address* denied = NULL;
 
-    denied = malloc(sizeof(struct denied_address));
-
-    if(!denied)
+    if(!(denied = malloc(sizeof(struct denied_address))))
     {
       return -3;
     }

@@ -31,7 +31,7 @@
 
 /**
  * \file protocol.c
- * \brief Creation of STUN / TURN messages and attributes, helper functions.
+ * \brief Creation of STUN/TURN messages and attributes, helper functions.
  * \author Sebastien Vincent
  * \date 2008-2009
  */
@@ -240,7 +240,7 @@ struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len, struct iovec
 {
   struct turn_attr_hdr* ret = NULL;
 
-  if((ret = malloc(sizeof(struct turn_attr_hdr) + len))== NULL)
+  if((ret = malloc(sizeof(struct turn_attr_hdr) + len)) == NULL)
   {
     return NULL;
   }
@@ -460,8 +460,11 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
   }
 
   ret->turn_attr_number = number;
-  strncpy((char*)ret->turn_attr_reason, reason, real_len); /* even if strlen(reason) < len, strncpy will add extra-zero */
-  /* no need to add final NULL character since we know the length (TLV) */
+  
+  /* even if strlen(reason) < len, strncpy will add extra-zero 
+   * also no need to add final NULL character since length is known (TLV)
+   */
+  strncpy((char*)ret->turn_attr_reason, reason, real_len); 
 
   iov->iov_base = ret;
   iov->iov_len = sizeof(struct turn_attr_error_code) + real_len;
@@ -477,7 +480,7 @@ struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknow
   uint16_t* ptr = NULL;
   size_t i = 0;
 
-  /* Length of the attributes MUST be a multiple of 4 bytes 
+  /* length of the attributes MUST be a multiple of 4 bytes 
    * so it must be a pair number of attributes 
    */
   len = attr_size + (attr_size % 2);
@@ -1379,12 +1382,14 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 
   if(memcmp(md_txt, nonce + 16, MD5_DIGEST_LENGTH) != 0)
   {
-    return 1; /* MD5 hash mismatch */
+    /* MD5 hash mismatch */
+    return 1; 
   }
 
   if(time(NULL) > t)
   {
-    return 1; /* nonce stale */
+    /* nonce stale */
+    return 1;
   }
 
   return 0;
@@ -1452,7 +1457,6 @@ int turn_add_fingerprint(struct iovec* iov, size_t* index)
   }
 
   /* add a fingerprint */
-
   if(!(attr = turn_attr_fingerprint_create(0, &iov[(*index)])))
   {
     return -1;
@@ -1461,7 +1465,6 @@ int turn_add_fingerprint(struct iovec* iov, size_t* index)
   (*index)++;
 
   /* compute fingerprint */
-
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
@@ -1521,10 +1524,10 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   /* zeroed structure */
   memset(message, 0x00, sizeof(struct turn_message));
 
-  /* STUN / TURN header MUST be 20 bytes length */
+  /* STUN/TURN header MUST be 20 bytes length */
   if(msg_len < 20)
   {
-    /* not a STUN / TURN message */
+    /* not a STUN/TURN message */
     return -1;
   }
 
@@ -1532,7 +1535,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   message->msg = hdr; /* keep pointer */
   len = ntohs(hdr->turn_msg_len);
 
-  /* check the length coherent with what we received */
+  /* check if the length coherent with packet length received */
   if((len + 20) > msg_len)
   {
     /* too short */
@@ -1554,7 +1557,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
     /* FINGERPRINT MUST be the last attributes if present */
     if(message->fingerprint)
     {
-      /* When present, the FINGERPRINT attribute MUST be the last attribute */
+      /* when present, the FINGERPRINT attribute MUST be the last attribute */
       /* ignore other message */
       return 0;
     }
@@ -1562,8 +1565,8 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
     /* MESSAGE-INTEGRITY is the last attribute except if FINGERPRINT follow it */ 
     if(message->message_integrity && ntohs(attr->turn_attr_type) != STUN_ATTR_FINGERPRINT)
     {
-      /* With the exception of the FINGERPRINT attribute [...]
-       * agents MUST ignore all other attributes that follow MESSAGE-INTEGRITY.
+      /* with the exception of the FINGERPRINT attribute [...]
+       * agents MUST ignore all other attributes that follow MESSAGE-INTEGRITY
        */
       return 0;
     }
@@ -1619,7 +1622,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         {
           /* too many XOR-PEER-ADDRESS attribute, 
            * this will inform process_createpermission() to reject the 
-           * request with a 508 error.
+           * request with a 508 error
            */
           message->xor_peer_addr_overflow = 1; 
         }

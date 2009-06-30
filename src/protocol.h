@@ -31,7 +31,7 @@
 
 /**
  * \file protocol.h
- * \brief Creation of STUN / TURN messages and attributes, helper functions.
+ * \brief Creation of STUN/TURN messages and attributes, helper functions.
  * \author Sebastien Vincent
  * \date 2008-2009
  */
@@ -66,11 +66,11 @@ extern "C"
 
 /**
  * \struct turn_message
- * \brief Structure containing pointers on STUN / TURN header and attributes.
+ * \brief Structure containing pointers on STUN/TURN header and attributes.
  */
 struct turn_message
 {
-  struct turn_msg_hdr* msg; /**< STUN / TURN header */
+  struct turn_msg_hdr* msg; /**< STUN/TURN header */
   struct turn_attr_mapped_address* mapped_addr; /**< MAPPED-ADDRESS attribute */
   struct turn_attr_xor_mapped_address* xor_mapped_addr; /**< XOR-MAPPED-ADDRESS attribute */
   struct turn_attr_alternate_server* alternate_server; /**< ALTERNATE-SERVER attribute */
@@ -699,14 +699,14 @@ int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, co
 uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen);
 
 /**
- * \brief Compute and add MESSAGE-INTEGRITY / optionnally FINGERPRINT attributes to message.
+ * \brief Compute and add MESSAGE-INTEGRITY and optionnally FINGERPRINT attributes to message.
  * \param iov vector which contains a message and attributes
  * \param index index in the vector, it will be updated to the next unused position if function succeed
  * \param key key used to hash
  * \param key_len length of key
  * \param add_fingerprint if set to 1, this function add FINGERPRINT attribute
  * \return 0 if success, -1 otherwise
- * \note This function set turn_msg_len field of TURN message to big endian (as MESSAGE-INTEGRITY / FINGERPRINT are normally the last attributes added).
+ * \note This function set turn_msg_len field of TURN message to big endian (as MESSAGE-INTEGRITY/FINGERPRINT are normally the last attributes added).
  */
 int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint);
 
@@ -730,7 +730,7 @@ int turn_add_fingerprint(struct iovec* iov, size_t* index);
 int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id);
 
 /**
- * \brief Parse a STUN / TURN message.
+ * \brief Parse a STUN/TURN message.
  * \param msg raw buffer containing the message
  * \param msg_len size of buffer
  * \param message structures that will contains pointer on message header and attributes.

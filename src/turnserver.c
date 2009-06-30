@@ -69,7 +69,7 @@
 #include "dbg.h"
 #include "turnserver.h"
 
-/* For operating systems that support setting 
+/* for operating systems that support setting 
  * DF flag from userspace, give them a
  * #define OS_SET_DF_SUPPORT
  */
@@ -199,20 +199,22 @@ static void signal_handler(int code)
 /**
  * \brief Realtime signal management.
  *
- * This is mainly used when a object timer expired. As we cannot use
- * functions like free() in a signal handler and to avoid race 
- * conditions, we put the desired expired object in an expired list 
- * and the main loop will purge it.
+ * This is mainly used when a object timer expired. As usage of
+ * functions like free() in a signal handler are not permitted 
+ * and to avoid race conditions, this function put the desired 
+ * expired object in an expired list and the main loop will purge it.
  * \param signo signal number
  * \param info additionnal info
  * \param extra not used
  */
 static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 {
-  extra = NULL; /* not used */
+  /* to avoid compilation warning because it is not used */
+  extra = NULL;
 
   if(!g_run)
   {
+    /* if the program will exit, do not care about signals */
     return;
   }
 
@@ -228,7 +230,6 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     }
 
     debug(DBG_ATTR, "Allocation expires: %p\n", desc);
-
     /* add it to the expired list, the next loop will
      * purge it
      */
@@ -451,8 +452,8 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
 }
 
 /**
- * \brief Verify if address / port is in denied list.
- * \param addr IPv4 / IPv6 address to check
+ * \brief Verify if address/port is in denied list.
+ * \param addr IPv4/IPv6 address to check
  * \param addrlen sizeof the address (IPv4 = 4, IPv6 = 16)
  * \param port port to check
  * \return 1 if address is denied, 0 otherwise
@@ -465,6 +466,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
   uint8_t mod = 0;
   size_t i = 0;
 
+  /* IPv6 address maximum length is 16 bytes */
   if(addrlen > 16)
   {
     return 0;
@@ -500,7 +502,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
     }
 
     /* OK so now the full bytes from the address are the same, 
-     * check for last bit if any.
+     * check for last bit if any
      */
     mod = (tmp->mask % 8);
 
@@ -537,7 +539,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
  * \brief Send an Error Response.
  * \param transport_protocol transport protocol to send the message
  * \param sock socket
- * \param method STUN / TURN method
+ * \param method STUN/TURN method
  * \param id transaction ID
  * \param saddr address to send
  * \param saddr_size sizeof address
@@ -607,6 +609,9 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   {
     if(turn_add_message_integrity(iov, &index, key, 16, 1) == -1)
     {
+      /* MESSAGE-INTEGRITY option has to be in message, so 
+       * deallocate ressources and return
+       */
       iovec_free_data(iov, index);
       return -1;
     }
@@ -625,7 +630,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index);
   }
-  else if(transport_protocol == IPPROTO_UDP)
+  else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
     nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
   }
@@ -709,7 +714,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
-  else if(transport_protocol == IPPROTO_UDP)
+  else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
     nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
   }
@@ -1293,7 +1298,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
-  else if(transport_protocol == IPPROTO_UDP)
+  else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
     nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
   }
@@ -1345,7 +1350,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   char str3[INET6_ADDRSTRLEN];
   uint16_t port = 0;
   uint16_t port2 = 0;
-  uint32_t channel_use = 0; /* if we refresh an existing ChannelBind */
+  uint32_t channel_use = 0; /* if refresh an existing ChannelBind */
 
   debug(DBG_ATTR, "ChannelBind request received!\n");
 
@@ -1513,7 +1518,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
-  else if(transport_protocol == IPPROTO_UDP)
+  else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
     nb = turn_udp_send(sock, saddr, saddr_size, iov, index); 
   }
@@ -1557,9 +1562,9 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   debug(DBG_ATTR, "Refresh request received!\n");
 
-  /* draft-ietf-behave-turn-ipv6-06: at this stage we know the 5-tuple and the allocation associated.
+  /* draft-ietf-behave-turn-ipv6-06: at this stage server knows the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
-   * no need to have a REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
+   * no need to have REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
 
   if(message->lifetime)
@@ -1637,7 +1642,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   {
     nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
-  else if(transport_protocol == IPPROTO_UDP)
+  else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
     nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
   }
@@ -1785,7 +1790,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     {
       nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
     }
-    else if(transport_protocol == IPPROTO_UDP)
+    else if(transport_protocol == IPPROTO_UDP) /* UDP */
     {
       nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
     }
@@ -1924,10 +1929,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   strncpy(str, family_address, INET6_ADDRSTRLEN);
   str[INET6_ADDRSTRLEN - 1] = 0x00;
 
-  /* after all these checks, we can allocate an allocation! */
+  /* after all these checks, allocate an allocation! */
 
-  /* allocate the relayed address or skip this if we have a token,
-   * we try 5 times to find a free port or couple of free ports.
+  /* allocate the relayed address or skip this if server has a token,
+   * try 5 times to find a free port or couple of free ports.
    */
   while(!has_token && (relayed_sock == -1 && quit_loop < 5))
   {
@@ -2083,7 +2088,7 @@ send_success_response:
 
     if(reservation_port) 
     {
-      /* we have store a socket / port */
+      /* server has stored a socket/port */
       debug(DBG_ATTR, "Send a reservation-token attribute\n");
       if(!(attr = turn_attr_reservation_token_create(reservation_token, &iov[index])))
       {
@@ -2115,7 +2120,7 @@ send_success_response:
     {
       nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
     }
-    else if(transport_protocol == IPPROTO_UDP)
+    else if(transport_protocol == IPPROTO_UDP) /* UDP */
     {
       nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
     }
@@ -2289,7 +2294,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   memcpy(&type, buf, 2);
   type = ntohs(type);
 
-  /* Is it a ChannelData message (bit 0 and 1 are not set to 0) */
+  /* is it a ChannelData message (bit 0 and 1 are not set to 0) ? */
   if(TURN_IS_CHANNELDATA(type))
   {
     /* ChannelData */
@@ -2303,10 +2308,10 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     return -1;
   }
 
-  /* check if we have a STUN / TURN header */
+  /* check if it is a STUN/TURN header */
   if(!message.msg)
   {
-    debug(DBG_ATTR, "No STUN / TURN header\n");
+    debug(DBG_ATTR, "No STUN/TURN header\n");
     return -1;
   }
 
@@ -2370,8 +2375,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     }
   }
 
-  /* all this cases above, discard silently the packets,
-   * so now we can process the packet more in details 
+  /* all this cases above discard silently the packets,
+   * so now process the packet more in details 
    */
 
   if(STUN_IS_REQUEST(hdr_msg_type) && method != STUN_METHOD_BINDING)
@@ -2413,7 +2418,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       {
         nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
       }
-      else if(transport_protocol == IPPROTO_UDP)
+      else if(transport_protocol == IPPROTO_UDP) /* UDP */
       {
         nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
       }
@@ -2472,7 +2477,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       {
         nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
       }
-      else if(transport_protocol == IPPROTO_UDP)
+      else if(transport_protocol == IPPROTO_UDP) /* UDP */
       {
         nb = turn_udp_send(sock, saddr, saddr_size, iov, index); 
       }
@@ -2550,7 +2555,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         {
           nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
         }
-        else if(transport_protocol == IPPROTO_UDP)
+        else if(transport_protocol == IPPROTO_UDP) /* UDP */
         {
           nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
         }
@@ -2576,7 +2581,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       if(message.fingerprint)
       {
-        /* if the message contains a FINGERPRINT attribute, we adjust the size */
+        /* if the message contains a FINGERPRINT attribute, adjust the size */
         size_t len_save = message.msg->turn_msg_len;
 
         message.msg->turn_msg_len = ntohs(message.msg->turn_msg_len) - sizeof(struct turn_attr_fingerprint);
@@ -2632,7 +2637,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         {
           nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
         }
-        else if(transport_protocol == IPPROTO_UDP)
+        else if(transport_protocol == IPPROTO_UDP) /* UDP */
         {
           nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
         }
@@ -2684,7 +2689,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     {
       nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
     }
-    else if(transport_protocol == IPPROTO_UDP)
+    else if(transport_protocol == IPPROTO_UDP) /* UDP */
     {
       nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
     }
@@ -2843,7 +2848,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   {
     nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), len, iov, index);
   }
-  else if(desc->tuple.transport_protocol == IPPROTO_UDP)
+  else if(desc->tuple.transport_protocol == IPPROTO_UDP) /* UDP */
   {
     int level = 0;
     int optname = 0;
@@ -2905,7 +2910,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
 
-  /* if we use a channel, we do not used dynamic allocation */
+  /* if use a channel, do not used dynamic allocation */
   if(!channel) 
   {
     iovec_free_data(iov, index);
@@ -2932,7 +2937,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
   size_t tmp_len = 0;
   size_t tmp_nb = (size_t)nb;
 
-  /* maybe we have incomplete message */
+  /* maybe it is an incomplete message */
   if(sock->buf_pos)
   {
     tmp_buf = sock->buf;
@@ -2955,7 +2960,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
   }
   else
   {
-    tmp_buf = (char*)buf; /* after that we don't modify buf */
+    tmp_buf = (char*)buf; /* after that don't modify buf */
   }
 
   /* printf("Received: %u, Have: %u\n", tmp_nb, tmp_nb); */
@@ -2987,7 +2992,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
         struct turn_channel_data* cdata = (struct turn_channel_data*)tmp_buf;
         tmp_len = ntohs(cdata->turn_channel_len);
 
-        /* TCP so padding mandatory */
+        /* TCP, so padding mandatory */
         if(ntohs(cdata->turn_channel_len) % 4)
         {
           tmp_len += 4 - (tmp_len % 4);
@@ -3012,7 +3017,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
     }
     else
     {
-      /* we know already the next message length */
+      /* next message length is already known */
       tmp_len = sock->msg_len;
     }
 
@@ -3036,7 +3041,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
 
     if(turnserver_listen_recv(IPPROTO_TCP, sock->sock, tmp_buf, tmp_len, saddr, daddr, saddr_size, allocation_list, account_list, speer) == -1)
     {
-      debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
+      debug(DBG_ATTR, "Bad STUN/TURN message or permission problem\n");
     }
 
     tmp_nb -= tmp_len;
@@ -3118,7 +3123,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     return;
   }
 
-  /* check if we have at least one TCP or UDP socket */
+  /* check if server has at least one TCP or UDP socket */
   if(sock_udp < 0 && sock_tcp < 0)
   {
     g_run = 0;
@@ -3221,7 +3226,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         }
         else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
         {
-          debug(DBG_ATTR, "Bad STUN / TURN message or permission problem\n");
+          debug(DBG_ATTR, "Bad STUN/TURN message or permission problem\n");
         }
       }
       else
@@ -3261,7 +3266,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
             /* decode TLS data */
             if((nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
             {
-              /* TLS over TCP stream may contain multiple STUN / TURN messages */
+              /* TLS over TCP stream may contain multiple STUN/TURN messages */
               turnserver_process_tcp_stream(buf2, nb, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer);
             }
             else
@@ -3272,7 +3277,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
           } 
           else /* non-encrypted TCP data */
           {
-            /* TCP stream may contain multiple STUN / TURN messages */
+            /* TCP stream may contain multiple STUN/TURN messages */
             turnserver_process_tcp_stream(buf, nb, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL);
           }
         }
@@ -3303,7 +3308,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
       {
         if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
         {
-          /* we don't relay the specified address family so close connection */
+          /* don't relay the specified address family so close connection */
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family: %s\n", proto);
           close(sock);
@@ -3311,20 +3316,19 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         else
         {
           debug(DBG_ATTR, "Received TCP connection\n");
-          sdesc = malloc(sizeof(struct socket_desc));
-
-          sdesc->buf_pos = 0;
-          sdesc->msg_len = 0;
-
-          if(!sdesc)
+          
+          if(!(sdesc = malloc(sizeof(struct socket_desc))))
           {
             close(sock);
           }
           else
           {
-            /* add it to the list */
+            /* initialize */
+            sdesc->buf_pos = 0;
+            sdesc->msg_len = 0;
             sdesc->sock = sock;
 
+            /* add it to the list */
             LIST_ADD(&sdesc->list, tcp_socket_list);
           }
         }
@@ -3345,7 +3349,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         {
           if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
           {
-            /* we don't relay the specified address family so close connection */
+            /* don't relay the specified address family so close connection */
             proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
             debug(DBG_ATTR, "Do not relay family: %s\n", proto);
             close(sock);
@@ -3353,16 +3357,19 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
           else
           {
             debug(DBG_ATTR, "Received TLS over TCP connection\n");
-            sdesc = malloc(sizeof(struct socket_desc));
-
-            if(!sdesc)
+            
+            if(!(sdesc = malloc(sizeof(struct socket_desc))))
             {
               close(sock);
             }
             else
             {
-              /* add it to the list */
+              /* initialize */
+              sdesc->buf_pos = 0;
+              sdesc->msg_len = 0;
               sdesc->sock = sock;
+              
+              /* add it to the list */
               LIST_ADD(&sdesc->list, tcp_socket_list);
             }
           }
@@ -3489,7 +3496,7 @@ int main(int argc, char** argv)
     debug(DBG_ATTR, "SIGPIPE will not be catched\n");
   }
 
-  /* we catch SIGUSR1 and SIGUSR2 to avoid being killed 
+  /* catch SIGUSR1 and SIGUSR2 to avoid being killed 
    * if someone send these signals
    */
   if(sigaction(SIGUSR1, &sa, NULL) == -1)
@@ -3565,7 +3572,7 @@ int main(int argc, char** argv)
   /* check configuration */
   if(!turnserver_cfg_listen_address() && !turnserver_cfg_listen_addressv6())
   {
-    fprintf(stderr, "Configuration error: must configure listen_address and / or listen_addressv6 in configuration file.\n");
+    fprintf(stderr, "Configuration error: must configure listen_address and/or listen_addressv6 in configuration file.\n");
     turnserver_cfg_free();
     /* free the denied address list */
     list_iterate_safe(get, n, &g_denied_address_list)
@@ -3668,14 +3675,14 @@ int main(int argc, char** argv)
   openlog("TurnServer", LOG_PID, LOG_DAEMON);
   syslog(LOG_INFO, "TurnServer start");
 
-  /* some version of getaddrinfo do not prefer IPv6+IPv4 addresses over
+  /* Some versions of getaddrinfo do not prefer IPv6+IPv4 addresses over
    * IPv4 only when passing NULL as "node" parameter.
    * 
-   * Here is a work around that check if we are configured to use IPv6
-   * relaying, if so we force listen to IPv6+IPv4 mode by passing "::" address,
-   * otherwise we force IPv4 only address.
+   * Here is a work around this problem. If TurnServer is configured to use IPv6
+   * relaying, force listen to IPv6+IPv4 by passing "::" address,
+   * otherwise force IPv4 only by passing "0.0.0.0" address.
    *
-   * Note that for *BSD, you have to disable IPV6ONLY socket option (see tls_peer.c)
+   * Note that for *BSD, disable IPV6ONLY socket option (see tls_peer.c)
    * to enable IPv6+IPv4 mode, else "::" address only listen on all IPv6 addresses.
    */
   listen_addr = turnserver_cfg_listen_addressv6() ? "::" : "0.0.0.0";
@@ -3747,7 +3754,7 @@ int main(int argc, char** argv)
   /* initialize rand() */
   srand(time(NULL) + getpid());
 
-  /* drop privileges if we are root */
+  /* drop privileges if program runs as root */
   if(geteuid() == 0 && uid_drop_privileges(getuid(), getgid(), geteuid(), getegid(), turnserver_cfg_unpriv_user()) == -1)
   {
     debug(DBG_ATTR, "Cannot drop privileges\n");
@@ -3854,7 +3861,7 @@ int main(int argc, char** argv)
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
-    /* note we don't care about decrementing account, after all we exit */
+    /* note: don't care about decrementing account, after all program exits */
 
     LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
@@ -3881,7 +3888,7 @@ int main(int argc, char** argv)
     close(sock_tcp);
   }
 
-  /* close TCP socket list */
+  /* close TCP client sockets */
   list_iterate_safe(get, n, &tcp_socket_list)
   {
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);

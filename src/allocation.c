@@ -73,6 +73,12 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   /* copy authentication information */
   ret->username = malloc(len_username + 1);
+  if(!ret->username)
+  {
+    free(ret);
+    return NULL;
+  }
+
   strncpy(ret->username, username, len_username);
   ret->username[len_username] = 0x00;
   memcpy(ret->key, key, 16); /* 16 = MD5 length */
@@ -104,6 +110,7 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
   /* list of channels */
   INIT_LIST(ret->peers_channels);
 
+  /* linked lists, second ones used when timer has expired */
   INIT_LIST(ret->list);
   INIT_LIST(ret->list2);
 
@@ -597,7 +604,7 @@ void allocation_token_list_free(struct list_head* list)
   {
     struct allocation_token* tmp = list_get(get, struct allocation_token, list);
     LIST_DEL(&tmp->list);
-    /* this function will probably be a cleanup so we close the relayed socket */
+    /* this function will probably be a cleanup so close the relayed socket */
     close(tmp->sock);
     allocation_token_free(&tmp);
   }

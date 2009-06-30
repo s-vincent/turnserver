@@ -389,7 +389,7 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid
 
   if(uid_real == 0 || uid_eff == 0) 
   {
-    /* we are root or sudoers */
+    /* program runs as root or sudoers */
     struct passwd user;
     struct passwd* tmpUser = &user;
     struct passwd* tmp = NULL;
@@ -399,7 +399,7 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid
     {
       if(uid_real == uid_eff)
       {
-        /* we are root and no user_name specified,
+        /* runs as root and no user_name specified,
          * cannot drop privileges.
          */
         return -1;
