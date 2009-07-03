@@ -87,7 +87,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.2.3"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.3"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
@@ -3389,7 +3389,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
         saddr_size = sizeof(struct sockaddr_storage);
         daddr_size = sizeof(struct sockaddr_storage);
 
-        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-13 */
+        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-16 */
         nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
         getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
 

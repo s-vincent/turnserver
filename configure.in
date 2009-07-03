@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([turnserver],[0.2.3],[http://www.turnserver.org/])
+AC_INIT([turnserver],[0.3],[http://www.turnserver.org/])
 AC_CONFIG_SRCDIR([src/turn.h])
 AC_CONFIG_HEADER([config.h])
 
@@ -56,7 +56,7 @@ DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN(turnserver, Doxyfile)
 
-AM_INIT_AUTOMAKE(turnserver, 0.2.3)
+AM_INIT_AUTOMAKE(turnserver, 0.3)
 
 # Checks for library functions.
 AC_FUNC_FORK
