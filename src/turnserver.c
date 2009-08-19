@@ -1559,8 +1559,12 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   ssize_t nb = -1;
+  uint8_t key[16];
 
   debug(DBG_ATTR, "Refresh request received!\n");
+
+  /* save key from allocation as it could be freed if lifetime equals 0 */
+  memcpy(key, desc->key, sizeof(desc->key));
 
   /* draft-ietf-behave-turn-ipv6-06: at this stage server knows the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
@@ -1607,7 +1611,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   if(!(hdr = turn_msg_refresh_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
     return -1;
   }
   index++;
@@ -1615,7 +1619,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -1628,10 +1632,10 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     index++;
   }
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
+  if(turn_add_message_integrity(iov, &index, key, sizeof(desc->key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
     return -1;
   }
 
