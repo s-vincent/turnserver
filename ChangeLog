@@ -1,7 +1,12 @@
 2009-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-  * Version 0.3   - Add turn-ipv6-06 draft support;
-                  - Add turn-16 draft support.
+  * Version 0.3
+
+2009-08-26  Sebastien Vincent <sebastien.vincent@turnserver.org>
+
+  * Version 0.2.3 - Add turn-ipv6-06 draft support;
+                  - Add turn-16 draft support;
+                  - Fix lifetime bug.
 
 2009-03-09  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
