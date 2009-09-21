@@ -180,7 +180,7 @@ AC_DEFUN([DX_INIT_DOXYGEN], [
 # Files:
 AC_SUBST([DX_PROJECT], [$1])
 AC_SUBST([DX_CONFIG], [ifelse([$2], [], Doxyfile, [$2])])
-AC_SUBST([DX_DOCDIR], [ifelse([$3], [], doxygen-doc, [$3])])
+AC_SUBST([DX_DOCDIR], [ifelse([$3], [], doc/html, [$3])])
 
 # Environment variables used inside doxygen.cfg:
 DX_ENV_APPEND(SRCDIR, $srcdir)

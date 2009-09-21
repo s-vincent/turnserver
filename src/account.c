@@ -31,7 +31,7 @@
 
 /**
  * \file account.c
- * \brief Account on TURN server (i.e. user).
+ * \brief Account on TURN server.
  * \author Sebastien Vincent
  * \date 2008-2009
  */
