@@ -330,11 +330,10 @@ static void turnserver_print_help(const char* name, const char* version)
  * \param argc number of argument
  * \param argv array of argument
  * \param configuration_file configuration (-c) argument will be filled in if any
- * \return 0 if success, -1 otherwise
  */
 static void turnserver_parse_cmdline(int argc, char** argv, char** configuration_file)
 {
-  static char* optstr = "c:hv";
+  static const char* optstr = "c:hv";
   int s = 0;
 
   while((s = getopt(argc, argv, optstr)) != -1)
@@ -347,7 +346,7 @@ static void turnserver_parse_cmdline(int argc, char** argv, char** configuration
         break;
       case 'v': /* version */
         fprintf(stdout, "TurnServer %s\n", PACKAGE_VERSION);
-        fprintf(stdout, "Copyright (C) 2008 Sebastien Vincent.\n");
+        fprintf(stdout, "Copyright (C) 2008-2009 Sebastien Vincent.\n");
         fprintf(stdout, "This is free software; see the source for copying conditions.  There is NO\n");
         fprintf(stdout, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
         exit(EXIT_SUCCESS);
