@@ -1517,7 +1517,6 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
   struct turn_msg_hdr* hdr = NULL;
   ssize_t len = 0; /* attributes length */
   const char* ptr = msg;
-  int ret = 0;
   size_t unknown_index = 0;
   size_t xor_peer_address_nb = 0; /* count of XOR-PEER-ADDRESS attribute */
 
@@ -1680,7 +1679,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
 
   *unknown_size = unknown_index; 
 
-  return ret;
+  return 0; 
 }
 
 #ifdef __cplusplus

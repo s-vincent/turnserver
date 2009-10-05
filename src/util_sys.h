@@ -159,7 +159,7 @@ typedef struct sfd_set
  * \def SFD_ZERO
  * \brief FD_ZERO wrapper.
  */
-#define SFD_ZERO(set) memset((set), 0x00, sizeof(sfd_set)/sizeof(fd_mask))
+#define SFD_ZERO(set) memset((set), 0x00, sizeof(sfd_set) / sizeof(fd_mask))
 
 /**
  * \def SFD_SET

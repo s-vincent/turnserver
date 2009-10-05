@@ -141,7 +141,7 @@ void tls_peer_free(struct tls_peer** peer);
  * \param addrlen sizeof address
  * \return bytes sent or -1 if error(s)
  */
-int tls_peer_write(struct tls_peer* peer, const char* buf, size_t buflen, const struct sockaddr* addr, socklen_t addrlen);
+ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, size_t buflen, const struct sockaddr* addr, socklen_t addrlen);
 
 /**
  * \brief Read a message using TLS for TCP use only.
@@ -157,7 +157,7 @@ int tls_peer_write(struct tls_peer* peer, const char* buf, size_t buflen, const 
  * \note Before calling this function, the caller must have recv() data.
  * \warning TCP use only!
  */
-int tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen, int sock);
+ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen, int sock);
 
 /**
  * \brief Read a message using TLS for UDP use only.
@@ -172,7 +172,7 @@ int tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* buf
  * \note Before calling this function, the caller must have recvfrom() data.
  * \warning UDP use only!
  */
-int tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen);
+ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen);
 
 /**
  * \brief Do the (D)TLS handshake.
