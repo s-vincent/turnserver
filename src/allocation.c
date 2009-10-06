@@ -50,7 +50,10 @@
 #include "allocation.h"
 #include "turnserver.h"
 
-struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
+struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username,
+                                            const unsigned char* key, const char* realm, const unsigned char* nonce,
+                                            const struct sockaddr* relayed_addr, const struct sockaddr* server_addr,
+                                            const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
 {
   struct allocation_desc* ret = NULL;
   size_t len_username = 0;
@@ -465,7 +468,8 @@ struct allocation_desc* allocation_list_find_id(struct list_head* list, const ui
   return NULL;
 }
 
-struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int transport_protocol, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size)
+struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int transport_protocol, const struct sockaddr* server_addr,
+                                                   const struct sockaddr* client_addr, socklen_t addr_size)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;

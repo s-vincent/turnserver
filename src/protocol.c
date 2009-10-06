@@ -131,7 +131,8 @@ static struct turn_attr_hdr* turn_attr_address_create(uint16_t type, const struc
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
-static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
+static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const struct sockaddr* address, uint32_t cookie,
+                                                          const uint8_t* id, struct iovec* iov)
 {
   struct turn_attr_xor_mapped_address* ret = NULL; /* XOR-MAPPED-ADDRESS are the same as XOR-PEER-ADDRESS and XOR-RELAYED-ADDRESS */
   size_t len = 0;
@@ -472,7 +473,8 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknown_attributes, size_t attr_size, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknown_attributes, size_t attr_size,
+                                                          struct iovec* iov)
 {
   size_t len = 0;
   size_t tmp_len = 0;
@@ -582,7 +584,8 @@ struct turn_attr_hdr* turn_attr_nonce_create(const uint8_t* nonce, size_t len, s
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_xor_mapped_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_mapped_address_create(const struct sockaddr* address, uint32_t cookie,
+                                                          const uint8_t* id, struct iovec* iov)
 {
   return turn_attr_xor_address_create(STUN_ATTR_XOR_MAPPED_ADDRESS, address, cookie, id, iov);
 }
@@ -685,7 +688,8 @@ struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime, struct iovec*
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* address, uint32_t cookie,
+                                                        const uint8_t* id, struct iovec* iov)
 {
   return turn_attr_xor_address_create(TURN_ATTR_XOR_PEER_ADDRESS, address, cookie, id, iov);
 }
@@ -717,7 +721,8 @@ struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, st
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_xor_relayed_address_create(const struct sockaddr* address, uint32_t cookie, const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_relayed_address_create(const struct sockaddr* address, uint32_t cookie,
+                                                           const uint8_t* id, struct iovec* iov)
 {
   return turn_attr_xor_address_create(TURN_ATTR_XOR_RELAYED_ADDRESS, address, cookie, id, iov);
 }
@@ -843,7 +848,8 @@ struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, const char* realm, const uint8_t* nonce, size_t nonce_len, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, const char* realm, const uint8_t* nonce,
+                                            size_t nonce_len, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -885,7 +891,8 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, cons
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, const uint16_t* unknown, size_t unknown_size, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, const uint16_t* unknown, size_t unknown_size,
+                                             struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -916,7 +923,8 @@ struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, cons
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, const char* realm, const uint8_t* nonce, size_t nonce_len, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, const char* realm, const uint8_t* nonce,
+                                             size_t nonce_len, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1212,7 +1220,8 @@ int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen)
   return len;
 }
 
-int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen)
+int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t addr_size, size_t total_len,
+                  const struct iovec* iov, size_t iovlen)
 {
   char* buf = NULL;
   char* p = NULL;
@@ -1249,7 +1258,8 @@ int turn_generate_transaction_id(uint8_t* id)
   return random_bytes_generate(id, 12);
 }
 
-int turn_calculate_authentication_key(const char* username, const char* realm, const char* password, unsigned char* key, size_t key_len)
+int turn_calculate_authentication_key(const char* username, const char* realm, const char* password, unsigned char* key,
+                                      size_t key_len)
 {
   MD5_CTX ctx;
 
@@ -1269,7 +1279,8 @@ int turn_calculate_authentication_key(const char* username, const char* realm, c
   return 0;
 }
 
-int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const unsigned char* key, size_t key_len, unsigned char* integrity)
+int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const unsigned char* key, size_t key_len,
+                                  unsigned char* integrity)
 {
   HMAC_CTX ctx;
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -1284,7 +1295,9 @@ int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const un
 
   return 0;
 }
-int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, const unsigned char* key, size_t key_len, unsigned char* integrity)
+
+int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, const unsigned char* key,
+                                      size_t key_len, unsigned char* integrity)
 {
   HMAC_CTX ctx;
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -1512,7 +1525,8 @@ int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
   return 0;
 }
 
-int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown, size_t* unknown_size)
+int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown,
+                       size_t* unknown_size)
 {
   struct turn_msg_hdr* hdr = NULL;
   ssize_t len = 0; /* attributes length */

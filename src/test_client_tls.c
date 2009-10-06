@@ -350,7 +350,8 @@ int main(int argc, char** argv)
       message.msg->turn_msg_len = ntohs(message.msg->turn_msg_len) - sizeof(struct turn_attr_fingerprint);
 
       message.msg->turn_msg_len = htons(message.msg->turn_msg_len);
-      turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint) - sizeof(struct turn_attr_message_integrity), md_buf, sizeof(md_buf), hash);
+      turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint) - sizeof(struct turn_attr_message_integrity),
+                                    md_buf, sizeof(md_buf), hash);
 
       /* restore length */
       message.msg->turn_msg_len = len_save;

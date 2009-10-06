@@ -548,7 +548,9 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
  * \note Some error codes cannot be sent using this function (420, 438, ...).
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer, unsigned char* key)
+static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error,
+                                 const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer,
+                                 unsigned char* key)
 {
   struct iovec iov[16]; /* should be sufficient */
   struct turn_msg_hdr* hdr = NULL;
@@ -627,7 +629,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   /* finally send the response */
   if(speer) /* TLS */
   {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index);
+    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr),
+                       iov, index);
   }
   else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
@@ -657,7 +660,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_binding_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
+static int turnserver_process_binding_request(int transport_protocol, int sock, const struct turn_message* message,
+                                              const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
 {
   struct iovec iov[4]; /* header, software, xor-address, fingerprint */
   size_t index = 0;
@@ -743,7 +747,9 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
  * \param allocation_list list of allocations
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_channeldata(int transport_protocol, uint16_t channel_number, const char* buf, ssize_t buflen, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list)
+static int turnserver_process_channeldata(int transport_protocol, uint16_t channel_number, const char* buf, ssize_t buflen,
+                                          const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
+                                          struct list_head* allocation_list)
 {
   struct allocation_desc* desc = NULL;
   struct turn_channel_data* channel_data = NULL;
@@ -1111,7 +1117,9 @@ static int turnserver_process_send_indication(const struct turn_message* message
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_createpermission_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
+static int turnserver_process_createpermission_request(int transport_protocol, int sock, const struct turn_message* message,
+                                                       const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc,
+                                                       struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1250,7 +1258,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
     inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
-    syslog(LOG_INFO, "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
+    syslog(LOG_INFO, "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s",
+           transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
 
     /* find a permission */
     alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
@@ -1326,7 +1335,9 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_channelbind_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
+static int turnserver_process_channelbind_request(int transport_protocol, int sock, const struct turn_message* message,
+                                                  const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc,
+                                                  struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1473,7 +1484,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
   }
 
-  syslog(LOG_INFO, "ChannelBind transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str, peer_port);
+  syslog(LOG_INFO, "ChannelBind transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u",
+         transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str, peer_port);
 
   /* find a permission */
   alloc_permission = allocation_desc_find_permission(desc, family, peer_addr);
@@ -1548,7 +1560,9 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_refresh_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list, struct allocation_desc* desc, struct account_desc* account, struct tls_peer* speer)
+static int turnserver_process_refresh_request(int transport_protocol, int sock, const struct turn_message* message,
+                                              const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list,
+                                              struct allocation_desc* desc, struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1676,7 +1690,9 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_allocate_request(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+static int turnserver_process_allocate_request(int transport_protocol, int sock, const struct turn_message* message,
+                                               const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
+                                               struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
 {
   struct allocation_desc* desc = NULL;
   struct itimerspec t; /* time before expire */
@@ -1742,7 +1758,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(account->allocations >= turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded => error 486 */
-    syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2, account->username);
+    syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s quota exceeded",
+           transport_protocol, speer ? 1 : 0, str2, port2, account->username);
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
     return -1;
   }
@@ -1997,7 +2014,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     port = ntohs(((struct sockaddr_in6*)&relayed_addr)->sin6_port);
   }
 
-  desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm, message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
+  desc = allocation_desc_new(message->msg->turn_msg_id, transport_protocol, account->username, account->key, account->realm,
+         message->nonce->turn_attr_nonce, (struct sockaddr*)&relayed_addr, daddr, saddr, sizeof(struct sockaddr_storage), lifetime);
 
   if(!desc)
   {
@@ -2021,7 +2039,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     desc->relayed_tls = 1;
   }
 
-  syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u", transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
+  syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u",
+         transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
 
   /* assign the sockets to the allocation */
   desc->relayed_sock = relayed_sock;
@@ -2156,7 +2175,9 @@ send_success_response:
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
  * \return 0 if success, -1 otherwise
  */
-static int turnserver_process_turn(int transport_protocol, int sock, const struct turn_message* message, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+static int turnserver_process_turn(int transport_protocol, int sock, const struct turn_message* message,
+                                  const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
+                                  struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = 0;
   uint16_t method = 0;
@@ -2269,7 +2290,9 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
  * \param speer TLS peer if not NULL, the server accept TLS connection
  * \return 0 if message processed correctly, -1 otherwise
  */
-static int turnserver_listen_recv(int transport_protocol, int sock, const char* buf, ssize_t buflen, const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+static int turnserver_listen_recv(int transport_protocol, int sock, const char* buf, ssize_t buflen,
+                                  const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
+                                  struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
 {
   struct turn_message message;
   uint16_t unknown[32];
@@ -2447,7 +2470,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       return 0;
     }
 
-    if(turn_nonce_is_stale(message.nonce->turn_attr_nonce, ntohs(message.nonce->turn_attr_len), (unsigned char*)turnserver_cfg_nonce_key(), strlen(turnserver_cfg_nonce_key())))
+    if(turn_nonce_is_stale(message.nonce->turn_attr_nonce, ntohs(message.nonce->turn_attr_len),
+       (unsigned char*)turnserver_cfg_nonce_key(), strlen(turnserver_cfg_nonce_key())))
     {
       /* nonce staled => error 438 */
       struct iovec iov[5]; /* header, error-code, realm, nonce, software */
@@ -2590,14 +2614,16 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         message.msg->turn_msg_len = ntohs(message.msg->turn_msg_len) - sizeof(struct turn_attr_fingerprint);
 
         message.msg->turn_msg_len = htons(message.msg->turn_msg_len);
-        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint) - sizeof(struct turn_attr_message_integrity), account->key, sizeof(account->key), hash);
+        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_fingerprint) - sizeof(struct turn_attr_message_integrity),
+                                      account->key, sizeof(account->key), hash);
 
         /* restore length */
         message.msg->turn_msg_len = len_save;
       }
       else
       {
-        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len -  sizeof(struct turn_attr_message_integrity), account->key, sizeof(account->key), hash);
+        turn_calculate_integrity_hmac((const unsigned char*)buf, total_len - sizeof(struct turn_attr_message_integrity),
+                                      account->key, sizeof(account->key), hash);
       }
 
       if(memcmp(hash, message.message_integrity->turn_attr_hmac, 20) != 0)
@@ -2725,7 +2751,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
  * \param speer TLS peer, if not NULL, message is relayed in TLS
  * \return 0 if message processed correctly, -1 otherwise
  */
-static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct tls_peer* speer)
+static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct sockaddr* saddr, struct sockaddr* daddr,
+                                   socklen_t saddr_size, struct list_head* allocation_list, struct tls_peer* speer)
 {
   struct allocation_desc* desc = NULL;
   uint8_t peer_addr[16];
@@ -2934,7 +2961,9 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
  * \param account_list list of accounts
  * \param speer TLS peer if not NULL, the server accept TLS connection
  */
-static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct socket_desc* sock, struct sockaddr* saddr, struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct socket_desc* sock, struct sockaddr* saddr,
+                                          struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list,
+                                          struct list_head* account_list, struct tls_peer* speer)
 {
   char* tmp_buf = NULL;
   size_t tmp_len = 0;
@@ -3095,7 +3124,8 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
  * \param account_list list of accounts
  * \param speer TLS peer if not NULL, the server accept TLS connection
  */
-static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_socket_list, struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_socket_list,
+                            struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
 {
   struct list_head* n = NULL;
   struct list_head* get = NULL;
@@ -3227,7 +3257,8 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family: %s\n", proto);
         }
-        else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, NULL) == -1)
+        else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr,
+                saddr_size, allocation_list, account_list, NULL) == -1)
         {
           debug(DBG_ATTR, "Bad STUN/TURN message or permission problem\n");
         }

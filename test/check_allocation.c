@@ -92,11 +92,13 @@ START_TEST(test_allocation_list)
   INIT_LIST(allocation_list);
 
   /* create a valid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr, (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr,
+                            (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* create a valid allocation descriptor */
-  ret2 = allocation_desc_new(id2, IPPROTO_UDP, "login2", key, realm, nonce, (struct sockaddr*)&relayed_addr2, (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr2, sizeof(client_addr2), 3600);
+  ret2 = allocation_desc_new(id2, IPPROTO_UDP, "login2", key, realm, nonce, (struct sockaddr*)&relayed_addr2,
+                             (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr2, sizeof(client_addr2), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   allocation_list_add(&allocation_list, ret);
@@ -145,7 +147,8 @@ START_TEST(test_allocation_add)
   relayed_addr.sin_port = htons(48000);
 
   /* create a valid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr, (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr,
+                            (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* add a permission */
@@ -208,7 +211,8 @@ START_TEST(test_allocation_create)
   relayed_addr.sin_port = htons(48000);
 
   /* create a valid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr, (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr,
+                            (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* free it */
@@ -216,7 +220,8 @@ START_TEST(test_allocation_create)
   fail_unless(ret == NULL, "allocation_desc_free does not set to NULL!");
 
   /* create a invalid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, NULL, (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, NULL, (struct sockaddr*)&server_addr,
+                            (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
 }
 END_TEST
