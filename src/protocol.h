@@ -264,7 +264,7 @@ struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len, struct iovec
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_binding_request_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_binding_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a STUN Binding Response.
@@ -273,7 +273,7 @@ struct turn_msg_hdr* turn_msg_binding_request_create(size_t len, const uint8_t* 
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_binding_response_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_binding_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a STUN Binding Error.
@@ -282,7 +282,7 @@ struct turn_msg_hdr* turn_msg_binding_response_create(size_t len, const uint8_t*
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_binding_error_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_binding_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Allocate Request.
@@ -291,7 +291,7 @@ struct turn_msg_hdr* turn_msg_binding_error_create(size_t len, const uint8_t* id
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_allocate_request_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_allocate_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Allocate Response.
@@ -300,7 +300,7 @@ struct turn_msg_hdr* turn_msg_allocate_request_create(size_t len, const uint8_t*
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_allocate_response_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_allocate_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Allocate Error.
@@ -309,7 +309,7 @@ struct turn_msg_hdr* turn_msg_allocate_response_create(size_t len, const uint8_t
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_allocate_error_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_allocate_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Refresh Request.
@@ -318,7 +318,7 @@ struct turn_msg_hdr* turn_msg_allocate_error_create(size_t len, const uint8_t* i
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_refresh_request_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_refresh_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Refresh Response.
@@ -327,7 +327,7 @@ struct turn_msg_hdr* turn_msg_refresh_request_create(size_t len, const uint8_t* 
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_refresh_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Refresh Error.
@@ -336,7 +336,7 @@ struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t*
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_refresh_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN CreatePermission Request.
@@ -345,7 +345,7 @@ struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_createpermission_request_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_createpermission_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN CreatePermission Response.
@@ -354,7 +354,7 @@ struct turn_msg_hdr* turn_msg_createpermission_request_create(size_t len, const 
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_createpermission_response_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_createpermission_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN CreatePermission Error.
@@ -363,7 +363,7 @@ struct turn_msg_hdr* turn_msg_createpermission_response_create(size_t len, const
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_createpermission_error_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_createpermission_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN ChannelBind Request.
@@ -372,7 +372,7 @@ struct turn_msg_hdr* turn_msg_createpermission_error_create(size_t len, const ui
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_channelbind_request_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_channelbind_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN ChannelBind Response.
@@ -381,7 +381,7 @@ struct turn_msg_hdr* turn_msg_channelbind_request_create(size_t len, const uint8
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_channelbind_response_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_channelbind_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN ChannelBind Error.
@@ -390,7 +390,7 @@ struct turn_msg_hdr* turn_msg_channelbind_response_create(size_t len, const uint
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_channelbind_error_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_channelbind_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Send Indication.
@@ -399,7 +399,7 @@ struct turn_msg_hdr* turn_msg_channelbind_error_create(size_t len, const uint8_t
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_send_indication_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_send_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a TURN Data Indication.
@@ -408,7 +408,7 @@ struct turn_msg_hdr* turn_msg_send_indication_create(size_t len, const uint8_t* 
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
  */
-struct turn_msg_hdr* turn_msg_data_indication_create(size_t len, const uint8_t* id, struct iovec* iov);
+struct turn_msg_hdr* turn_msg_data_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
  * \brief Create a MAPPED-ADDRESS attribute.

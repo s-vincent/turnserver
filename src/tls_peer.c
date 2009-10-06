@@ -230,7 +230,7 @@ static void tls_peer_clear_connection(struct tls_peer* peer)
  * \param ssl SSL peer concerned
  * \param err the error number
  */
-static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl, unsigned long err)
+static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl, int err)
 {
   switch (err)
   {
@@ -390,11 +390,11 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
  * \param speer SSL peer
  * \return number of bytes read or -1 if error or handshake not finalized
  */
-static ssize_t tls_peer_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, struct ssl_peer* speer)
+static ssize_t tls_peer_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen, struct ssl_peer* speer)
 {
   BIO* bio_read = NULL;
-  int len = -1;
-  unsigned long err = 0;
+  ssize_t len = -1;
+  int err = 0;
 
   /* printf("tls_peer_read\n"); */
 
@@ -488,6 +488,7 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
       if(FD_ISSET(peer->sock, &fdsr))
       {
         ssize_t nb = -1;
+
         if(peer->type == UDP)
         {
           nb = recvfrom(peer->sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr2, &daddr_size);
@@ -520,7 +521,7 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
   return (ret > 0) ? 0 : -1;
 }
 
-ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen, int sock)
+ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen, int sock)
 {
   struct ssl_peer* speer = NULL;
 
@@ -560,7 +561,7 @@ ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, size_t buflen, char*
   return tls_peer_read(peer, buf, buflen, bufout, bufoutlen, speer);
 }
 
-ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char* bufout, size_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen)
+ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen)
 {
   struct ssl_peer* speer = NULL;
 
@@ -604,11 +605,11 @@ ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, size_t buflen, char*
   return tls_peer_read(peer, buf, buflen, bufout, bufoutlen, speer);
 }
 
-ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, size_t buflen, const struct sockaddr* addr, socklen_t addrlen)
+ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen, const struct sockaddr* addr, socklen_t addrlen)
 {
   BIO* bio_write = NULL;
-  int len = -1;
-  unsigned long err = 0;
+  ssize_t len = -1;
+  int err = 0;
   struct ssl_peer* speer = NULL;
 
   /* printf("tls_write\n"); */

@@ -762,7 +762,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   channel_data = (struct turn_channel_data*)buf;
   len = ntohs(channel_data->turn_channel_len);
 
-  if(len > buflen - sizeof(struct turn_channel_data))
+  if(len > (buflen - sizeof(struct turn_channel_data)))
   {
     /* length mismatch */
     debug(DBG_ATTR, "Length too big\n");
@@ -2277,7 +2277,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   struct account_desc* account = NULL;
   uint16_t method = 0;
   uint16_t hdr_msg_type = 0;
-  uint16_t total_len = 0;
+  size_t total_len = 0;
   uint16_t type = 0;
   ssize_t nb = -1;
 

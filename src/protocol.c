@@ -257,89 +257,89 @@ struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len, struct iovec
 
 /* STUN messages */
 
-struct turn_msg_hdr* turn_msg_binding_request_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_binding_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((STUN_METHOD_BINDING | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_binding_response_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_binding_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((STUN_METHOD_BINDING | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_binding_error_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_binding_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((STUN_METHOD_BINDING | STUN_ERROR_RESP), len, id, iov);
 }
 
 /* TURN messages */
 
-struct turn_msg_hdr* turn_msg_allocate_request_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_allocate_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_ALLOCATE | STUN_REQUEST) , len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_allocate_response_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_allocate_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_ALLOCATE | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_allocate_error_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_allocate_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_ALLOCATE | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_send_indication_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_send_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_SEND | STUN_INDICATION), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_data_indication_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_data_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_DATA | STUN_INDICATION), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_refresh_request_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_refresh_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_refresh_response_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_refresh_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_refresh_error_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_refresh_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_createpermission_request_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_createpermission_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_createpermission_response_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_createpermission_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_createpermission_error_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_createpermission_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_channelbind_request_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_channelbind_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_channelbind_response_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_channelbind_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_channelbind_error_create(size_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_channelbind_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_ERROR_RESP), len, id, iov);
 }
