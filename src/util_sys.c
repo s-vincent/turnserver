@@ -283,7 +283,6 @@ char* strdup(const char* str)
 #endif
 
 #ifdef _WIN32
-
 ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size)
 {
   /* it should be sufficient,

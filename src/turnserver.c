@@ -69,18 +69,24 @@
 #include "dbg.h"
 #include "turnserver.h"
 
+#ifndef HAVE_SIGACTION
+/* expiration stuff use real-time signals
+ * that can only be handled by sigaction 
+ * so stop compilation with error
+ */
+#error "Must have sigaction."
+#endif
+
 /* for operating systems that support setting 
  * DF flag from userspace, give them a
  * #define OS_SET_DF_SUPPORT
  */
 #if defined(__linux__)
-
 /**
  * \def OS_SET_DF_SUPPORT
  * \brief Current operating system can set the DF flag.
  */
 #define OS_SET_DF_SUPPORT 1
-
 #endif
 
 /**
@@ -366,6 +372,10 @@ static void turnserver_parse_cmdline(int argc, char** argv, char** configuration
 
 /**
  * \brief Disable core dump if the server crash.
+ *
+ * Typically it is used in release mode. It prevents
+ * user/attacker to have access to core dump which could
+ * contains some sensitive data.
  */
 static void turnserver_disable_core_dump(void)
 {
@@ -379,17 +389,19 @@ static void turnserver_disable_core_dump(void)
 #endif
 
 /**
- * \brief Check bandwidth limitation.
+ * \brief Check bandwidth limitation on uplink OR downlink.
  * \param desc allocation descriptor
- * \param byteup byte received on uplink connection
- * \param bytedown byte received on downlink connection
+ * \param byteup byte received on uplink connection. 0 means 
+ * bandwidth check will be made on downlink (if different than 0)
+ * \param bytedown byte received on downlink connection. 0 means 
+ * bandwidth check will be made on uplink (if different than 0)
  * \return 1 if bandwidth threshold is exceeded, 0 otherwise
  */
 static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t byteup, size_t bytedown)
 {
   struct timeval now;
   unsigned long diff = 0;
-  double d = turnserver_cfg_bandwidth_per_allocation();
+  unsigned long d = turnserver_cfg_bandwidth_per_allocation();
 
   if(d <= 0)
   {
@@ -404,6 +416,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
   {
     if(desc->bucket_tokenup < desc->bucket_capacity)
     {
+      /* count in milliseconds */
       diff = (now.tv_sec - desc->last_timeup.tv_sec) * 1000 + (now.tv_usec - desc->last_timeup.tv_usec) / 1000;
       d *= diff;
       desc->bucket_tokenup = MIN(desc->bucket_capacity, desc->bucket_tokenup + d);
@@ -422,11 +435,11 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
       return 1;
     }
   }
-
-  if(bytedown)
+  else if(bytedown)
   {
     if(desc->bucket_tokendown < desc->bucket_capacity)
     {
+      /* count in milliseconds */
       diff = (now.tv_sec - desc->last_timedown.tv_sec) * 1000 + (now.tv_usec - desc->last_timedown.tv_usec) / 1000;
       d *= diff;
       desc->bucket_tokendown = MIN(desc->bucket_capacity, desc->bucket_tokendown + d);
@@ -535,7 +548,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
 }
 
 /**
- * \brief Send an Error Response.
+ * \brief Send a TURN Error response.
  * \param transport_protocol transport protocol to send the message
  * \param sock socket
  * \param method STUN/TURN method
@@ -651,7 +664,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
 }
 
 /** 
- * \brief Process a STUN Binding Request.
+ * \brief Process a STUN Binding request.
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -875,7 +888,8 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
       optlen = 0;
     }
 #else
-    optval = 0; /* avoid compilation warning */
+    /* avoid compilation warning */
+    optval = 0;
     optlen = 0;
 #endif
 
@@ -891,7 +905,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   else /* TCP */
   {
     /* Relaying with TCP is not in the standard TURN specification.
-     * draft-ietf-behave-turn-tcp-02 specify a TURN extension to do this.
+     * draft-ietf-behave-turn-tcp-04 specify a TURN extension to do this.
      * It is currently not supported.
      */
     return -1;
@@ -1074,7 +1088,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
         optlen = 0;
       }
 #else
-      optval = 0; /* avoid compilation warning */
+      /* avoid compilation warning */
+      optval = 0;
       optlen = 0;
 #endif
 
@@ -1090,7 +1105,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
     else /* TCP */
     {
       /* Relaying with TCP is not in the standard TURN specification.
-       * draft-ietf-behave-turn-tcp-02 specify a TURN extension to do this.
+       * draft-ietf-behave-turn-tcp-04 specify a TURN extension to do this.
        * It is currently not supported.
        */
       return -1;
@@ -1220,8 +1235,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
     inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
-    /* if one of the addresses is denied, directly send a CreatePermission 
-     * error response.
+    /* if one of the addresses is denied, directly send
+     * a CreatePermission error response.
      */
     if(turnserver_is_address_denied(peer_addr, len, peer_port))
     {
@@ -2052,7 +2067,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   /* send back the success response */
 send_success_response:
   {
-    /* header, relayed-address, lifetime, reservation-token (if any), xor-mapped-address, username, software, message-integrity, fingerprint */
+    /* header, relayed-address, lifetime, reservation-token (if any),
+     * xor-mapped-address, username, software, message-integrity, fingerprint
+     */
     struct iovec iov[12]; 
     struct turn_msg_hdr* hdr = NULL;
     struct turn_attr_hdr* attr = NULL;
@@ -2194,7 +2211,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     return turnserver_process_binding_request(transport_protocol, sock, message, saddr, saddr_size, speer);
   }
 
-  /* check the 5-tuple except for an Allocate Request */
+  /* check the 5-tuple except for an Allocate request */
   if(!(STUN_IS_REQUEST(hdr_msg_type) && (STUN_GET_METHOD(hdr_msg_type) == TURN_METHOD_ALLOCATE)))
   {
     desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size);
@@ -2227,7 +2244,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
       /* check to prevent hijacking the client's allocation */
       size_t len = strlen(account->username);
       if(len != ntohs(message->username->turn_attr_len) ||
-          strncmp((char*)message->username->turn_attr_username, account->username, len))
+         strncmp((char*)message->username->turn_attr_username, account->username, len))
       {
         /* credentials do not match with those used for allocation => error 441 */
         debug(DBG_ATTR, "Wrong credentials!\n");
@@ -3148,7 +3165,7 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
   max_fd = SFD_SETSIZE;
 
-  if(max_fd == -1)
+  if(max_fd <= 0)
   {
     /* should not happen on a POSIX.1 compliant-system */
     g_run = 0;
@@ -3487,6 +3504,7 @@ int main(int argc, char** argv)
   struct tls_peer* speer = NULL;
   char* configuration_file = NULL;
   char* listen_addr = NULL;
+  struct sigaction sa;
 
   /* initialize lists */
   INIT_LIST(allocation_list);
@@ -3506,10 +3524,6 @@ int main(int argc, char** argv)
   debug(DBG_ATTR, "Disable core dump\n");
   turnserver_disable_core_dump();
 #endif 
-
-#ifdef HAVE_SIGACTION
-
-  struct sigaction sa;
 
   sa.sa_handler = signal_handler;
   sigemptyset(&sa.sa_mask);
@@ -3548,6 +3562,9 @@ int main(int argc, char** argv)
   sa.sa_sigaction = realtime_signal_handler;
   sa.sa_flags = SA_SIGINFO;
 
+  /* as TurnServer uses these signals for expiration
+   * stuff, exit if they cannot be handled by signal handler
+   */
   if(sigaction(SIGRT_EXPIRE_ALLOCATION, &sa, NULL) == -1)
   {
     debug(DBG_ATTR, "SIGRT_EXPIRE_ALLOCATION will not be catched\n");
@@ -3571,10 +3588,6 @@ int main(int argc, char** argv)
     debug(DBG_ATTR, "SIGRT_EXPIRE_TOKEN will not be catched\n");
     exit(EXIT_FAILURE);
   }
-
-#else
-#error "Must have sigaction."
-#endif
 
   /* parse the arguments */
   turnserver_parse_cmdline(argc, argv, &configuration_file);
@@ -3633,6 +3646,9 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
+  /* check if certificates and key stuff are in configuration file 
+   * if TLS is used
+   */
   if(turnserver_cfg_tls() && (!turnserver_cfg_ca_file() || !turnserver_cfg_cert_file() || !turnserver_cfg_private_key_file()))
   {
     fprintf(stderr, "Configuration error: TLS enabled but some elements are missing (cert file, ...).\n");
@@ -3731,6 +3747,7 @@ int main(int argc, char** argv)
     syslog(LOG_ERR, "UDP socket creation failed");
   }
 
+  /* TCP socket */
   sock_tcp = socket_create(IPPROTO_TCP, listen_addr, turnserver_cfg_tcp_port());
 
   if(sock_tcp > 0)
@@ -3944,6 +3961,7 @@ int main(int argc, char** argv)
   /* free the token list */
   allocation_token_list_free(&g_token_list);
 
+  /* close TLS socket */
   if(turnserver_cfg_tls())
   {
     /* close TLS socket */

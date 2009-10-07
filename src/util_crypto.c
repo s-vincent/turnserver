@@ -144,6 +144,7 @@ int md5_generate(unsigned char* hash, const unsigned char* text, size_t len)
 int hmac_sha1_generate(unsigned char* hash, const unsigned char* text, size_t text_len, const unsigned char* key, size_t key_len)
 {
   unsigned int md_len = SHA_DIGEST_LENGTH;
+
   if(!HMAC(EVP_sha1(), key, key_len, text, text_len, hash, &md_len))
   {
     return -1;
@@ -155,6 +156,7 @@ int hmac_sha1_generate(unsigned char* hash, const unsigned char* text, size_t te
 int hmac_md5_generate(unsigned char* hash, const unsigned char* text, size_t text_len, const unsigned char* key, size_t key_len)
 {
   unsigned int md_len = MD5_DIGEST_LENGTH;
+
   if(!HMAC(EVP_md5(), key, key_len, text, text_len, hash, &md_len))
   {
     return -1;
@@ -175,9 +177,9 @@ void digest_print(const unsigned char* buf, size_t len)
 
   for(i = 0 ; i < len ; i++)
   {
-    sprintf(&res[i*2], "%02x", buf[i]);
+    sprintf(&res[i * 2], "%02x", buf[i]);
   }
-  res[i*2] = 0x00;
+  res[i * 2] = 0x00;
 
   fprintf(stderr, "%s\n", res);
 }

@@ -9,8 +9,8 @@ of tabs.
 
 void foo(int barc, char** barv)
 {
-  int test = 0;
-  int i = 0;
+  unsigned int test = 0;
+  size_t i = 0;
   int run = 0;
 
   if(test)
@@ -55,21 +55,22 @@ The code has to follow these recommendations:
 - Put "static" keyword if functions / global variables are not used outside C file (not in header file);
 - Try to avoid static variables in functions (try to make reentrant things);
 - Prefer using size_t/ssize_t instead of int/unsigned int when possible;
-- Use "const" keyword for pointer and reference if they should not been modified in function;
+- Use "const" keyword for pointers if they should not been modified in function;
+- Put a space before and after operator +/-* i.e. a + b - (c * 5) / 3);
 - Put an empty line at the end of each file.
 
 Naming has to follow these recommendations:
 - File name has to be in lower case, words are separated by "_";
 - Structure and function name has to be in lower case, words are separated by a "_" character (my_structure, my_function);
-- Each global variable must be prefixed with "g_".
+- Each global variable must be prefixed with "g_" (g_run).
 
-Each file, function, structure and global variable MUST be documented using doxygen. Here is a
-complete example:
+Each file, function, structure and global variable MUST be documented using doxygen.
+Here is a complete example:
 
 /**
  * \file my_file.h
  * \brief Short description.
- * \author name
+ * \author Name
  * \date 2008
  */
 
@@ -112,5 +113,5 @@ III) Standards
 ---------------
 
 In order to compile and run on many operating systems the code has to be portable. Thus
-it is strongly recommended to write code which respect C99 and POSIX standards.
+it is strongly recommended to write code which respects C99 and POSIX standards.
 

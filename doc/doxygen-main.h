@@ -2,7 +2,7 @@
  * \file doxygen-main.h
  * \brief Documentation main page.
  * \author Sebastien Vincent
- * \date 2008
+ * \date 2008-2009
  */
 
 /**
@@ -20,15 +20,15 @@
  * \section section-modules Modules
  *
  * The API is decomposed in several modules: 
- * - STUN / TURN headers and attributes (turn.h);
- * - Header / attribute generation (protocol.c, protocol.h);
+ * - STUN/TURN headers and attributes (turn.h);
+ * - Header/attribute generation (protocol.c, protocol.h);
  * - Allocation management (allocation.c, allocation.h);
  * - Account management (account.c, account.h);
  * - Server configuration parsing (conf.c, conf.h);
  * - Asynchronous Transport Layer Security (TLS) (tls_peer.c, tls_peer.h);
  * - Some utils functions (dbg.c, dbg.h, util_sys.c, util_sys.h, util_crypto.c, util_crypto.h, list.h).
  *
- * There are basics unit tests in tests directory. Note that you have to install <a href="http://check.sourceforge.net/">check</a> 
+ * There are basics unit tests in test directory of source tree. Note that you have to install <a href="http://check.sourceforge.net/">check</a> 
  * framework in order to use it.
  *
  * There also three programs that can generate a suite of TURN packets (Allocate request, wait for an answer, Refresh requests, 
@@ -36,7 +36,7 @@
  * TURN packet generators.
  *
  * Note that TurnServer uses <a href="http://www.openssl.org/">OpenSSL</a> (for cryptographics and TLS stuff) and 
- * <a href="http://www.nongnu.org/confuse/">Confuse</a> (for parsing configuration file), so you need  to have these libraries 
+ * <a href="http://www.nongnu.org/confuse/">Confuse</a> (for parsing configuration file), so you need to have these libraries 
  * on your system.
  *
  * \section section-standard Standards
@@ -51,5 +51,10 @@
  * TurnServer is known to run on the following systems: 
  * - GNU/Linux 2.6;
  * - FreeBSD 7.0.
+ *
+ * \section section-license License
+ *
+ * TurnServer is licensed under the <a href="http://www.gnu.org/licenses/gpl-3.0.html">GPL version 3</a> (with an exception for OpenSSL).
+ *
  */
 
