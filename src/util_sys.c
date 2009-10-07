@@ -519,6 +519,6 @@ void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t)
 }
 
 #ifdef __cplusplus
-} /* } */
+}
 #endif
 
