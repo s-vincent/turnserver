@@ -179,10 +179,10 @@ typedef struct list_head
  * \param head the list
  * \return size of the list
  */
-static inline size_t list_size(struct list_head* head)
+static inline unsigned int list_size(struct list_head* head)
 {
   struct list_head* lp = NULL;
-  size_t size = 0;
+  unsigned int size = 0;
 
   list_iterate(lp, head)
   {

@@ -593,7 +593,7 @@ ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char
     SSL_set_accept_state(ssl);
 
     bio_write = BIO_new_dgram(peer->sock, BIO_NOCLOSE);
-    BIO_dgram_set_peer(bio_write, addr);
+    (void)BIO_dgram_set_peer(bio_write, addr);
 
     SSL_set_bio(ssl, NULL, bio_write);
     /* SSL_set_mtu(ssl, SSL3_RT_MAX_PLAIN_LENGTH); */
@@ -630,7 +630,7 @@ ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen, c
     if(peer->type != TCP)
     {
       bio_write = BIO_new_dgram(peer->sock, BIO_NOCLOSE);
-      BIO_dgram_set_peer(bio_write, addr);
+      (void)BIO_dgram_set_peer(bio_write, addr);
       SSL_set_bio(ssl, peer->bio_fake, bio_write);
       /* SSL_set_mtu(ssl, SSL3_RT_MAX_PLAIN_LENGTH); */
     }
@@ -783,7 +783,7 @@ void tls_peer_free(struct tls_peer** peer)
   {
     BUF_MEM* ptr = NULL;
     BIO_get_mem_ptr(ret->bio_fake, &ptr);
-    BIO_set_close(ret->bio_fake, BIO_NOCLOSE); /* so BIO_free() leaves BUF_MEM alone */
+    (void)BIO_set_close(ret->bio_fake, BIO_NOCLOSE); /* so BIO_free() leaves BUF_MEM alone */
     BIO_free(ret->bio_fake);
     BUF_MEM_free(ptr);
   }
