@@ -19,7 +19,7 @@ AC_CHECK_PROG(SED, sed, sed)
 # Checks for libraries.
 AC_CHECK_LIB(rt, timer_create,,[echo -e "\tPlease install librt";exit])
 AC_CHECK_LIB(ssl, SSL_new,,[echo -e "\tPlease install libssl-dev";exit])
-AC_CHECK_LIB(confuse, cfg_init,,[echo -e "\tPlease install libconfuse-dev";exit])
+AC_CHECK_LIB(confuse, cfg_init,,[echo -e "\tPlease install libconfuse-dev (version >= 2.6)";exit])
 
 # Checks for header files.
 AC_HEADER_STDC

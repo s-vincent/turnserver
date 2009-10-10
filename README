@@ -9,13 +9,13 @@ over TCP. For the moment relaying messages can only be done with UDP protocol.
 
 TurnServer is known to work on the following systems:
 - GNU/Linux 2.6;
-- FreeBSD 7.0.
+- FreeBSD 7.x.
 
 1) Build / install
 ------------------
 
 TurnServer requires following libraries: 
-- libconfuse development files;
+- libconfuse development files (version >= 2.6);
 - libssl development files;
 - librt (normally included in Linux and *BSD distribution).
 
@@ -24,7 +24,7 @@ should be compiled on all POSIX systems which have realtime signals support.
 
 Note for *BSD users, install the required libconfuse ports in /usr/ prefix, otherwise you 
 have to set the PKG_CONFIG_PATH variable or make symlinks before running ./configure script:
- # ln -sf /usr/local/lib/libconfuse.so /usr/lib/ && ln -sf /usr/local/include/confuse.h /usr/include/
+# ln -sf /usr/local/lib/libconfuse.so /usr/lib/ && ln -sf /usr/local/include/confuse.h /usr/include/
 
 To build TurnServer, run following commands: 
 $ autoreconf -i

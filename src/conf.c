@@ -53,17 +53,15 @@
 #include "conf.h"
 #include "turnserver.h"
 
-/* remove extern function because this does not compile on some libconfuse version (< 2.6) */
-#if 0
 /**
  * \brief Free the resources used by the lex parser.
  *
  * This function comes from libconfuse and is not called 
  * in cfg_free(), that's why call it here.
+ * \note Require libconfuse >= 2.6.
  * \return 0
  */
 extern int cfg_yylex_destroy(void);
-#endif
 
 /** 
  * \var denied_address_opts
@@ -230,9 +228,8 @@ void turnserver_cfg_free(void)
   {
     cfg_free(g_cfg);
     g_cfg = NULL;
-#if 0 
+    
     cfg_yylex_destroy();
-#endif
   }
 }
 
