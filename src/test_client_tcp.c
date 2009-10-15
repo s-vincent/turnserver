@@ -689,7 +689,7 @@ int main(int argc, char** argv)
   index++;
 #endif
 
-#if 0 /* no REQUESTED-ADDRESS-FAMILY with RESERVATION-TOKEN (see draft-ietf-behave-turn-ipv6-06) */
+#if 0 /* no REQUESTED-ADDRESS-FAMILY with RESERVATION-TOKEN (see draft-ietf-behave-turn-ipv6-07) */
   /* REQUESTED-ADDRESS-FAMILY */
   attr = turn_attr_requested_address_family_create(STUN_ATTR_FAMILY_IPV4, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;

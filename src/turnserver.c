@@ -770,8 +770,6 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   size_t len = 0;
   char* msg = NULL;
   ssize_t nb = -1;
-  int level = 0;
-  int optname = 0;
   int optval = 0;
   int save_val =0;
   socklen_t optlen = sizeof(int);
@@ -808,6 +806,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   if(!desc)
   {
     /* not found */
+    debug(DBG_ATTR, "No allocation found\n");
     return -1;
   }
 
@@ -816,6 +815,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   if(!alloc_channel)
   {
     /* no channel bound to this peer */
+    debug(DBG_ATTR, "No channel bound to this peer\n");
     return -1;
   }
 
@@ -845,13 +845,6 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
         memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
         ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
         memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
-
-#ifdef OS_SET_DF_SUPPORT
-        /* prepare value for setsockopt: set DF flag to 0 */
-        level = IPPROTO_IP;
-        optname = IP_MTU_DISCOVER;
-        optval = IP_PMTUDISC_DONT;
-#endif
         break;
       case AF_INET6:
         ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
@@ -862,44 +855,50 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 #ifdef SIN6_LEN
         ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-
-#ifdef OS_SET_DF_SUPPORT
-        /* prepare value for setsockopt: set DF flag to 0 */
-        level = IPPROTO_IPV6;
-        optname = IPV6_MTU_DISCOVER;
-        optval = IPV6_PMTUDISC_DONT;
-#endif
         break;
       default:
         return -1;
         break;
     }
 
+    /* draft-ietf-behave-turn-ipv6-07:  If present, the
+     * DONT-FRAGMENT attribute MUST be ignored by the server for 
+     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+     */
+    if(desc->relayed_addr.ss_family == AF_INET && 
+       (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 && 
+       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
+    {
+      /* alternate behavior */
 #ifdef OS_SET_DF_SUPPORT 
-    if(!getsockopt(desc->relayed_sock, level, optname, &save_val, &optlen))
-    {
-      setsockopt(desc->relayed_sock, level, optname, &optval, sizeof(int));
-    }
-    else
-    {
-      /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-       * in case getsockopt failed
-       */
-      optlen = 0;
-    }
+      optval = IP_PMTUDISC_DONT;
+      
+      if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+      {
+        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+      }
+      else
+      {
+        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+         * in case getsockopt failed
+         */
+        optlen = 0;
+      }
 #else
-    /* avoid compilation warning */
-    optval = 0;
-    optlen = 0;
+      /* avoid compilation warning */
+      optval = 0;
+      optlen = 0;
 #endif
+    }
 
     debug(DBG_ATTR, "Send ChannelData to peer\n");
     nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
+    /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
     if(optlen)
     {
       /* restore original value */
-      setsockopt(desc->relayed_sock, level, optname, &save_val, sizeof(int));
+      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
     }
   }
   else /* TCP */
@@ -938,8 +937,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
   uint8_t* p = (uint8_t*)&cookie;
   ssize_t nb = -1;
   /* for get/setsockopt */
-  int level = 0;
-  int optname = 0;
   int optval = 0;
   int save_val = 0;
   socklen_t optlen = sizeof(int);
@@ -1027,12 +1024,6 @@ static int turnserver_process_send_indication(const struct turn_message* message
           memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
           ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
           memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
-
-#ifdef OS_SET_DF_SUPPORT
-          /* DF flag */
-          level = IPPROTO_IP;
-          optname = IP_MTU_DISCOVER;
-#endif
           break;
         case AF_INET6:
           ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
@@ -1043,63 +1034,66 @@ static int turnserver_process_send_indication(const struct turn_message* message
 #ifdef SIN6_LEN
           ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-
-#ifdef OS_SET_DF_SUPPORT
-          /* DF flag */
-          level = IPPROTO_IPV6;
-          optname = IPV6_MTU_DISCOVER;
-#endif
           break;
         default:
           return -1;
           break;
       }
 
-      if(message->dont_fragment)
+      /* draft-ietf-behave-turn-ipv6-07:  If present, the
+       * DONT-FRAGMENT attribute MUST be ignored by the server for 
+       * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+       */
+      if(desc->relayed_addr.ss_family == AF_INET && 
+         (desc->tuple.client_addr.ss_family == AF_INET ||(desc->tuple.client_addr.ss_family == AF_INET6 && 
+         IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
       {
+        /* following is for IPv4-IPv4 relay only */
 #ifdef OS_SET_DF_SUPPORT 
-        optval = desc->relayed_addr.ss_family == AF_INET6 ? IPV6_PMTUDISC_DO : IP_PMTUDISC_DO;
-#else
-        /* ignore message */
-        debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
-        return -1;
-#endif
-        debug(DBG_ATTR, "Will set DF flag\n");
-      }
-      else
-      {
-#ifdef OS_SET_DF_SUPPORT 
-        /* alternate behavior, set DF to 0 */
-        optval = desc->relayed_addr.ss_family == AF_INET6 ? IPV6_PMTUDISC_DONT : IP_PMTUDISC_DONT;
-        debug(DBG_ATTR, "Will not set DF flag\n");
-#endif
-      }
+        if(message->dont_fragment)
+        {
+          optval = IP_PMTUDISC_DO;
+          debug(DBG_ATTR, "Will set DF flag\n");
+        }
+        else /* IPv4-IPv4 relay but no DONT-FRAGMENT attribute */
+        {
+          /* alternate behavior, set DF to 0 */
+          optval = IP_PMTUDISC_DONT;
+          debug(DBG_ATTR, "Will not set DF flag\n");
+        }
 
-#ifdef OS_SET_DF_SUPORT
-      if(!getsockopt(desc->relayed_sock, level, optname, &save_val, &optlen))
-      {
-        setsockopt(desc->relayed_sock, level, optname, &optval, sizeof(int));
-      }
-      else
-      {
-        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-         * in case getsockopt failed
-         */
-        optlen = 0;
-      }
+        if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+        {
+          setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+        }
+        else
+        {
+          /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+           * in case getsockopt failed
+           */
+          optlen = 0;
+        }
 #else
-      /* avoid compilation warning */
-      optval = 0;
-      optlen = 0;
+        /* avoid compilation warning */
+        optval = 0;
+
+        if(message->dont_fragment)
+        {
+          /* ignore message */
+          debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
+          return -1;
+        }
 #endif
+      }
 
       debug(DBG_ATTR, "Send data to peer\n");
       nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
+      /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
       if(optlen)
       {
         /* restore original value */
-        setsockopt(desc->relayed_sock, level, optname, &save_val, sizeof(int));
+        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
       }
     }
     else /* TCP */
@@ -1594,7 +1588,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   /* save key from allocation as it could be freed if lifetime equals 0 */
   memcpy(key, desc->key, sizeof(desc->key));
 
-  /* draft-ietf-behave-turn-ipv6-06: at this stage server knows the 5-tuple and the allocation associated.
+  /* draft-ietf-behave-turn-ipv6-07: at this stage server knows the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
    * no need to have REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
@@ -1858,8 +1852,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_addr_family && message->reservation_token)
   {
-    /* draft-ietf-behave-turn-ipv6-06: cannot have both REQUESTED-ADDRESS-FAMILY 
-     * and RESERVATION-TOKEN => error 400 
+    /* draft-ietf-behave-turn-ipv6-07: cannot have both REQUESTED-ADDRESS-FAMILY 
+     * and RESERVATION-TOKEN => error 400
      */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
@@ -1921,7 +1915,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     lifetime = MIN(turnserver_cfg_allocation_lifetime(), TURN_MAX_ALLOCATION_LIFETIME);
   }
 
-  /* draft-ietf-behave-turn-ipv6-06 */
+  /* draft-ietf-behave-turn-ipv6-07 */
   if(message->requested_addr_family)
   {
     switch(message->requested_addr_family->turn_attr_family)
@@ -2428,16 +2422,18 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     if(!message.message_integrity)
     {
       /* no messages integrity => error 401 */
-      struct iovec iov[5]; /* header, error-code, realm, nonce, software */
-      size_t index = 0;
+      struct iovec iov[12]; /* header, error-code, realm, nonce, software */
+      uint8_t nonce[32];
       struct turn_msg_hdr* error = NULL;
       struct turn_attr_hdr* attr = NULL;
-      uint8_t nonce[32];
       char* key = turnserver_cfg_nonce_key();
+      size_t index = 0;
 
       debug(DBG_ATTR, "No message integrity\n");
 
       turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key, strlen(key));
+      /* strange thing happen here when OS_SET_DF is not defined: index does not equal 0 */
+      index = 0;
 
       if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
       {
@@ -2500,6 +2496,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       char* key = turnserver_cfg_nonce_key();
 
       turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key, strlen(key));
+      index = 0;
 
       if(!(error = turn_error_response_438(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
       {
@@ -2576,6 +2573,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         debug(DBG_ATTR, "No account\n");
 
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key, strlen(key));
+        index = 0;
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
         {
@@ -2660,6 +2658,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         digest_print(message.message_integrity->turn_attr_hmac, 20);
 #endif
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)nonce_key, strlen(nonce_key));
+        index = 0;
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
         {  
@@ -2897,42 +2896,35 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   }
   else if(desc->tuple.transport_protocol == IPPROTO_UDP) /* UDP */
   {
-    int level = 0;
-    int optname = 0;
     int optval = 0;
     int save_val = 0;
     socklen_t optlen = sizeof(int);
 
 #ifdef OS_SET_DF_SUPPORT
-    /* alternate behavior, set DF to 0 */
-    if(desc->tuple.client_addr.ss_family == AF_INET)
+    /* draft-ietf-behave-turn-ipv6-07:  If present, the
+     * DONT-FRAGMENT attribute MUST be ignored by the server for 
+     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+     */
+    if((desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 &&
+       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))) &&
+       (saddr->sa_family == AF_INET || (saddr->sa_family == AF_INET6 && 
+       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)saddr)->sin6_addr))))
     {
-      level = IPPROTO_IP;
-      optname = IP_MTU_DISCOVER;
+      /* only for IPv4-IPv4 relay */
+      /* alternate behavior, set DF to 0 */
       optval = IP_PMTUDISC_DONT;
-    }
-    else if(desc->tuple.client_addr.ss_family == AF_INET6)
-    {
-      level = IPPROTO_IPV6;
-      optname = IPV6_MTU_DISCOVER;
-      optval = IPV6_PMTUDISC_DONT;
-    }
-    else
-    {
-      /* unknow AF family */
-      return -1;
-    }
 
-    if(!getsockopt(desc->tuple_sock, level, optname, &save_val, &optlen))
-    {
-      setsockopt(desc->tuple_sock, level, optname, &optval, sizeof(int));
-    }
-    else
-    {
-      /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-       * in case getsockopt failed
-       */
-      optlen = 0;
+      if(!getsockopt(desc->tuple_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+      {
+        setsockopt(desc->tuple_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+      }
+      else
+      {
+        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+         * in case getsockopt failed
+         */
+        optlen = 0;
+      }
     }
 #else
     optlen = 0;
@@ -2941,10 +2933,11 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 
     nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), iov, index);
 
+    /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
     if(optlen)
     {
       /* restore original value */
-      setsockopt(desc->tuple_sock, level, optname, &save_val, sizeof(int));
+      setsockopt(desc->tuple_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
     }
   }
   else /* TCP */
