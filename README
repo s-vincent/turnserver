@@ -56,7 +56,7 @@ $ turnserver -c /path/to/config/file
 In extra/ directory you will find a configuration template file (turnserver.conf.template). 
 Change settings according to your environment.
 
-Here are Important parameters,
+Here are important parameters,
 - listen_address        : public IPv4 address;
 - listen_addressv6      : public IPv6 address;
 - realm                 : realm (i.e. domain.org) of the server;
@@ -67,8 +67,8 @@ If you want to use TLS over TCP you have to set "tls = true" in the configuratio
 well as the pathnames of the Certificate Authority (ca_file), server certificate (cert_file) 
 and associated private key (private_key_file).
 
-Other parameters such as allocations number quota can be configured. For more details about 
-configuration parameters, see man page:
+Other parameters such as allocations number quota or experimental features are documented in
+manpages:
 $ man turnserver.conf 
 
 3) Accounts database file
@@ -85,7 +85,7 @@ Note: realm have to match realm parameter defined in TurnServer configuration fi
 4) Security
 ------------
 
-If TurnServer is launched as root / or set-uid root, it is possible to drop privileges.
+If TurnServer is launched as root or set-uid root, it is possible to drop privileges.
 
 One possibility is to create a special user (which have less privileges). To create such 
 a user named turnserver:

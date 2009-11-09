@@ -1,6 +1,7 @@
 2009-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-  * Version 0.3		- Add turn-ipv6-07 draft support.
+  * Version 0.3		- Add turn-ipv6-07 draft support;
+									- Experimental DTLS support (not in TURN standard).
 
 2009-08-26  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

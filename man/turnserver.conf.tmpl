@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "April 6, 2009" "TurnServer Configuration"
+.TH turnserver.conf 5 "November 9, 2009" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -36,19 +36,24 @@ The main advantage to have multiple public IPv6 addresses is to do load sharing.
 
 .TP
 .BR "udp_port " "= number"
-The UDP port of the server to listen for incoming connection.
+The UDP port of the server to listen for incoming connections.
 
 .TP 
 .BR "tcp_port " "= number"
-The TCP port of the server to listen for incoming connection.
+The TCP port of the server to listen for incoming connections.
 
 .TP
 .BR "tls_port " "= number"
-The TLS port of the server to listen for incoming connection.
+The TLS port of the server to listen for incoming connections.
 
 .TP
 .BR "tls " "= boolean"
-Enable or not TLS over TCP connection.
+Enable or not TLS over TCP connections.
+
+.TP
+.BR "dtls " "= boolean"
+Enable or not TLS over UDP connections. It is an experimental feature of TurnServer and 
+it is not defined by TURN standard.
 
 .TP
 .BR "daemon " "= boolean"

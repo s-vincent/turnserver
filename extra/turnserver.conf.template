@@ -24,6 +24,9 @@ tls_port = 5349
 ## TLS support.
 tls = false
 
+## DTLS support. It is an experimental feature and is not defined in TURN standard.
+dtls = false
+
 ## Daemon mode.
 daemon = false
 

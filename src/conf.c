@@ -87,6 +87,7 @@ static cfg_opt_t opts[]=
   CFG_INT("tcp_port", 3478, CFGF_NONE),
   CFG_INT("tls_port", 5349, CFGF_NONE),
   CFG_BOOL("tls", cfg_false, CFGF_NONE),
+  CFG_BOOL("dtls", cfg_false, CFGF_NONE),
   CFG_BOOL("daemon", cfg_false, CFGF_NONE),
   CFG_STR("unpriv_user", NULL, CFGF_NONE),
   CFG_INT("max_client", 50, CFGF_NONE),
@@ -281,6 +282,11 @@ uint16_t turnserver_cfg_tls_port(void)
 int turnserver_cfg_tls(void)
 {
   return cfg_getbool(g_cfg, "tls");
+}
+
+int turnserver_cfg_dtls(void)
+{
+  return cfg_getbool(g_cfg, "dtls");
 }
 
 int turnserver_cfg_daemon(void)

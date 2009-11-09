@@ -173,6 +173,7 @@ static struct ssl_peer* tls_peer_find_connection(struct tls_peer* peer, const st
   list_iterate_safe(get, n, &peer->remote_peers)
   {
     struct ssl_peer* tmp = NULL;
+    
     tmp = list_get(get, struct ssl_peer, list);
     if(!memcmp(&tmp->addr, addr, addrlen))
     {
@@ -232,7 +233,7 @@ static void tls_peer_clear_connection(struct tls_peer* peer)
  */
 static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl, int err)
 {
-  switch (err)
+  switch(err)
   {
     case SSL_ERROR_NONE:
       break;
@@ -441,8 +442,9 @@ void tls_peer_print_connection(struct tls_peer* peer)
     {
       continue;
     }
-
+#ifndef NDEBUG
     fprintf(stdout, "Network address: %s handshake_completed: %u\n", buf, tmp->handshake_complete);
+#endif
   }
 }
 

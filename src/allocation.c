@@ -101,6 +101,7 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   /* by default, this will be set by caller */
   ret->relayed_tls = 0;
+  ret->relayed_dtls = 0;
 
   /* tocken bucket initialization */
   ret->bucket_capacity = 0;

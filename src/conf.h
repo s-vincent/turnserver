@@ -61,7 +61,8 @@ struct turnserver_cfg
   uint16_t udp_port; /**< UDP listening port */
   uint16_t tcp_port; /**< TCP listening port */
   uint16_t tls_port; /**< TLS listening port */
-  int tls;/**< TLS socket support */
+  int tls; /**< TLS socket support */
+  int dtls; /**< DTLS socket support (not in TURN standard) */
   int daemon; /**< Daemon state */
   char realm[256]; /**< Realm */
   uint16_t max_client; /**< Max simultanous client */
@@ -144,6 +145,15 @@ uint16_t turnserver_cfg_tls_port(void);
  * \note Server could also receive and process non-TLS data.
  */
 int turnserver_cfg_tls(void);
+
+/**
+ * \brief Run with DTLS socket.
+ *
+ * Please note that DTLS (TLS over UDP) is not in TURN standard 
+ * and so is an experimental feature of TurnServer.
+ * \return 1 if server has to start with DTLS, 0 otherwise
+ */
+int turnserver_cfg_dtls(void);
 
 /**
  * \brief Get the behavior of server at startup.

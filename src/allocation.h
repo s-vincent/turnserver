@@ -121,6 +121,7 @@ struct allocation_desc
   struct list_head peers_permissions; /**< List of peers permissions */
   int relayed_sock; /**< Socket for the allocated transport address */
   int relayed_tls; /**< If allocation has been set in TLS */
+  int relayed_dtls; /**< If allocation has been set in DTLS */
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
   uint8_t transaction_id[12]; /**< Transaction ID of the Allocate Request */
   timer_t expire_timer; /**< Expire timer */

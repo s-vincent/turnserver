@@ -97,8 +97,8 @@ int main(int argc, char** argv)
   /* get address for server_addr */
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_protocol = IPPROTO_UDP;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
   hints.ai_flags = 0;
 
   if(getaddrinfo(argv[2], "3478", &hints, &res) != 0)
@@ -114,8 +114,8 @@ int main(int argc, char** argv)
   snprintf(peer_port, sizeof(peer_port), "%s", argv[4]);
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol =  IPPROTO_TCP;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol =  IPPROTO_UDP;
   hints.ai_flags = 0;
 
   if(getaddrinfo(argv[3], peer_port, &hints, &res) != 0)

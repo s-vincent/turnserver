@@ -168,6 +168,18 @@ struct socket_desc
 };
 
 /**
+ * \struct listen_sockets
+ * \brief Gather all listen sockets (UDP, TCP, TLS and DTLS).
+ */
+struct listen_sockets
+{
+  int sock_tcp; /**< Listen TCP socket */
+  int sock_udp; /**< Listen UDP socket */
+  struct tls_peer* sock_tls; /**< Listen TLS socket */
+  struct tls_peer* sock_dtls; /**< Listen DTLS socket */
+};
+
+/**
  * \brief Get sockaddr structure size according to its type.
  * \param ss sockaddr_storage structure
  * \return size of sockaddr_in or sockaddr_in6
@@ -1267,8 +1279,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
     inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
-    syslog(LOG_INFO, "CreatePermission transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s",
-           transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str);
+    syslog(LOG_INFO, "CreatePermission transport=%u (d)tls=%u source=%s:%u account=%s relayed=%s:%u install_or_refresh=%s",
+           transport_protocol, desc->relayed_tls || desc->relayed_dtls, str2, port2, desc->username, str3, port, str);
 
     /* find a permission */
     alloc_permission = allocation_desc_find_permission(desc, desc->relayed_addr.ss_family, peer_addr);
@@ -1493,8 +1505,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
   }
 
-  syslog(LOG_INFO, "ChannelBind transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u",
-         transport_protocol, desc->relayed_tls, str2, port2, desc->username, str3, port, str, peer_port);
+  syslog(LOG_INFO, "ChannelBind transport=%u (d)tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u",
+         transport_protocol, desc->relayed_tls || desc->relayed_dtls, str2, port2, desc->username, str3, port, str, peer_port);
 
   /* find a permission */
   alloc_permission = allocation_desc_find_permission(desc, family, peer_addr);
@@ -1767,7 +1779,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(account->allocations >= turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded => error 486 */
-    syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s quota exceeded",
+    syslog(LOG_INFO, "Allocation transport=%u (d)tls=%u source=%s:%u account=%s quota exceeded",
            transport_protocol, speer ? 1 : 0, str2, port2, account->username);
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
     return -1;
@@ -2045,11 +2057,18 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(speer)
   {
-    desc->relayed_tls = 1;
+    if(desc->tuple.transport_protocol == IPPROTO_TCP)
+    {
+      desc->relayed_tls = 1;
+    }
+    else /* UDP */
+    {
+      desc->relayed_dtls = 1;
+    }
   }
 
-  syslog(LOG_INFO, "Allocation transport=%u tls=%u source=%s:%u account=%s relayed=%s:%u",
-         transport_protocol, desc->relayed_tls, str2, port2, account->username, str, port);
+  syslog(LOG_INFO, "Allocation transport=%u (d)tls=%u source=%s:%u account=%s relayed=%s:%u",
+         transport_protocol, desc->relayed_tls || desc->relayed_dtls, str2, port2, account->username, str, port);
 
   /* assign the sockets to the allocation */
   desc->relayed_sock = relayed_sock;
@@ -3127,15 +3146,13 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
 
 /**
  * \brief Wait messages and process it.
- * \param sock_tcp listen TCP socket
- * \param sock_udp listen UDP socket
+ * \param sockets all listen sockets
  * \param tcp_socket_list list of TCP sockets
  * \param allocation_list list of allocations
  * \param account_list list of accounts
- * \param speer TLS peer if not NULL, the server accept TLS connection
  */
-static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_socket_list,
-                            struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+static void turnserver_main(struct listen_sockets* sockets, struct list_head* tcp_socket_list,
+                            struct list_head* allocation_list, struct list_head* account_list)
 {
   struct list_head* n = NULL;
   struct list_head* get = NULL;
@@ -3166,40 +3183,34 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     return;
   }
 
-  /* check if server has at least one TCP or UDP socket */
-  if(sock_udp < 0 && sock_tcp < 0)
-  {
-    g_run = 0;
-    debug(DBG_ATTR, "No listen sockets!\n");
-    return;
-  }
-
   SFD_ZERO(&fdsr);
 
   /* ensure that FD_SET will not overflow */
-  if(sock_udp >= max_fd || sock_tcp >= max_fd || (speer && (speer->sock >= max_fd)))
+  if(sockets->sock_udp >= max_fd || sockets->sock_tcp >= max_fd || 
+     (sockets->sock_tls && (sockets->sock_tls->sock >= max_fd)))
   {
     g_run = 0;
     debug(DBG_ATTR, "Listen sockets cannot be set for select() (FD_SETSIZE overflow)\n");
     return;
   }
 
-  if(sock_udp > 0)
+  SFD_SET(sockets->sock_udp, &fdsr);
+  SFD_SET(sockets->sock_tcp, &fdsr);
+
+  nsock = MAX(sockets->sock_udp, sockets->sock_tcp);
+
+  /* TLS socket */
+  if(turnserver_cfg_tls() && sockets->sock_tls->sock > 0)
   {
-    SFD_SET(sock_udp, &fdsr);
+    SFD_SET(sockets->sock_tls->sock, &fdsr);
+    nsock = MAX(nsock, sockets->sock_tls->sock);
   }
 
-  if(sock_tcp > 0)
+  /* DTLS socket */
+  if(turnserver_cfg_dtls() && sockets->sock_dtls->sock > 0)
   {
-    SFD_SET(sock_tcp, &fdsr);
-  }
-
-  nsock = MAX(sock_udp, sock_tcp);
-
-  if(turnserver_cfg_tls() && speer->sock > 0)
-  {
-    SFD_SET(speer->sock, &fdsr);
-    nsock = MAX(nsock, speer->sock);
+    SFD_SET(sockets->sock_dtls->sock, &fdsr);
+    nsock = MAX(nsock, sockets->sock_dtls->sock);
   }
 
   /* add relayed sockets */
@@ -3250,15 +3261,15 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
   if(ret > 0)
   {
     /* main UDP listen socket */
-    if(sock_udp > 0 && sock_udp < max_fd && SFD_ISSET(sock_udp, &fdsr))
+    if(sockets->sock_udp < max_fd && SFD_ISSET(sockets->sock_udp, &fdsr))
     {
       debug(DBG_ATTR, "Received UDP on listening address\n");
       saddr_size = sizeof(struct sockaddr_storage);
       daddr_size = sizeof(struct sockaddr_storage);
 
-      nb = recvfrom(sock_udp, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
+      nb = recvfrom(sockets->sock_udp, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
 
-      getsockname(sock_udp, (struct sockaddr*)&daddr, &daddr_size);
+      getsockname(sockets->sock_udp, (struct sockaddr*)&daddr, &daddr_size);
 
       if(nb > 0)
       {
@@ -3267,10 +3278,49 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family: %s\n", proto);
         }
-        else if(turnserver_listen_recv(IPPROTO_UDP, sock_udp, buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr,
+        else if(turnserver_listen_recv(IPPROTO_UDP, sockets->sock_udp, buf, nb, 
+                (struct sockaddr*)&saddr, (struct sockaddr*)&daddr,
                 saddr_size, allocation_list, account_list, NULL) == -1)
         {
           debug(DBG_ATTR, "Bad STUN/TURN message or permission problem\n");
+        }
+      }
+      else
+      {
+        get_error(errno, error_str, sizeof(error_str));
+        debug(DBG_ATTR, "Error: %s\n", error_str);
+      }
+    }
+
+    /* main DTLS listen socket */
+    if(sockets->sock_dtls && sockets->sock_dtls->sock < max_fd && SFD_ISSET(sockets->sock_dtls->sock, &fdsr))
+    {
+      debug(DBG_ATTR, "Received DTLS on listening address\n");
+      saddr_size = sizeof(struct sockaddr_storage);
+      daddr_size = sizeof(struct sockaddr_storage);
+
+      nb = recvfrom(sockets->sock_dtls->sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
+
+      getsockname(sockets->sock_dtls->sock, (struct sockaddr*)&daddr, &daddr_size);
+
+      if(nb > 0 && tls_peer_is_encrypted(buf, nb))
+      {
+        char buf2[8192];
+        ssize_t nb2 = -1;
+
+        if((nb2 = tls_peer_udp_read(sockets->sock_dtls, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size)) > 0)
+        {
+          if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
+          {
+            proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+            debug(DBG_ATTR, "Do not relay family: %s\n", proto);
+          }
+          else if(turnserver_listen_recv(IPPROTO_UDP, sockets->sock_dtls->sock, buf2, nb2,
+                  (struct sockaddr*)&saddr, (struct sockaddr*)&daddr,
+                  saddr_size, allocation_list, account_list, sockets->sock_dtls) == -1)
+          {
+            debug(DBG_ATTR, "Bad STUN/TURN message or permission problem\n");
+          }
         }
       }
       else
@@ -3303,15 +3353,16 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
         if(nb > 0)
         {
-          if(speer && tls_peer_is_encrypted(buf, nb))
+          if(sockets->sock_tls && tls_peer_is_encrypted(buf, nb))
           {
             char buf2[1500];
+            ssize_t nb2 = -1;
 
             /* decode TLS data */
-            if((nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
+            if((nb2 = tls_peer_tcp_read(sockets->sock_tls, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
             {
               /* TLS over TCP stream may contain multiple STUN/TURN messages */
-              turnserver_process_tcp_stream(buf2, nb, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, speer);
+              turnserver_process_tcp_stream(buf2, nb2, tmp, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, account_list, sockets->sock_tls);
             }
             else
             {
@@ -3341,10 +3392,10 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     }
 
     /* main TCP listen socket */
-    if(sock_tcp > 0 && sock_tcp < max_fd && SFD_ISSET(sock_tcp, &fdsr))
+    if(sockets->sock_tcp < max_fd && SFD_ISSET(sockets->sock_tcp, &fdsr))
     {
       struct socket_desc* sdesc = NULL;
-      int sock = accept(sock_tcp, (struct sockaddr*)&saddr, &saddr_size);
+      int sock = accept(sockets->sock_tcp, (struct sockaddr*)&saddr, &saddr_size);
 
       debug(DBG_ATTR, "Received TCP on listening address\n");
 
@@ -3380,12 +3431,12 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
     }
 
     /* main TLS listen socket */
-    if(speer)
+    if(sockets->sock_tls)
     {
-      if(speer->sock > 0 && speer->sock < max_fd && SFD_ISSET(speer->sock, &fdsr))
+      if(sockets->sock_tls->sock < max_fd && SFD_ISSET(sockets->sock_tls->sock, &fdsr))
       {
         struct socket_desc* sdesc = NULL;
-        int sock = accept(speer->sock, (struct sockaddr*)&saddr, &saddr_size);
+        int sock = accept(sockets->sock_tls->sock, (struct sockaddr*)&saddr, &saddr_size);
 
         debug(DBG_ATTR, "Received TLS on listening address\n");
 
@@ -3439,7 +3490,18 @@ static void turnserver_main(int sock_udp, int sock_tcp, struct list_head* tcp_so
 
         if(nb > 0)
         {
-          turnserver_relayed_recv(buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, tmp->relayed_tls ? speer : NULL);
+          struct tls_peer* speer = NULL;
+
+          if(tmp->relayed_tls)
+          {
+            speer = sockets->sock_tls;
+          }
+          else if(tmp->relayed_dtls)
+          {
+            speer = sockets->sock_dtls;
+          }
+
+          turnserver_relayed_recv(buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, speer);
         }
         else
         {
@@ -3490,11 +3552,9 @@ int main(int argc, char** argv)
   struct list_head allocation_list;
   struct list_head account_list;
   struct list_head tcp_socket_list;
-  int sock_udp = -1;
-  int sock_tcp = -1;
   struct list_head* n = NULL;
   struct list_head* get = NULL;
-  struct tls_peer* speer = NULL;
+  struct listen_sockets sockets;
   char* configuration_file = NULL;
   char* listen_addr = NULL;
   struct sigaction sa;
@@ -3511,6 +3571,12 @@ int main(int argc, char** argv)
   INIT_LIST(g_expired_permission_list);
   INIT_LIST(g_expired_channel_list);
   INIT_LIST(g_expired_token_list);
+
+  /* initialize sockets */
+  sockets.sock_udp = -1;
+  sockets.sock_tcp = -1;
+  sockets.sock_tls = NULL;
+  sockets.sock_dtls = NULL;
 
 #ifdef NDEBUG
   /* disable core dump in release mode */
@@ -3731,41 +3797,46 @@ int main(int argc, char** argv)
   listen_addr = turnserver_cfg_listen_addressv6() ? "::" : "0.0.0.0";
 
   /* initialize listen sockets */
-  /* non-DTLS UDP socket */
-  sock_udp = socket_create(IPPROTO_UDP, listen_addr, turnserver_cfg_udp_port());
+  /* UDP socket */
+  sockets.sock_udp = socket_create(IPPROTO_UDP, listen_addr, turnserver_cfg_udp_port());
 
-  if(sock_udp == -1)
+  if(sockets.sock_udp == -1)
   {
     debug(DBG_ATTR, "UDP socket creation failed\n");
     syslog(LOG_ERR, "UDP socket creation failed");
   }
 
   /* TCP socket */
-  sock_tcp = socket_create(IPPROTO_TCP, listen_addr, turnserver_cfg_tcp_port());
+  sockets.sock_tcp = socket_create(IPPROTO_TCP, listen_addr, turnserver_cfg_tcp_port());
 
-  if(sock_tcp > 0)
+  if(sockets.sock_tcp > 0)
   {
-    if(listen(sock_tcp, 5) == -1)
+    if(listen(sockets.sock_tcp, 5) == -1)
     {
       debug(DBG_ATTR, "TCP socket failed to listen()\n");
       syslog(LOG_ERR, "TCP socket failed to listen()");
-      close(sock_tcp);
-      sock_tcp  = -1;
+      close(sockets.sock_tcp);
+      sockets.sock_tcp  = -1;
     }
   }
 
-  if(sock_tcp == -1)
+  if(sockets.sock_tcp == -1)
   {
     debug(DBG_ATTR, "TCP socket creation failed\n");
     syslog(LOG_ERR, "TCP socket creation failed");
   }
 
-  if(turnserver_cfg_tls())
+  if(turnserver_cfg_tls() || turnserver_cfg_dtls())
   {
     /* libssl initialization */
     LIBSSL_INIT;
+  }
 
-    /* TLS TCP socket */
+  if(turnserver_cfg_tls())
+  {
+    struct tls_peer* speer = NULL;
+
+    /* TLS over TCP socket */
     speer = tls_peer_new(IPPROTO_TCP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
 
     if(speer)
@@ -3777,6 +3848,8 @@ int main(int argc, char** argv)
         tls_peer_free(&speer);
         speer = NULL;
       }
+
+      sockets.sock_tls = speer;
     }
     else
     {
@@ -3784,7 +3857,26 @@ int main(int argc, char** argv)
     }
   }
 
-  if(sock_tcp == -1 || sock_udp == -1 || (turnserver_cfg_tls() && !speer))
+  if(turnserver_cfg_dtls())
+  {
+    struct tls_peer* speer = NULL;
+
+    /* TLS over UDP socket */
+    speer = tls_peer_new(IPPROTO_UDP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
+
+    if(speer)
+    {
+      sockets.sock_dtls = speer;
+    }
+    else
+    {
+      debug(DBG_ATTR, "DTLS initialization failed\n");
+    }
+  }
+
+  if(sockets.sock_tcp == -1 || sockets.sock_udp == -1 || 
+     (turnserver_cfg_tls() && !sockets.sock_tls) ||
+     (turnserver_cfg_dtls() && !sockets.sock_dtls))
   {
     debug(DBG_ATTR, "Problem creating listen sockets, exiting\n");
     syslog(LOG_ERR, "Problem creating listen sockets");
@@ -3888,7 +3980,7 @@ int main(int argc, char** argv)
     turnserver_unblock_realtime_signal();
 
     /* wait messages and processing */
-    turnserver_main(sock_udp, sock_tcp, &tcp_socket_list, &allocation_list, &account_list, speer);
+    turnserver_main(&sockets, &tcp_socket_list, &allocation_list, &account_list);
   }
 
   fprintf(stderr, "\n");
@@ -3922,17 +4014,17 @@ int main(int argc, char** argv)
   }
 
   /* close UDP and TCP sockets */
-  if(sock_udp > 0)
+  if(sockets.sock_udp > 0)
   {
-    close(sock_udp);
+    close(sockets.sock_udp);
   }
 
-  if(sock_tcp > 0)
+  if(sockets.sock_tcp > 0)
   {
-    close(sock_tcp);
+    close(sockets.sock_tcp);
   }
 
-  /* close TCP client sockets */
+  /* close remote TCP client sockets */
   list_iterate_safe(get, n, &tcp_socket_list)
   {
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);
@@ -3945,6 +4037,24 @@ int main(int argc, char** argv)
     free(tmp);
   }
 
+  /* close TLS and DTLS sockets */
+  if(turnserver_cfg_tls() || turnserver_cfg_dtls())
+  {
+    /* close TLS socket */
+    if(sockets.sock_tls)
+    {
+      tls_peer_free(&sockets.sock_tls);
+    }
+
+    if(sockets.sock_dtls)
+    {
+      tls_peer_free(&sockets.sock_dtls);
+    }
+
+    /* cleanup SSL lib */
+    LIBSSL_CLEANUP;
+  }
+
   /* free the valid allocation list */
   allocation_list_free(&allocation_list);
 
@@ -3954,22 +4064,6 @@ int main(int argc, char** argv)
   /* free the token list */
   allocation_token_list_free(&g_token_list);
 
-  /* close TLS socket */
-  if(turnserver_cfg_tls())
-  {
-    /* close TLS socket */
-    if(speer)
-    {
-      tls_peer_free(&speer);
-    }
-
-    /* cleanup SSL lib */
-    LIBSSL_CLEANUP;
-  }
-
-  /* free the configuration parser */
-  turnserver_cfg_free();
-
   /* free the denied address list */
   list_iterate_safe(get, n, &g_denied_address_list)
   {
@@ -3977,6 +4071,9 @@ int main(int argc, char** argv)
     LIST_DEL(&tmp->list);
     free(tmp);
   }
+  
+  /* free the configuration parser */
+  turnserver_cfg_free();
 
   return EXIT_SUCCESS;
 }

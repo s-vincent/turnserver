@@ -30,10 +30,10 @@
  */
 
 /**
- * \file test_client_tls.c
- * \brief TLS over TCP TURN client example.
+ * \file test_client_dtls.c
+ * \brief TLS over UDP TURN client example.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2009
  */
 
 #include <stdio.h>
@@ -91,7 +91,9 @@ int main(int argc, char** argv)
   char peer_port[8];
   struct addrinfo hints;
   struct addrinfo* res = NULL;
-
+  struct sockaddr_storage daddr;
+  socklen_t daddr_size = sizeof(struct sockaddr_storage);
+  
   if(argc != 5)
   {
     printf("Usage %s client_address server_address peer_address peer_port\n", argv[0]);
@@ -101,8 +103,8 @@ int main(int argc, char** argv)
   /* get address for server_addr */
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol = IPPROTO_UDP;
   hints.ai_flags = 0;
 
   if(getaddrinfo(argv[2], "5349", &hints, &res) != 0)
@@ -154,7 +156,7 @@ int main(int argc, char** argv)
 
   nb = turn_generate_transaction_id(id);
 
-  speer = tls_peer_new(IPPROTO_TCP, argv[1], 0, "./ca.crt", "client1.crt", "./client1.key");
+  speer = tls_peer_new(IPPROTO_UDP, argv[1], 0, "./ca.crt", "client1.crt", "./client1.key");
 
   if(!speer)
   {
@@ -220,14 +222,14 @@ int main(int argc, char** argv)
   memset(&message, 0x00, sizeof(message));
 
   printf("wait message\n");
-  nb2 = recv(sock, buf, sizeof(buf), 0);
+  nb2 = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
 
   getpeername(sock, (struct sockaddr*)&server_addr, &server_addr_size);
 
-  nb2 = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb2 = tls_peer_udp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
   if(nb2 == -1)
   {
-    perror("tls_peer_tcp_read");
+    perror("tls_peer_udp_read");
     tls_peer_free(&speer);
     /* cleanup SSL lib */
     EVP_cleanup();
@@ -320,8 +322,8 @@ int main(int argc, char** argv)
 
   iovec_free_data(iov, index);
 
-  nb = recv(sock, buf, sizeof(buf), 0);
-  nb = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb = tls_peer_udp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
 
   nb2 = 0;
   nb = turn_parse_message(buf, (size_t)nb, &message, NULL, (size_t*)&nb2);
@@ -438,8 +440,8 @@ int main(int argc, char** argv)
   iovec_free_data(iov, index);
   index = 0;
 
-  nb = recv(sock, buf, sizeof(buf), 0);
-  nb2 = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb2 = tls_peer_udp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
 
   /* ChannelBind request */
   hdr = turn_msg_channelbind_request_create(0, id, &iov[index]);
@@ -511,8 +513,8 @@ int main(int argc, char** argv)
 #if 1
   printf("Send ChannelBind request\n");
   nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
-  nb = recv(sock, buf, sizeof(buf), 0);
-  nb2 = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb2 = tls_peer_udp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
 #endif
 
   iovec_free_data(iov, index);
@@ -571,8 +573,8 @@ int main(int argc, char** argv)
 #if 1
   printf("Send CreatePermission request\n");
   nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, ntohs(hdr->turn_msg_len) + sizeof(*hdr), iov, index);
-  nb = recv(sock, buf, sizeof(buf), 0);
-  nb2 = tls_peer_tcp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
+  nb2 = tls_peer_udp_read(speer, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
 #endif
   iovec_free_data(iov, index);
   index = 0;
@@ -598,8 +600,10 @@ int main(int argc, char** argv)
   sleep(1);
 
 #if 0
-  nb2 = recv(speer->sock, buf, sizeof(buf), 0);
-  nb2 = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+  printf("Receive\n");
+  nb2 = recvfrom(speer->sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
+  printf("Decode\n");
+  nb2 = tls_peer_udp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
   nb = turn_parse_message(buf2, nb2, &message, tabu, &tabu_size);
 
   if(nb == -1)
@@ -649,8 +653,8 @@ int main(int argc, char** argv)
     nb = turn_tls_send(speer, (struct sockaddr*)&server_addr, server_addr_size, data_len, iov, index);
 
 #if 1
-    nb2 = recv(speer->sock, buf, sizeof(buf), 0);
-    nb2 = tls_peer_tcp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size, speer->sock);
+    nb2 = recvfrom(speer->sock, buf, sizeof(buf), 0, (struct sockaddr*)&daddr, &daddr_size);
+    nb2 = tls_peer_udp_read(speer, buf, nb2, buf2, sizeof(buf2), (struct sockaddr*)&server_addr, server_addr_size);
 
     if(nb2 > 0)
     {
