@@ -195,7 +195,7 @@ int msleep(unsigned long usec);
  * \brief The getdtablesize() function from glibc does not compile in ANSI.
  * \return max open files for a process
  */
-int get_dtablesize(void);
+long get_dtablesize(void);
 
 /**
  * \brief Return if host machine is big endian.

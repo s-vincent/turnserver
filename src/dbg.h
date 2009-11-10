@@ -66,13 +66,15 @@ extern "C"
 
 #include <sys/types.h>
 
-#ifndef DBG_THREAD_LOCK
 /**
  * \def DBG_THREAD_LOCK
  * \brief Print message on stderr when some pthread function are used.
  * If you do not want this, set to 0.
  */
-#define	 DBG_THREAD_LOCK 0
+#ifndef DBG_THREAD_LOCK
+#define DBG_THREAD_LOCK 0
+#else
+#define DBG_THREAD_LOCK 1
 #endif
 
 /**
@@ -117,6 +119,7 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
 /**
  * \def debug
  * \brief Print a debug message.
+ *
  * Use similary like a variadic macro: debug(DBG_ATTR, format, ...).
  * \warning Respect the use: debug(DBG_ATTR, format, ...).
  */
@@ -129,6 +132,7 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
 /**
  * \def debug_hexa
  * \brief Print the content of a buffer in hexadecimal.
+ *
  * Use similary like a variadic macro: debug_print_hexa(DBG_ATTR, buf, buflen, format, ...).
  * \warning Respect the use: debug_hexa(DBG_ATTR, buf, buflen, ...).
  */

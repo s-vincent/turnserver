@@ -3305,7 +3305,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
       if(nb > 0 && tls_peer_is_encrypted(buf, nb))
       {
-        char buf2[8192];
+        char buf2[1500];
         ssize_t nb2 = -1;
 
         if((nb2 = tls_peer_udp_read(sockets->sock_dtls, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size)) > 0)

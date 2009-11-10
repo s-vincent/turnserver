@@ -100,7 +100,7 @@ int msleep(unsigned long usec)
   return 0;
 }
 
-int get_dtablesize(void)
+long get_dtablesize(void)
 {
 #ifndef _WIN32
   return sysconf(_SC_OPEN_MAX);

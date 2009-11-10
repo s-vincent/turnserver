@@ -117,7 +117,7 @@ void dbg_print_null(const char* f, int line, const char* format, ...)
 
 void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const char* format, ...)
 {
-  unsigned int i = 0;
+  size_t i = 0;
   va_list args;
 
 #ifdef _MSC_VER
