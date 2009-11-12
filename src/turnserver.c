@@ -108,6 +108,12 @@
 static volatile sig_atomic_t g_run = 0;
 
 /**
+ * \var g_reinit
+ * \brief Reload credentials (parse again account file).
+ */
+static volatile sig_atomic_t g_reinit = 0;
+
+/**
  * \var g_expired_allocation_list
  * \brief List which constains expired allocation.
  */
@@ -203,6 +209,9 @@ static void signal_handler(int code)
     case SIGUSR1:
     case SIGUSR2:
     case SIGPIPE:
+      break;
+    case SIGHUP:
+      g_reinit = 1;
       break;
     case SIGINT:
     case SIGTERM:
@@ -645,7 +654,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
   else
   {
-    turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
+    turn_add_fingerprint(iov, &index); /* not fatal if not successful */
 
     /* convert to big endian */
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
@@ -1320,7 +1329,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     return -1;
   }
 
-  debug(DBG_ATTR, "CreatePermission successfull, send success CreatePermission response\n");
+  debug(DBG_ATTR, "CreatePermission successful, send success CreatePermission response\n");
 
   /* finally send the response */
   if(speer) /* TLS */
@@ -1543,7 +1552,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     return -1;
   }
 
-  debug(DBG_ATTR, "ChannelBind successfull, send success ChannelBind response\n");
+  debug(DBG_ATTR, "ChannelBind successful, send success ChannelBind response\n");
 
   /* finally send the response */
   if(speer) /* TLS */
@@ -1673,7 +1682,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     return -1;
   }
 
-  debug(DBG_ATTR, "Refresh successfull, send success refresh response\n");
+  debug(DBG_ATTR, "Refresh successful, send success refresh response\n");
 
   /* finally send the response */
   if(speer) /* TLS */
@@ -2166,7 +2175,7 @@ send_success_response:
       return -1;
     }
 
-    debug(DBG_ATTR, "Allocation successfull, send success allocate response\n");
+    debug(DBG_ATTR, "Allocation successful, send success allocate response\n");
 
     if(speer) /* TLS */
     {
@@ -2467,7 +2476,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         index++;
       }
 
-      turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
+      turn_add_fingerprint(iov, &index); /* not fatal if not successful */
 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
@@ -2573,7 +2582,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       strncpy(username, (char*)message.username->turn_attr_username, username_len);
       username[username_len - 1] = 0x00;
       strncpy(user_realm, (char*)message.realm->turn_attr_realm, realm_len);
-      user_realm[realm_len -1] = 0x00;
+      user_realm[realm_len - 1] = 0x00;
 
       /* search the account */
       account = account_list_find(account_list, username, user_realm);
@@ -2607,7 +2616,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
           index++;
         }
 
-        turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
+        turn_add_fingerprint(iov, &index); /* not fatal if not successful */
 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
@@ -2692,7 +2701,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
           index++;
         }
 
-        turn_add_fingerprint(iov, &index); /* not fatal if not successfull */
+        turn_add_fingerprint(iov, &index); /* not fatal if not successful */
 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
@@ -3249,6 +3258,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   sigaddset(&mask, SIGINT);
   sigaddset(&mask, SIGTERM);
   sigaddset(&mask, SIGPIPE);
+  sigaddset(&mask, SIGHUP);
   sigaddset(&mask, SIGUSR1);
   sigaddset(&mask, SIGUSR2);
   sigaddset(&mask, SIGRT_EXPIRE_ALLOCATION);
@@ -3603,6 +3613,12 @@ int main(int argc, char** argv)
     debug(DBG_ATTR, "SIGPIPE will not be catched\n");
   }
 
+  /* catch SIGHUP to reload credentials */
+  if(sigaction(SIGHUP, &sa, NULL) == -1)
+  {
+    debug(DBG_ATTR, "SIGHUP will not be catched\n");
+  }
+
   /* catch SIGUSR1 and SIGUSR2 to avoid being killed 
    * if someone send these signals
    */
@@ -3751,7 +3767,7 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-#if 0 
+#if 0
   /* print account information */
   list_iterate_safe(get, n, &account_list)
   {
@@ -3903,6 +3919,43 @@ int main(int argc, char** argv)
     if(!g_run)
     {
       break;
+    }
+
+    if(g_reinit)
+    {
+      struct list_head tmp_list;
+      INIT_LIST(tmp_list);
+
+      /* map the account in memory */
+      if(account_parse_file(&tmp_list, turnserver_cfg_account_file()) == -1)
+      {
+        debug(DBG_ATTR, "Reload account file failed!\n");
+        syslog(LOG_INFO, "Reload account file failed!");
+      }
+      else
+      {
+        /* reload successful */
+        /* free the account list and
+         * copy new list of accounts
+         */
+        account_list_free(&account_list);
+
+        memcpy(&account_list, &tmp_list, sizeof(struct list_head));
+        /* specific to list_head implementation:
+         * The extremities of a list MUST be its pointer
+         */
+        account_list.next->prev = &account_list;
+        account_list.prev->next = &account_list;
+#if 0
+        /* print account information */
+        list_iterate_safe(get, n, &account_list)
+        {
+          struct account_desc* tmp = list_get(get, struct account_desc, list);
+          printf("%s %s\n", tmp->username, tmp->realm);
+        }
+#endif
+      }
+      g_reinit = 0;
     }
 
     /* avoid signal handling during purge */

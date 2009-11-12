@@ -86,8 +86,8 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
   ret->username[len_username] = 0x00;
   memcpy(ret->key, key, 16); /* 16 = MD5 length */
   memcpy(ret->nonce, nonce, 24); /* see protocol.c for nonce length */
-  strncpy(ret->realm, realm, sizeof(ret->realm) -1);
-  ret->realm[sizeof(ret->realm) -1] = 0x00;
+  strncpy(ret->realm, realm, sizeof(ret->realm) - 1);
+  ret->realm[sizeof(ret->realm) - 1] = 0x00;
 
   /* initialize the 5-tuple */
   ret->tuple.transport_protocol = transport_protocol;
