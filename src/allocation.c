@@ -175,6 +175,7 @@ void allocation_desc_free(struct allocation_desc** desc)
   {
     close(ret->relayed_sock);
   }
+
   ret->relayed_sock = -1;
 
   /* the tuple sock is closed by the user-defined application */

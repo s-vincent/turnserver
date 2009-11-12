@@ -2597,6 +2597,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         uint8_t nonce[32];
         char* realm = turnserver_cfg_realm();
         char* key = turnserver_cfg_nonce_key();
+        struct allocation_desc* desc = NULL;
 
         debug(DBG_ATTR, "No account\n");
 
@@ -2641,6 +2642,13 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         /* free sent data */
         iovec_free_data(iov, index);
+        
+        /* case of an allocation which account has been removed during credentials reload */ 
+        if((desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size)))
+        {
+          allocation_list_remove(allocation_list, desc);
+        }
+
         return 0;
       }
     }
