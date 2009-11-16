@@ -452,6 +452,24 @@ void allocation_list_remove(struct list_head* list, struct allocation_desc* desc
   allocation_desc_free(&desc);
 }
 
+struct allocation_desc* allocation_list_find_username(struct list_head* list, const char* username)
+{
+  struct list_head* get = NULL;
+  struct list_head* n = NULL;
+
+  list_iterate_safe(get, n, list)
+  {
+    struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
+    if(!strcmp(tmp->username, username))
+    {
+      return tmp;
+    }
+  }
+
+  /* not found */
+  return NULL;
+}
+
 struct allocation_desc* allocation_list_find_id(struct list_head* list, const uint8_t* id)
 {
   struct list_head* get = NULL;

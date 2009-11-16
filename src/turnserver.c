@@ -2597,7 +2597,6 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         uint8_t nonce[32];
         char* realm = turnserver_cfg_realm();
         char* key = turnserver_cfg_nonce_key();
-        struct allocation_desc* desc = NULL;
 
         debug(DBG_ATTR, "No account\n");
 
@@ -2642,13 +2641,6 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         /* free sent data */
         iovec_free_data(iov, index);
-        
-        /* case of an allocation which account has been removed during credentials reload */ 
-        if((desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size)))
-        {
-          allocation_list_remove(allocation_list, desc);
-        }
-
         return 0;
       }
     }
@@ -3942,6 +3934,38 @@ int main(int argc, char** argv)
       }
       else
       {
+        struct list_head* n2 = NULL;
+        struct list_head* get2 = NULL;
+        struct allocation_desc* allocation = NULL;
+
+        /* find the removed account and close TURN sessions */
+        list_iterate_safe(get, n, &account_list)
+        {
+          struct account_desc* tmp = list_get(get, struct account_desc, list);
+          int found = 0;
+
+          list_iterate_safe(get2, n2, &tmp_list)
+          {
+            struct account_desc* tmp2 = list_get(get2, struct account_desc, list);
+
+            if(!strcmp(tmp->username, tmp2->username))
+            {
+              /* found it, try next iteration of account_list */
+              found = 1;
+              break;
+            }
+          }
+
+          /* many allocation can used same username */
+          if(!found)
+          {
+            while((allocation = allocation_list_find_username(&allocation_list, tmp->username)))
+            {
+              allocation_list_remove(&allocation_list, allocation);
+            }
+          }
+        }
+
         /* reload successful */
         /* free the account list and
          * copy new list of accounts
@@ -3954,6 +3978,10 @@ int main(int argc, char** argv)
          */
         account_list.next->prev = &account_list;
         account_list.prev->next = &account_list;
+        
+        debug(DBG_ATTR, "Reload account file successful!\n");
+        syslog(LOG_INFO, "Reload account file successful");
+
 #if 0
         /* print account information */
         list_iterate_safe(get, n, &account_list)
@@ -3963,6 +3991,7 @@ int main(int argc, char** argv)
         }
 #endif
       }
+
       g_reinit = 0;
     }
 
