@@ -1352,7 +1352,7 @@ int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key, size_t key_len
   MD5_Final(md_buf, &ctx);
 
   /* add MD5 at the end of the nonce */
-  hex_convert(md_buf, MD5_DIGEST_LENGTH, nonce + 16, len - 8);
+  hex_convert(md_buf, MD5_DIGEST_LENGTH, nonce + 16, len - 16);
 
   return 0;
 }
@@ -1367,7 +1367,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
   unsigned char md_buf[MD5_DIGEST_LENGTH];
   unsigned char md_txt[MD5_DIGEST_LENGTH * 2];
 
-  if(len != (16 + MD5_DIGEST_LENGTH))
+  if(len != (16 + MD5_DIGEST_LENGTH * 2))
   {
     return 1; /* bad nonce length */
   }
@@ -1391,9 +1391,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 
   hex_convert(md_buf, MD5_DIGEST_LENGTH, md_txt, sizeof(md_txt));
 
-  md_txt[16] = 0x00;
-
-  if(memcmp(md_txt, nonce + 16, MD5_DIGEST_LENGTH) != 0)
+  if(memcmp(md_txt, nonce + 16, (MD5_DIGEST_LENGTH * 2)) != 0)
   {
     /* MD5 hash mismatch */
     return 1; 

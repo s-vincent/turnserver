@@ -2356,7 +2356,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     return -1;
   }
 
-  memcpy(&type, buf, 2);
+  memcpy(&type, buf, sizeof(uint16_t));
   type = ntohs(type);
 
   /* is it a ChannelData message (bit 0 and 1 are not set to 0) ? */
@@ -2451,17 +2451,16 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     {
       /* no messages integrity => error 401 */
       struct iovec iov[12]; /* header, error-code, realm, nonce, software */
-      uint8_t nonce[32];
+      uint8_t nonce[48];
       struct turn_msg_hdr* error = NULL;
       struct turn_attr_hdr* attr = NULL;
-      char* key = turnserver_cfg_nonce_key();
+      char* key = NULL;
       size_t index = 0;
 
       debug(DBG_ATTR, "No message integrity\n");
-
+      
+      key = turnserver_cfg_nonce_key();
       turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key, strlen(key));
-      /* strange thing happen here when OS_SET_DF is not defined: index does not equal 0 */
-      index = 0;
 
       if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
       {
@@ -2493,7 +2492,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       {
         nb = turn_tcp_send(sock, iov, index);
       }
-
+      
       if(nb == -1)
       {
         debug(DBG_ATTR, "turn_*_send failed\n");
@@ -2519,7 +2518,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       size_t index = 0;
       struct turn_msg_hdr* error = NULL;
       struct turn_attr_hdr* attr = NULL;
-      uint8_t nonce[32];
+      uint8_t nonce[48];
       char* realm = turnserver_cfg_realm();
       char* key = turnserver_cfg_nonce_key();
 
@@ -2594,7 +2593,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         size_t index = 0;
         struct turn_msg_hdr* error = NULL;
         struct turn_attr_hdr* attr = NULL;
-        uint8_t nonce[32];
+        uint8_t nonce[48];
         char* realm = turnserver_cfg_realm();
         char* key = turnserver_cfg_nonce_key();
 
@@ -2676,7 +2675,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         size_t index = 0;
         struct turn_msg_hdr* error = NULL;
         struct turn_attr_hdr* attr = NULL;
-        uint8_t nonce[32];
+        uint8_t nonce[48];
         char* nonce_key = turnserver_cfg_nonce_key();
 
         debug(DBG_ATTR, "Hash mismatch\n");
