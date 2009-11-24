@@ -792,7 +792,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   char* msg = NULL;
   ssize_t nb = -1;
   int optval = 0;
-  int save_val =0;
+  int save_val = 0;
   socklen_t optlen = sizeof(int);
 
   debug(DBG_ATTR, "ChannelData received!\n");
@@ -909,18 +909,21 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
       /* avoid compilation warning */
       optval = 0;
       optlen = 0;
+      save_val = 0;
 #endif
     }
 
     debug(DBG_ATTR, "Send ChannelData to peer\n");
     nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
+#ifdef OS_SET_DF_SUPPORT 
     /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
     if(optlen)
     {
       /* restore original value */
       setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
     }
+#endif
   }
   else /* TCP */
   {
@@ -1097,6 +1100,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
 #else
         /* avoid compilation warning */
         optval = 0;
+        optlen = 0;
+        save_val = 0;
 
         if(message->dont_fragment)
         {
@@ -1111,11 +1116,13 @@ static int turnserver_process_send_indication(const struct turn_message* message
       nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
       /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
+#ifdef OS_SET_DF_SUPPORT 
       if(optlen)
       {
         /* restore original value */
         setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
       }
+#endif
     }
     else /* TCP */
     {
@@ -2956,16 +2963,19 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
 #else
     optlen = 0;
     optval = 0;
+    save_val = 0;
 #endif
 
     nb = turn_udp_send(desc->tuple_sock, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), iov, index);
 
     /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
+#ifdef OS_SET_DF_SUPPORT
     if(optlen)
     {
       /* restore original value */
       setsockopt(desc->tuple_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
     }
+#endif
   }
   else /* TCP */
   {
