@@ -4022,7 +4022,7 @@ int main(int argc, char** argv)
           debug(DBG_ATTR, "Account %s, allocations used: %u\n", desc->username, desc->allocations);
         }
 
-        /* remove it from the list of valid allocation */
+        /* remove it from the list of valid allocations */
         LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_desc\n");
@@ -4036,7 +4036,7 @@ int main(int argc, char** argv)
       {
         struct allocation_permission* tmp = list_get(get, struct allocation_permission, list2);
 
-        /* remove it from the list of valid permission */
+        /* remove it from the list of valid permissions */
         LIST_DEL(&tmp->list); 
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_permission\n");
@@ -4051,7 +4051,7 @@ int main(int argc, char** argv)
       {
         struct allocation_channel* tmp = list_get(get, struct allocation_channel, list2);
 
-        /* remove it from the list of valid channel */
+        /* remove it from the list of valid channels */
         LIST_DEL(&tmp->list); 
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_channel\n");
@@ -4066,7 +4066,7 @@ int main(int argc, char** argv)
       {
         struct allocation_token* tmp = list_get(get, struct allocation_token, list2);
 
-        /* remove it from the list of valid token */
+        /* remove it from the list of valid tokens */
         LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_token\n");

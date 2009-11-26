@@ -237,20 +237,20 @@ void allocation_permission_set_timer(struct allocation_permission* permission, u
 
 /**
  * \brief Free a list of allocations.
- * \param list list of allocation
+ * \param list list of allocations
  */
 void allocation_list_free(struct list_head* list);
 
 /**
  * \brief Add an allocation to a list.
- * \param list list of allocation
+ * \param list list of allocations
  * \param desc allocation descriptor to add
  */
 void allocation_list_add(struct list_head* list, struct allocation_desc* desc);
 
 /**
  * \brief Remove and free an allocation from a list.
- * \param list list of allocation
+ * \param list list of allocations
  * \param desc allocation to remove
  */
 void allocation_list_remove(struct list_head* list, struct allocation_desc* desc);
@@ -336,7 +336,7 @@ void allocation_token_list_free(struct list_head* list);
 
 /**
  * \brief Remove and free a token from a list.
- * \param list list of allocation
+ * \param list list of allocations
  * \param desc allocation to remove
  */
 void allocation_token_list_remove(struct list_head* list, struct allocation_token* desc);

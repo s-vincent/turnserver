@@ -121,7 +121,7 @@ START_TEST(test_attr_create)
   {
     unsigned char* key = "Calamar power";
     size_t len = strlen(key);
-    uint8_t nonce_value[32];
+    uint8_t nonce_value[48];
 
     nb = turn_generate_nonce(nonce_value, sizeof(nonce_value), key, len);
     fail_unless(nb == 0, "generate nonce failed");

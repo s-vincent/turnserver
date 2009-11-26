@@ -62,7 +62,7 @@ START_TEST(test_allocation_list)
   uint8_t id[12];
   uint8_t id2[12];
   unsigned char key[16];
-  unsigned char nonce[32];
+  unsigned char nonce[48];
   char* realm = "domain.org";
   int nb = -1;
   uint32_t channel = 0;
@@ -128,7 +128,7 @@ START_TEST(test_allocation_add)
   int nb = -1;
   uint32_t channel = 0;
   unsigned char key[16];
-  unsigned char nonce[32];
+  unsigned char nonce[48];
   char* realm = "domain.org";
 
   memset(id, 0xEA, 12);
@@ -192,7 +192,7 @@ START_TEST(test_allocation_create)
   struct sockaddr_in relayed_addr;
   uint8_t id[12];
   unsigned char key[16];
-  unsigned char nonce[32];
+  unsigned char nonce[48];
   char* realm = "domain.org";
 
   memset(id, 0xEA, 12);

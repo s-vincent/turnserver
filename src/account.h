@@ -95,7 +95,7 @@ void account_desc_set_state(struct account_desc* desc, enum account_state state)
 
 /**
  * \brief Find a account with specified username and realm from a list. 
- * \param list list of account
+ * \param list list of accounts
  * \param username
  * \param realm realm
  * \return pointer on account_desc or NULL if not found
@@ -104,20 +104,20 @@ struct account_desc* account_list_find(struct list_head* list, const char* usern
 
 /**
  * \brief Free a list of account.
- * \param list list of account
+ * \param list list of accounts
  */
 void account_list_free(struct list_head* list);
 
 /**
  * \brief Add an account to a list.
- * \param list list of account
+ * \param list list of accounts
  * \param desc account descriptor to add
  */
 void account_list_add(struct list_head* list, struct account_desc* desc);
 
 /**
  * \brief Remove and free an account from a list.
- * \param list list of account
+ * \param list list of accounts
  * \param desc account to remove
  */
 void account_list_remove(struct list_head* list, struct account_desc* desc);
