@@ -113,7 +113,7 @@ struct allocation_desc
   char* username; /**< Username of client */
   unsigned char key[16]; /**< MD5 hash over username, realm and password */
   char realm[256]; /**< Realm of user */
-  unsigned char nonce[32]; /**< Nonce of user */
+  unsigned char nonce[48]; /**< Nonce of user */
   int relayed_transport_protocol; /**< Relayed transport protocol used */
   struct sockaddr_storage relayed_addr; /**< Relayed transport address */
   struct allocation_tuple tuple; /**< 5-tuple */

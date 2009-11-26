@@ -2222,8 +2222,8 @@ send_success_response:
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_turn(int transport_protocol, int sock, const struct turn_message* message,
-                                  const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
-                                  struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+                                   const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
+                                   struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = 0;
   uint16_t method = 0;
@@ -3503,7 +3503,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         saddr_size = sizeof(struct sockaddr_storage);
         daddr_size = sizeof(struct sockaddr_storage);
 
-        /* for the moment manage only UDP relay as described in ietf-draft-behave-turn-16 */
+        /* for the moment manage only UDP relay as described in draft-ietf-behave-turn-16 */
         nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
         getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
 
