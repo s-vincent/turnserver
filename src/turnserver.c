@@ -882,7 +882,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
         break;
     }
 
-    /* draft-ietf-behave-turn-ipv6-07:  If present, the
+    /* draft-ietf-behave-turn-ipv6-08:  If present, the
      * DONT-FRAGMENT attribute MUST be ignored by the server for 
      * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
@@ -1064,7 +1064,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
           break;
       }
 
-      /* draft-ietf-behave-turn-ipv6-07:  If present, the
+      /* draft-ietf-behave-turn-ipv6-08:  If present, the
        * DONT-FRAGMENT attribute MUST be ignored by the server for 
        * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
        */
@@ -1598,8 +1598,9 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_refresh_request(int transport_protocol, int sock, const struct turn_message* message,
-                                              const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list,
-                                              struct allocation_desc* desc, struct account_desc* account, struct tls_peer* speer)
+                                              const struct sockaddr* saddr, socklen_t saddr_size, 
+                                              struct list_head* allocation_list, struct allocation_desc* desc, 
+                                              struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1616,10 +1617,38 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   /* save key from allocation as it could be freed if lifetime equals 0 */
   memcpy(key, desc->key, sizeof(desc->key));
 
-  /* draft-ietf-behave-turn-ipv6-07: at this stage server knows the 5-tuple and the allocation associated.
+  /* draft-ietf-behave-turn-ipv6-08: at this stage server knows the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so 
    * no need to have REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
+
+  /* if REQUESTED-ADDRESS-FAMILY attribute is present and 
+   * do not match relayed address ones => error 443
+   */
+  if(message->requested_addr_family)
+  {
+    int family = 0;
+
+    switch(message->requested_addr_family->turn_attr_family)
+    {
+      case STUN_ATTR_FAMILY_IPV4:
+        family = AF_INET;
+        break;
+      case STUN_ATTR_FAMILY_IPV6:
+        family = AF_INET6;
+        break;
+      default:
+        return -1;
+    }
+
+    if(desc->relayed_addr.ss_family != family)
+    {
+      /* peer family mismatch => error 443 */
+      debug(DBG_ATTR, "Peer family mismatch\n");
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443, saddr, saddr_size, speer, key);
+      return -1;
+    }
+  }
 
   if(message->lifetime)
   {
@@ -1682,7 +1711,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     index++;
   }
 
-  if(turn_add_message_integrity(iov, &index, key, sizeof(desc->key), 1) == -1)
+  if(turn_add_message_integrity(iov, &index, key, sizeof(key), 1) == -1)
   {
     iovec_free_data(iov, index);
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
@@ -1880,8 +1909,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_addr_family && message->reservation_token)
   {
-    /* draft-ietf-behave-turn-ipv6-07: cannot have both REQUESTED-ADDRESS-FAMILY 
-     * and RESERVATION-TOKEN => error 400
+    /* draft-ietf-behave-turn-ipv6-08: cannot have both 
+     * REQUESTED-ADDRESS-FAMILY and RESERVATION-TOKEN => error 400
      */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
@@ -1943,7 +1972,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     lifetime = MIN(turnserver_cfg_allocation_lifetime(), TURN_MAX_ALLOCATION_LIFETIME);
   }
 
-  /* draft-ietf-behave-turn-ipv6-07 */
+  /* draft-ietf-behave-turn-ipv6-08 */
   if(message->requested_addr_family)
   {
     switch(message->requested_addr_family->turn_attr_family)
@@ -2935,7 +2964,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     socklen_t optlen = sizeof(int);
 
 #ifdef OS_SET_DF_SUPPORT
-    /* draft-ietf-behave-turn-ipv6-07:  If present, the
+    /* draft-ietf-behave-turn-ipv6-08:  If present, the
      * DONT-FRAGMENT attribute MUST be ignored by the server for 
      * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
