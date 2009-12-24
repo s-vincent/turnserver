@@ -259,7 +259,7 @@ struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len, struct iovec
 
 /**
  * \brief Create a STUN Binding Request.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -268,7 +268,7 @@ struct turn_msg_hdr* turn_msg_binding_request_create(uint16_t len, const uint8_t
 
 /**
  * \brief Create a STUN Binding Response.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -277,7 +277,7 @@ struct turn_msg_hdr* turn_msg_binding_response_create(uint16_t len, const uint8_
 
 /**
  * \brief Create a STUN Binding Error.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -286,7 +286,7 @@ struct turn_msg_hdr* turn_msg_binding_error_create(uint16_t len, const uint8_t* 
 
 /**
  * \brief Create a TURN Allocate Request.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -295,7 +295,7 @@ struct turn_msg_hdr* turn_msg_allocate_request_create(uint16_t len, const uint8_
 
 /**
  * \brief Create a TURN Allocate Response.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -304,7 +304,7 @@ struct turn_msg_hdr* turn_msg_allocate_response_create(uint16_t len, const uint8
 
 /**
  * \brief Create a TURN Allocate Error.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -313,7 +313,7 @@ struct turn_msg_hdr* turn_msg_allocate_error_create(uint16_t len, const uint8_t*
 
 /**
  * \brief Create a TURN Refresh Request.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -322,7 +322,7 @@ struct turn_msg_hdr* turn_msg_refresh_request_create(uint16_t len, const uint8_t
 
 /**
  * \brief Create a TURN Refresh Response.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -331,7 +331,7 @@ struct turn_msg_hdr* turn_msg_refresh_response_create(uint16_t len, const uint8_
 
 /**
  * \brief Create a TURN Refresh Error.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -340,7 +340,7 @@ struct turn_msg_hdr* turn_msg_refresh_error_create(uint16_t len, const uint8_t* 
 
 /**
  * \brief Create a TURN CreatePermission Request.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -349,7 +349,7 @@ struct turn_msg_hdr* turn_msg_createpermission_request_create(uint16_t len, cons
 
 /**
  * \brief Create a TURN CreatePermission Response.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -358,7 +358,7 @@ struct turn_msg_hdr* turn_msg_createpermission_response_create(uint16_t len, con
 
 /**
  * \brief Create a TURN CreatePermission Error.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -367,7 +367,7 @@ struct turn_msg_hdr* turn_msg_createpermission_error_create(uint16_t len, const 
 
 /**
  * \brief Create a TURN ChannelBind Request.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -376,7 +376,7 @@ struct turn_msg_hdr* turn_msg_channelbind_request_create(uint16_t len, const uin
 
 /**
  * \brief Create a TURN ChannelBind Response.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -385,7 +385,7 @@ struct turn_msg_hdr* turn_msg_channelbind_response_create(uint16_t len, const ui
 
 /**
  * \brief Create a TURN ChannelBind Error.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -394,7 +394,7 @@ struct turn_msg_hdr* turn_msg_channelbind_error_create(uint16_t len, const uint8
 
 /**
  * \brief Create a TURN Send Indication.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -403,7 +403,7 @@ struct turn_msg_hdr* turn_msg_send_indication_create(uint16_t len, const uint8_t
 
 /**
  * \brief Create a TURN Data Indication.
- * \param len Length of the message
+ * \param len length of the message
  * \param id 96 bit transaction ID
  * \param iov vector
  * \return pointer on turn_msg_hdr or NULL if problem
@@ -535,7 +535,7 @@ struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* a
 /**
  * \brief Create a DATA attribute.
  * \param data data
- * \param datalen Length of data
+ * \param datalen length of data
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */

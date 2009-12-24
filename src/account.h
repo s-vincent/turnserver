@@ -103,7 +103,7 @@ void account_desc_set_state(struct account_desc* desc, enum account_state state)
 struct account_desc* account_list_find(struct list_head* list, const char* username, const char* realm);
 
 /**
- * \brief Free a list of account.
+ * \brief Free a list of accounts.
  * \param list list of accounts
  */
 void account_list_free(struct list_head* list);

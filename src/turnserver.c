@@ -890,8 +890,8 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
        (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 && 
        IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
     {
-      /* alternate behavior */
 #ifdef OS_SET_DF_SUPPORT 
+      /* alternate behavior */
       optval = IP_PMTUDISC_DONT;
       
       if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
