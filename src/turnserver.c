@@ -664,8 +664,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   /* finally send the response */
   if(speer) /* TLS */
   {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr),
-                       iov, index);
+    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index);
   }
   else if(transport_protocol == IPPROTO_UDP) /* UDP */
   {
@@ -2034,7 +2033,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     /* for the moment only UDP */
     relayed_sock = socket_create(IPPROTO_UDP, str, port);
-
+    
+    if(relayed_sock == -1)
+    {
+      quit_loop++;
+      continue;
+    }
+    
     if(r_flag)
     {
       reservation_port = port + 1;
@@ -3208,8 +3213,6 @@ static inline void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_
   char* proto = NULL;
   int rsock = accept(sock, (struct sockaddr*)&saddr, &saddr_size);
 
-  debug(DBG_ATTR, "Received TCP or TLS over TCP on listening address\n");
-
   if(rsock > 0)
   {
     if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
@@ -3221,8 +3224,6 @@ static inline void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_
     }
     else
     {
-      debug(DBG_ATTR, "Received TCP connection\n");
-
       if(!(sdesc = malloc(sizeof(struct socket_desc))))
       {
         close(rsock);
@@ -3435,7 +3436,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
       if(sfd_has_data(tmp->sock, max_fd, &fdsr))
       {
-        debug(DBG_ATTR, "Received data from TCP or TLS over TCP client\n");
+        debug(DBG_ATTR, "Received data from %s client\n", !tmp->tls ? "TCP" : "TLS");
 
         nb = recv(tmp->sock, buf, sizeof(buf), 0);
 
@@ -3453,7 +3454,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           {
             char buf2[1500];
             ssize_t nb2 = -1;
-
+            
             /* decode TLS data */
             if((nb2 = tls_peer_tcp_read(sockets->sock_tls, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
             {
@@ -3490,12 +3491,14 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     /* main TCP listen socket */
     if(sfd_has_data(sockets->sock_tcp, max_fd, &fdsr))
     {
+      debug(DBG_ATTR, "Received TCP on listening address\n");
       turnserver_handle_tcp_accept(sockets->sock_tcp, tcp_socket_list, 0);
     }
 
     /* main TLS listen socket */
     if(sockets->sock_tls && sfd_has_data(sockets->sock_tls->sock, max_fd, &fdsr))
     {
+      debug(DBG_ATTR, "Received TLS on listening address\n");
       turnserver_handle_tcp_accept(sockets->sock_tls->sock, tcp_socket_list, 1);
     }
 
@@ -4078,7 +4081,10 @@ int main(int argc, char** argv)
         LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_token\n");
-        close(tmp->sock);
+        if(tmp->sock > 0)
+        {
+          close(tmp->sock);
+        }
         allocation_token_free(&tmp);
       }
     }
@@ -4116,7 +4122,10 @@ int main(int argc, char** argv)
     struct allocation_token* tmp = list_get(get, struct allocation_token, list2);
     LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
-    close(tmp->sock);
+    if(tmp->sock > 0)
+    {
+      close(tmp->sock);
+    }
     allocation_token_free(&tmp);
   }
 
