@@ -170,6 +170,7 @@ struct socket_desc
   char buf[1500]; /**< Internal buffer for TCP stream reconstruction */
   size_t buf_pos; /**< Position in the internal buffer */
   size_t msg_len; /**< Message length that is not complete */
+  int tls; /**< If socket uses TLS */
   struct list_head list; /**< For list management */
 };
 
@@ -3192,6 +3193,56 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
 }
 
 /**
+ * \brief Handle TCP or TLS over TCP accept().
+ * \param sock listen TCP or TLS socket
+ * \param tcp_socket_list list of remote TCP sockets
+ * \param tls if socket use TLS (connect on TLS port)
+ */
+static inline void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_socket_list, int tls)
+{
+  struct socket_desc* sdesc = NULL;
+  struct sockaddr_storage saddr;
+  socklen_t saddr_size = 0;
+  char* listen_address = turnserver_cfg_listen_address();
+  char* listen_addressv6 = turnserver_cfg_listen_addressv6();
+  char* proto = NULL;
+  int rsock = accept(sock, (struct sockaddr*)&saddr, &saddr_size);
+
+  debug(DBG_ATTR, "Received TCP or TLS over TCP on listening address\n");
+
+  if(rsock > 0)
+  {
+    if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
+    {
+      /* don't relay the specified address family so close connection */
+      proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
+      debug(DBG_ATTR, "Do not relay family: %s\n", proto);
+      close(rsock);
+    }
+    else
+    {
+      debug(DBG_ATTR, "Received TCP connection\n");
+
+      if(!(sdesc = malloc(sizeof(struct socket_desc))))
+      {
+        close(rsock);
+      }
+      else
+      {
+        /* initialize */
+        sdesc->buf_pos = 0;
+        sdesc->msg_len = 0;
+        sdesc->tls = tls;
+        sdesc->sock = rsock;
+ 
+        /* add it to the list */
+        LIST_ADD(&sdesc->list, tcp_socket_list);
+      }
+    }
+  }
+}
+
+/**
  * \brief Wait messages and process it.
  * \param sockets all listen sockets
  * \param tcp_socket_list list of TCP sockets
@@ -3241,6 +3292,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     return;
   }
 
+  /* UDP and TCP listen socket */
   SFD_SET(sockets->sock_udp, &fdsr);
   SFD_SET(sockets->sock_tcp, &fdsr);
 
@@ -3309,14 +3361,13 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   if(ret > 0)
   {
     /* main UDP listen socket */
-    if(sockets->sock_udp < max_fd && SFD_ISSET(sockets->sock_udp, &fdsr))
+    if(sfd_has_data(sockets->sock_udp, max_fd, &fdsr))
     {
       debug(DBG_ATTR, "Received UDP on listening address\n");
       saddr_size = sizeof(struct sockaddr_storage);
       daddr_size = sizeof(struct sockaddr_storage);
 
       nb = recvfrom(sockets->sock_udp, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
-
       getsockname(sockets->sock_udp, (struct sockaddr*)&daddr, &daddr_size);
 
       if(nb > 0)
@@ -3341,14 +3392,13 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     }
 
     /* main DTLS listen socket */
-    if(sockets->sock_dtls && sockets->sock_dtls->sock < max_fd && SFD_ISSET(sockets->sock_dtls->sock, &fdsr))
+    if(sockets->sock_dtls && sfd_has_data(sockets->sock_dtls->sock, max_fd, &fdsr))
     {
       debug(DBG_ATTR, "Received DTLS on listening address\n");
       saddr_size = sizeof(struct sockaddr_storage);
       daddr_size = sizeof(struct sockaddr_storage);
 
       nb = recvfrom(sockets->sock_dtls->sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
-
       getsockname(sockets->sock_dtls->sock, (struct sockaddr*)&daddr, &daddr_size);
 
       if(nb > 0 && tls_peer_is_encrypted(buf, nb))
@@ -3383,25 +3433,23 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     {
       struct socket_desc* tmp = list_get(get, struct socket_desc, list);
 
-      if(tmp->sock > 0 && tmp->sock < max_fd && SFD_ISSET(tmp->sock, &fdsr))
+      if(sfd_has_data(tmp->sock, max_fd, &fdsr))
       {
-        debug(DBG_ATTR, "Received data from TCP client\n");
+        debug(DBG_ATTR, "Received data from TCP or TLS over TCP client\n");
 
-        memset(buf, 0x00, sizeof(buf));
         nb = recv(tmp->sock, buf, sizeof(buf), 0);
 
-        if(getpeername(tmp->sock, (struct sockaddr*)&saddr, &saddr_size) == -1)
+        if((getpeername(tmp->sock, (struct sockaddr*)&saddr, &saddr_size) == -1) ||
+           (getsockname(tmp->sock, (struct sockaddr*)&daddr, &daddr_size) == -1))
         {
           LIST_DEL(&tmp->list);
           free(tmp);
           continue;
         }
 
-        getsockname(tmp->sock, (struct sockaddr*)&daddr, &daddr_size);
-
         if(nb > 0)
         {
-          if(sockets->sock_tls && tls_peer_is_encrypted(buf, nb))
+          if(tmp->tls && sockets->sock_tls && tls_peer_is_encrypted(buf, nb))
           {
             char buf2[1500];
             ssize_t nb2 = -1;
@@ -3440,84 +3488,15 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     }
 
     /* main TCP listen socket */
-    if(sockets->sock_tcp < max_fd && SFD_ISSET(sockets->sock_tcp, &fdsr))
+    if(sfd_has_data(sockets->sock_tcp, max_fd, &fdsr))
     {
-      struct socket_desc* sdesc = NULL;
-      int sock = accept(sockets->sock_tcp, (struct sockaddr*)&saddr, &saddr_size);
-
-      debug(DBG_ATTR, "Received TCP on listening address\n");
-
-      if(sock > 0)
-      {
-        if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
-        {
-          /* don't relay the specified address family so close connection */
-          proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
-          debug(DBG_ATTR, "Do not relay family: %s\n", proto);
-          close(sock);
-        }
-        else
-        {
-          debug(DBG_ATTR, "Received TCP connection\n");
-          
-          if(!(sdesc = malloc(sizeof(struct socket_desc))))
-          {
-            close(sock);
-          }
-          else
-          {
-            /* initialize */
-            sdesc->buf_pos = 0;
-            sdesc->msg_len = 0;
-            sdesc->sock = sock;
-
-            /* add it to the list */
-            LIST_ADD(&sdesc->list, tcp_socket_list);
-          }
-        }
-      }
+      turnserver_handle_tcp_accept(sockets->sock_tcp, tcp_socket_list, 0);
     }
 
     /* main TLS listen socket */
-    if(sockets->sock_tls)
+    if(sockets->sock_tls && sfd_has_data(sockets->sock_tls->sock, max_fd, &fdsr))
     {
-      if(sockets->sock_tls->sock < max_fd && SFD_ISSET(sockets->sock_tls->sock, &fdsr))
-      {
-        struct socket_desc* sdesc = NULL;
-        int sock = accept(sockets->sock_tls->sock, (struct sockaddr*)&saddr, &saddr_size);
-
-        debug(DBG_ATTR, "Received TLS on listening address\n");
-
-        if(sock > 0)
-        {
-          if(!turnserver_check_relay_address(listen_address, listen_addressv6, &saddr))
-          {
-            /* don't relay the specified address family so close connection */
-            proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
-            debug(DBG_ATTR, "Do not relay family: %s\n", proto);
-            close(sock);
-          }
-          else
-          {
-            debug(DBG_ATTR, "Received TLS over TCP connection\n");
-            
-            if(!(sdesc = malloc(sizeof(struct socket_desc))))
-            {
-              close(sock);
-            }
-            else
-            {
-              /* initialize */
-              sdesc->buf_pos = 0;
-              sdesc->msg_len = 0;
-              sdesc->sock = sock;
-              
-              /* add it to the list */
-              LIST_ADD(&sdesc->list, tcp_socket_list);
-            }
-          }
-        }
-      }
+      turnserver_handle_tcp_accept(sockets->sock_tls->sock, tcp_socket_list, 1);
     }
 
     /* relayed addresses */
@@ -3526,7 +3505,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
 
       /* relayed address */
-      if(tmp->relayed_sock > 0 && tmp->relayed_sock < max_fd && SFD_ISSET(tmp->relayed_sock, &fdsr))
+      if(sfd_has_data(tmp->relayed_sock, max_fd, &fdsr))
       {
         debug(DBG_ATTR, "Received UDP on a relayed address\n");
         saddr_size = sizeof(struct sockaddr_storage);

@@ -179,6 +179,29 @@ typedef struct sfd_set
  */
 #define SFD_CLR(fd, set) FD_CLR((fd), (set))
 
+/**
+ * \brief Test if socket has data to read.
+ * 
+ * It is a convenient function to test if socket
+ * is valid, can be tested in select and if it has
+ * data to read.
+ * \param sock socket to read
+ * \param nsock parameter of (p)select() function
+ * \param fdsr set of descriptor (see select())
+ * \return 1 if socket has data, 0 otherwise
+ */
+static inline int sfd_has_data(int sock, int nsock, sfd_set* fdsr)
+{
+  if(sock > 0 && sock < nsock && SFD_ISSET(sock, fdsr))
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
 #ifdef __cplusplus
 extern "C"
 { /* } */
