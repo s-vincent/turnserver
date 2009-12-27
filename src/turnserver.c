@@ -2449,12 +2449,12 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
   /* check that the method value is supported */
   if(method != STUN_METHOD_BINDING &&
-      method != TURN_METHOD_ALLOCATE && 
-      method != TURN_METHOD_REFRESH &&
-      method != TURN_METHOD_CREATEPERMISSION &&
-      method != TURN_METHOD_CHANNELBIND &&
-      method != TURN_METHOD_SEND &&
-      method != TURN_METHOD_DATA)
+     method != TURN_METHOD_ALLOCATE && 
+     method != TURN_METHOD_REFRESH &&
+     method != TURN_METHOD_CREATEPERMISSION &&
+     method != TURN_METHOD_CHANNELBIND &&
+     method != TURN_METHOD_SEND &&
+     method != TURN_METHOD_DATA)
   {
     debug(DBG_ATTR, "Unknown method\n");
     return -1;
@@ -3437,7 +3437,6 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       if(sfd_has_data(tmp->sock, max_fd, &fdsr))
       {
         debug(DBG_ATTR, "Received data from %s client\n", !tmp->tls ? "TCP" : "TLS");
-
         nb = recv(tmp->sock, buf, sizeof(buf), 0);
 
         if((getpeername(tmp->sock, (struct sockaddr*)&saddr, &saddr_size) == -1) ||
@@ -3612,7 +3611,7 @@ int main(int argc, char** argv)
   /* disable core dump in release mode */
   debug(DBG_ATTR, "Disable core dump\n");
   turnserver_disable_core_dump();
-#endif 
+#endif
 
   sa.sa_handler = signal_handler;
   sigemptyset(&sa.sa_mask);
