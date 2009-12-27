@@ -893,7 +893,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
 #ifdef OS_SET_DF_SUPPORT 
       /* alternate behavior */
       optval = IP_PMTUDISC_DONT;
-      
+
       if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
       {
         setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
@@ -1786,7 +1786,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size);
 
   if(desc)
-  {      
+  {
     if(transport_protocol == IPPROTO_UDP && !memcmp(message->msg->turn_msg_id, desc->transaction_id, 12))
     {
       /* the request is a retransmission of a valid request, rebuild the response */
@@ -1804,7 +1804,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       /* allocation mismatch => error 437 */
       turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, desc->key);
     }
-    
+
     return 0;
   }
 
@@ -2033,13 +2033,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     /* for the moment only UDP */
     relayed_sock = socket_create(IPPROTO_UDP, str, port);
-    
+
     if(relayed_sock == -1)
     {
       quit_loop++;
       continue;
     }
-    
+ 
     if(r_flag)
     {
       reservation_port = port + 1;
@@ -2500,7 +2500,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       size_t index = 0;
 
       debug(DBG_ATTR, "No message integrity\n");
-      
+
       key = turnserver_cfg_nonce_key();
       turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key, strlen(key));
 
@@ -2534,7 +2534,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       {
         nb = turn_tcp_send(sock, iov, index);
       }
-      
+
       if(nb == -1)
       {
         debug(DBG_ATTR, "turn_*_send failed\n");
@@ -3300,14 +3300,14 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   nsock = MAX(sockets->sock_udp, sockets->sock_tcp);
 
   /* TLS socket */
-  if(turnserver_cfg_tls() && sockets->sock_tls->sock > 0)
+  if(turnserver_cfg_tls() && sockets->sock_tls)
   {
     SFD_SET(sockets->sock_tls->sock, &fdsr);
     nsock = MAX(nsock, sockets->sock_tls->sock);
   }
 
   /* DTLS socket */
-  if(turnserver_cfg_dtls() && sockets->sock_dtls->sock > 0)
+  if(turnserver_cfg_dtls() && sockets->sock_dtls)
   {
     SFD_SET(sockets->sock_dtls->sock, &fdsr);
     nsock = MAX(nsock, sockets->sock_dtls->sock);
@@ -3318,7 +3318,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
 
-    if(tmp->relayed_sock > 0 && tmp->relayed_sock < max_fd)
+    if(tmp->relayed_sock < max_fd)
     {
       SFD_SET(tmp->relayed_sock, &fdsr);
       nsock = MAX(nsock, tmp->relayed_sock);
@@ -3331,7 +3331,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);
 
     /* TCP remote socket */
-    if(tmp->sock > 0 && tmp->sock < max_fd)
+    if(tmp->sock < max_fd)
     {
       SFD_SET(tmp->sock, &fdsr);
       nsock = MAX(nsock, tmp->sock);
@@ -3368,8 +3368,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       saddr_size = sizeof(struct sockaddr_storage);
       daddr_size = sizeof(struct sockaddr_storage);
 
-      nb = recvfrom(sockets->sock_udp, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
       getsockname(sockets->sock_udp, (struct sockaddr*)&daddr, &daddr_size);
+      nb = recvfrom(sockets->sock_udp, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
 
       if(nb > 0)
       {
@@ -3399,8 +3399,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       saddr_size = sizeof(struct sockaddr_storage);
       daddr_size = sizeof(struct sockaddr_storage);
 
-      nb = recvfrom(sockets->sock_dtls->sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
       getsockname(sockets->sock_dtls->sock, (struct sockaddr*)&daddr, &daddr_size);
+      nb = recvfrom(sockets->sock_dtls->sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
 
       if(nb > 0 && tls_peer_is_encrypted(buf, nb))
       {
@@ -3454,7 +3454,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           {
             char buf2[1500];
             ssize_t nb2 = -1;
-            
+
             /* decode TLS data */
             if((nb2 = tls_peer_tcp_read(sockets->sock_tls, buf, nb, buf2, sizeof(buf2), (struct sockaddr*)&saddr, saddr_size, tmp->sock)) > 0)
             {
@@ -3907,6 +3907,7 @@ int main(int argc, char** argv)
     else
     {
       debug(DBG_ATTR, "DTLS initialization failed\n");
+      syslog(LOG_ERR, "DTLS initialization failed");
     }
   }
 
@@ -3998,7 +3999,7 @@ int main(int argc, char** argv)
          */
         account_list.next->prev = &account_list;
         account_list.prev->next = &account_list;
-        
+
         debug(DBG_ATTR, "Reload account file successful!\n");
         syslog(LOG_INFO, "Reload account file successful");
 
@@ -4144,11 +4145,7 @@ int main(int argc, char** argv)
   list_iterate_safe(get, n, &tcp_socket_list)
   {
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);
-
-    if(tmp->sock > 0)
-    {
-      close(tmp->sock);
-    }
+    close(tmp->sock);
     LIST_DEL(&tmp->list);
     free(tmp);
   }

@@ -96,7 +96,7 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   /* copy relayed address */
   memcpy(&ret->relayed_addr, relayed_addr, addr_size);
-  
+
   ret->relayed_transport_protocol = IPPROTO_UDP;
 
   /* by default, this will be set by caller */

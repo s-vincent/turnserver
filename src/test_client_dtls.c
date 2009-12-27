@@ -93,7 +93,7 @@ int main(int argc, char** argv)
   struct addrinfo* res = NULL;
   struct sockaddr_storage daddr;
   socklen_t daddr_size = sizeof(struct sockaddr_storage);
-  
+
   if(argc != 5)
   {
     printf("Usage %s client_address server_address peer_address peer_port\n", argv[0]);

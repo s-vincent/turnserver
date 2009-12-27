@@ -46,7 +46,7 @@
 START_TEST(test_account_create)
 {
   struct account_desc* ret = NULL;
-  
+
   /* create a valid account descriptor */
   ret = account_desc_new("login", "password", "domain.org");
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
@@ -58,11 +58,11 @@ START_TEST(test_account_create)
   /* create a invalid account descriptor */
   ret = account_desc_new("login", NULL, "domain.org");
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
-  
+
   /* create a invalid account descriptor */
   ret = account_desc_new(NULL, "password", "domain.org");
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
-  
+
   /* create a invalid account descriptor */
   ret = account_desc_new("login", "password", NULL);
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
@@ -99,7 +99,7 @@ START_TEST(test_account_list)
   /* find an valid name but unknown realm */
   ret3 = account_list_find(&account_list, "login", "domain2.org");
   fail_unless(ret3 == NULL, "The list has a match");
-  
+
   /* find an valid name but no realm specified */
   ret3 = account_list_find(&account_list, "login", NULL);
   fail_unless(ret3 != NULL, "The list has not a match");

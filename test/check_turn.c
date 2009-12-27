@@ -104,7 +104,7 @@ START_TEST(test_attr_create)
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* XOR-RELAYED-ADDRESS */
   attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
@@ -189,7 +189,7 @@ START_TEST(test_attr_create)
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* REQUESTED-TRANSPORT */
   attr = turn_attr_requested_transport_create(IPPROTO_UDP, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
@@ -220,7 +220,7 @@ START_TEST(test_attr_create)
   attr = turn_attr_message_integrity_create(NULL, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
-  
+
   nb = index; /* number of element before MESSAGE-INTEGRITY */
   index++;
 
@@ -238,7 +238,7 @@ START_TEST(test_attr_create)
     unsigned char buf[40];
     uint32_t crc = 0;
     uint32_t crc_hello = htonl(0x86a61036);
-    
+
     strncpy(buf, "hello", 40);
     buf[39] = 0x00;
 
@@ -252,10 +252,10 @@ START_TEST(test_attr_create)
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len = ntohs(hdr->turn_msg_len) + iov[index].iov_len;
   index++; 
-    
+
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
-  
+
   /* calculate fingerprint */
   /* index -1, we do not take into account FINGERPRINT attribute */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
@@ -296,7 +296,7 @@ START_TEST(test_attr_create)
     uint32_t crc = turn_calculate_fingerprint(iov, index - 1);
     fail_unless(htonl(crc) ^ htonl(STUN_FINGERPRINT_XOR_VALUE) == ((struct turn_attr_fingerprint*)attr)->turn_attr_crc, "Fingerprint check");
   }
-  
+
   iovec_free_data(iov, index);
   close(sock);
 }
@@ -350,7 +350,7 @@ START_TEST(test_msg_create)
   hdr = turn_msg_binding_response_create(0, id, &iov[index]);
   fail_unless(hdr != NULL, "header creation failed");
   index++;
-  
+
   /* Binding error */
   hdr = turn_msg_binding_error_create(0, id, &iov[index]);
   fail_unless(hdr != NULL, "header creation failed");
@@ -375,7 +375,7 @@ START_TEST(test_msg_create)
   hdr = turn_msg_channelbind_request_create(0, id, &iov[index]);
   fail_unless(hdr != NULL, "header creation failed");
   index++;
-  
+
   /* ChannelBind response */
   hdr = turn_msg_channelbind_response_create(0, id, &iov[index]);
   fail_unless(hdr != NULL, "header creation failed");
@@ -488,7 +488,7 @@ START_TEST(test_message_parse)
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* XOR-RELAYED-ADDRESS */
   attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
@@ -552,7 +552,7 @@ START_TEST(test_message_parse)
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* LIFETIME */
   attr = turn_attr_lifetime_create(0xDEADBEEF, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
@@ -564,7 +564,7 @@ START_TEST(test_message_parse)
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* REQUESTED-TRANSPORT */
   attr = turn_attr_requested_transport_create(IPPROTO_UDP, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
@@ -619,7 +619,7 @@ START_TEST(test_message_parse)
   /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
   md5_generate(md_buf, "login:domain.org:password", strlen("login:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
-  
+
   /* put iovec into a raw buffer */
   {
     char* ptr = buf;

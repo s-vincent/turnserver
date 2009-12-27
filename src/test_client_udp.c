@@ -199,12 +199,12 @@ int main(int argc, char** argv)
   attr = turn_attr_username_create("toto", strlen("toto"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* LIFETIME */
   attr = turn_attr_lifetime_create(0x00000005, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-  
+
   /* SOFTWARE */
   attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;

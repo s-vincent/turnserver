@@ -461,7 +461,7 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
   }
 
   ret->turn_attr_number = number;
-  
+
   /* even if strlen(reason) < len, strncpy will add extra-zero 
    * also no need to add final NULL character since length is known (TLV)
    */

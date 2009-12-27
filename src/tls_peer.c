@@ -173,7 +173,7 @@ static struct ssl_peer* tls_peer_find_connection(struct tls_peer* peer, const st
   list_iterate_safe(get, n, &peer->remote_peers)
   {
     struct ssl_peer* tmp = NULL;
-    
+
     tmp = list_get(get, struct ssl_peer, list);
     if(!memcmp(&tmp->addr, addr, addrlen))
     {
@@ -373,7 +373,7 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
     {
       return -1;
     } 
-    
+
     SSL_CTX_set_client_CA_list(peer->ctx_server, calist);
   }
 
@@ -437,7 +437,7 @@ void tls_peer_print_connection(struct tls_peer* peer)
   list_iterate_safe(get, n, &peer->remote_peers)
   {
     struct ssl_peer* tmp = list_get(get, struct ssl_peer, list);
-    
+
     if(getnameinfo((struct sockaddr*)&tmp->addr, sizeof(tmp->addr), buf, INET6_ADDRSTRLEN, NULL, 0, NI_NUMERICHOST) != 0)
     {
       continue;
@@ -554,7 +554,7 @@ ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char
 
     /* associate the SSL pointer with the socket descriptor */
     SSL_set_fd(ssl, sock);
-    
+
     speer = ssl_peer_new((struct sockaddr*)addr, addrlen, ssl);
     if(!speer)
     {

@@ -229,7 +229,7 @@ void turnserver_cfg_free(void)
   {
     cfg_free(g_cfg);
     g_cfg = NULL;
-    
+
     cfg_yylex_destroy();
   }
 }
