@@ -1139,7 +1139,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
       debug(DBG_ATTR, "turn_*_send failed\n");
     }
   }
-  
+
   return 0;
 }
 
@@ -1943,7 +1943,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       return 0;
     }
   }
-  
+
   if(message->even_port)
   {
     r_flag = message->even_port->turn_attr_flags & 0x80;
@@ -2730,7 +2730,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         index = 0;
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
-        {  
+        {
           turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
           return -1;
         }
@@ -3193,7 +3193,7 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
   {
     return 0;
   }
-  
+
   return 1;
 }
 
@@ -4184,7 +4184,7 @@ int main(int argc, char** argv)
     LIST_DEL(&tmp->list);
     free(tmp);
   }
-  
+
   /* free the configuration parser */
   turnserver_cfg_free();
 

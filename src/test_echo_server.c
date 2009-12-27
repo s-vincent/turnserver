@@ -126,7 +126,7 @@ int main(int argc, char** argv)
   memset(buf, 0x00, sizeof(buf));
 
   g_run = 1;
-  
+
   fprintf(stdout, "UDP Echo server started on port %u\n", port);
 
   while(g_run)
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
   }
 
   close(sock);
-  
+
   fprintf(stdout, "Exiting\n");
 
   return EXIT_SUCCESS;
