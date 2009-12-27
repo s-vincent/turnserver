@@ -3203,7 +3203,7 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
  * \param tcp_socket_list list of remote TCP sockets
  * \param tls if socket use TLS (connect on TLS port)
  */
-static inline void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_socket_list, int tls)
+static void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_socket_list, int tls)
 {
   struct socket_desc* sdesc = NULL;
   struct sockaddr_storage saddr;
