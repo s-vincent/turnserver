@@ -513,7 +513,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
 
     /* compare addresses from same family */
     if((tmp->family == AF_INET6 && addrlen != 16) ||
-        (tmp->family == AF_INET && addrlen != 4))
+       (tmp->family == AF_INET && addrlen != 4))
     {
       continue;
     }
@@ -2437,9 +2437,9 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
   /* check if it is a known class */
   if(!STUN_IS_REQUEST(hdr_msg_type) &&
-      !STUN_IS_INDICATION(hdr_msg_type) &&
-      !STUN_IS_SUCCESS_RESP(hdr_msg_type) && 
-      !STUN_IS_ERROR_RESP(hdr_msg_type))
+     !STUN_IS_INDICATION(hdr_msg_type) &&
+     !STUN_IS_SUCCESS_RESP(hdr_msg_type) && 
+     !STUN_IS_ERROR_RESP(hdr_msg_type))
   {
     debug(DBG_ATTR, "Unknown message class\n");
     return -1;
@@ -3437,7 +3437,6 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       if(sfd_has_data(tmp->sock, max_fd, &fdsr))
       {
         debug(DBG_ATTR, "Received data from %s client\n", !tmp->tls ? "TCP" : "TLS");
-        nb = recv(tmp->sock, buf, sizeof(buf), 0);
 
         if((getpeername(tmp->sock, (struct sockaddr*)&saddr, &saddr_size) == -1) ||
            (getsockname(tmp->sock, (struct sockaddr*)&daddr, &daddr_size) == -1))
@@ -3446,6 +3445,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           free(tmp);
           continue;
         }
+        
+        nb = recv(tmp->sock, buf, sizeof(buf), 0);
 
         if(nb > 0)
         {
@@ -3514,8 +3515,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         daddr_size = sizeof(struct sockaddr_storage);
 
         /* for the moment manage only UDP relay as described in draft-ietf-behave-turn-16 */
-        nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
         getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
+        nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
 
         if(nb > 0)
         {
