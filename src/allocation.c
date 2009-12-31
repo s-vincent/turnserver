@@ -498,7 +498,7 @@ struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int t
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
 
-    if(tmp->tuple.transport_protocol == transport_protocol && 
+    if(tmp->tuple.transport_protocol == transport_protocol &&
        !memcmp(&tmp->tuple.server_addr, server_addr, addr_size) &&
        !memcmp(&tmp->tuple.client_addr, client_addr, addr_size))
     {

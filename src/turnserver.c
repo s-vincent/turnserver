@@ -1622,7 +1622,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
    * no need to have REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
 
-  /* if REQUESTED-ADDRESS-FAMILY attribute is present and 
+  /* if REQUESTED-ADDRESS-FAMILY attribute is present and
    * do not match relayed address ones => error 443
    */
   if(message->requested_addr_family)
@@ -2276,7 +2276,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
   }
 
   /* check the 5-tuple except for an Allocate request */
-  if(!(STUN_IS_REQUEST(hdr_msg_type) && (STUN_GET_METHOD(hdr_msg_type) == TURN_METHOD_ALLOCATE)))
+  if(!(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_ALLOCATE))
   {
     desc = allocation_list_find_tuple(allocation_list, transport_protocol, daddr, saddr, saddr_size);
 
@@ -3445,7 +3445,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           free(tmp);
           continue;
         }
-        
+
         nb = recv(tmp->sock, buf, sizeof(buf), 0);
 
         if(nb > 0)
@@ -4035,9 +4035,9 @@ int main(int argc, char** argv)
         }
 
         /* remove it from the list of valid allocations */
+        debug(DBG_ATTR, "Free an allocation_desc\n");
         LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
-        debug(DBG_ATTR, "Free an allocation_desc\n");
         allocation_desc_free(&tmp);
       }
     }
@@ -4112,7 +4112,6 @@ int main(int argc, char** argv)
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list2);
 
     /* note: don't care about decrementing account, after all program exits */
-
     LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
     allocation_desc_free(&tmp);

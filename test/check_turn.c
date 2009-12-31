@@ -202,14 +202,6 @@ START_TEST(test_attr_create)
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-#if 0
-  /* ICMP */
-  attr = turn_attr_icmp_create(0xFF, 0xFE, &iov[index]);
-  fail_unless(attr != NULL, "attribute header creation failed");
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-#endif
-
   /* DONT-FRAGMENT */
   attr = turn_attr_dont_fragment_create(&iov[index]);
   fail_unless(attr != NULL, "attribute header create failed");
@@ -586,14 +578,6 @@ START_TEST(test_message_parse)
     index++;
   }
 
-#if 0
-  /* ICMP */
-  attr = turn_attr_icmp_create(0xFF, 0xFE, &iov[index]);
-  fail_unless(attr != NULL, "attribute header creation failed");
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-#endif
-
   /* DONT-FRAGMENT */
   attr = turn_attr_dont_fragment_create(&iov[index]);
   fail_unless(attr != NULL, "attribute header create failed");
@@ -644,9 +628,6 @@ START_TEST(test_message_parse)
   fail_unless(message.channel_number != NULL, "channel_number must be present");
   fail_unless(message.lifetime != NULL, "lifetime must be present");
   fail_unless(message.nonce != NULL, "nonce must be present");
-#if 0
-  fail_unless(message.icmp != NULL, "icmp must be present");
-#endif
   fail_unless(message.realm != NULL, "realm must be present");
   fail_unless(message.username != NULL, "username must be present");
   fail_unless(message.even_port != NULL, "even_port must be present");
