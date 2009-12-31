@@ -5,7 +5,7 @@ TurnServer is an OpenSource implementation of Traversal Using Relays around NAT 
 It aims to be compliant with RFC5389 (STUN) and latest TURN draft.
 
 TURN clients can connect to TurnServer with the following protocols: UDP, TCP and TLS 
-over TCP. For the moment relaying messages can only be done with UDP protocol.
+over TCP. Relaying messages can be done either with UDP or TCP protocol.
 
 TurnServer is known to work on the following systems:
 - GNU/Linux 2.6;

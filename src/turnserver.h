@@ -74,6 +74,12 @@
 #define SIGRT_EXPIRE_TOKEN (SIGRTMIN + 3)
 
 /**
+ * \def SIGRT_EXPIRE_TCP_RELAY
+ * \brief Signal value when TCP relay expires (no ConnectionBind received).
+ */
+#define SIGRT_EXPIRE_TCP_RELAY (SIGRTMIN + 4)
+
+/**
  * \struct denied_address
  * \brief Describes an address.
  */

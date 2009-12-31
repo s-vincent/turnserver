@@ -138,6 +138,12 @@ static struct list_head g_expired_channel_list;
 static struct list_head g_expired_token_list;
 
 /**
+ * \var g_expired_tcp_relay_list
+ * \brief List which contains expired TCP relays.
+ */
+static struct list_head g_expired_tcp_relay_list;
+
+/**
  * \var g_token_list
  * \brief List of valid tokens.
  */
@@ -157,6 +163,14 @@ static struct list_head g_denied_address_list;
  * - R: reserve couple of ports (one even, one odd).
  */
 static const uint8_t g_supported_even_port_flags = 0x80;
+
+/**
+ * \var g_tcp_socket_list
+ * \brief List which contains remote TCP sockets.
+ *
+ * This list does not contains TURN-TCP related sockets.
+ */
+static struct list_head g_tcp_socket_list;
 
 /**
  * \struct socket_desc
@@ -301,6 +315,19 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     debug(DBG_ATTR, "Token expires: %p\n", desc);
     /* add it to the expired list */
     LIST_ADD(&desc->list2, &g_expired_token_list);
+  }
+  else if(signo == SIGRT_EXPIRE_TCP_RELAY)
+  {
+    struct allocation_tcp_relay* desc = info->si_value.sival_ptr;
+
+    if(!desc)
+    {
+      return;
+    }
+
+    /* remove relay from list */
+    debug(DBG_ATTR, "TCP relay expires: %p\n", desc);
+    LIST_ADD(&desc->list2, &g_expired_tcp_relay_list);
   }
 }
 
@@ -616,6 +643,12 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 443: /* Peer address family mismatch */
       hdr = turn_error_response_443(method, id, &iov[index], &index);
       break;
+    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-05) */
+      hdr = turn_error_response_446(method, id, &iov[index], &index);
+      break;
+    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-05) */
+      hdr = turn_error_response_447(method, id, &iov[index], &index);
+      break;
     case 486: /* Allocation quota reached */
       hdr = turn_error_response_486(method, id, &iov[index], &index);
       break;
@@ -681,6 +714,285 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
 
   iovec_free_data(iov, index);
+  return 0;
+}
+
+/**
+ * \brief Process a TURN Connect request (draft-ietf-behave-turn-tcp-05).
+ * \param transport_protocol transport protocol used
+ * \param sock socket
+ * \param message STUN message
+ * \param saddr source address
+ * \param saddr_size sizeof address
+ * \param desc allocation descriptor
+ * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
+ * \return 0 if success, -1 otherwise
+ */
+static int turnserver_process_connect_request(int transport_protocol, int sock, const struct turn_message* message,
+                                              const struct sockaddr* saddr, socklen_t saddr_size, 
+                                              struct allocation_desc* desc, struct tls_peer* speer)
+{
+  uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
+  uint16_t method = STUN_GET_METHOD(hdr_msg_type);
+  uint8_t peer_addr[16];
+  uint16_t peer_port = 0;
+  uint16_t len = 0;
+  struct sockaddr_storage storage;
+  int peer_sock = -1;
+  int family = 0;
+  struct iovec iov[8];
+  size_t index = 0;
+  struct turn_msg_hdr* hdr = NULL;
+  struct turn_attr_hdr* attr = NULL;
+  uint32_t id = 0;
+  int nb = -1;
+  uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
+  uint8_t* p = (uint8_t*)&cookie;
+
+  debug(DBG_ATTR, "Connect request received!\n");
+
+  if(!message->peer_addr[0])
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  switch(message->peer_addr[0]->turn_attr_family)
+  {
+    case STUN_ATTR_FAMILY_IPV4:
+      len = 4;
+      family = AF_INET;
+      break;
+    case STUN_ATTR_FAMILY_IPV6:
+      len = 16;
+      family = AF_INET6;
+      break;
+    default:
+      return -1;
+      break;
+  }
+
+  /* copy address/port */
+  memcpy(peer_addr, message->peer_addr[0]->turn_attr_address, len);
+  peer_port = ntohs(message->peer_addr[0]->turn_attr_port);
+
+  if(turn_xor_address_cookie(family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
+  {
+    return -1;
+  }
+
+  if(desc->relayed_addr.ss_family != family)
+  {
+    debug(DBG_ATTR, "Could not relayed from a different family\n");
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  /* check if server has already processed the same
+   * XOR-PEER-ADDRESS with this allocation => error 446
+   */
+  if(allocation_desc_find_tcp_relay_addr(desc, family, peer_addr, peer_port))
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 446, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  if(turnserver_is_address_denied(peer_addr, len, peer_port))
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  /* connection to peer */
+  switch(family)
+  {
+    case AF_INET:
+      ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
+      memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
+      ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
+      memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+      break;
+    case AF_INET6:
+      ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
+      memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
+      ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
+      ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
+      ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+#ifdef SIN6_LEN
+      ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
+#endif
+      break;
+    default:
+      return -1;
+      break;
+  }
+
+  peer_sock = desc->relayed_sock_tcp;
+  desc->relayed_sock_tcp = -1;
+
+  if(connect(peer_sock, (struct sockaddr*)&storage, sockaddr_get_size(&storage)) == -1)
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 447, saddr, saddr_size, speer, NULL);
+    return -1;
+  }
+
+  /* generate unique ID */
+  random_bytes_generate((uint8_t*)&id, 4);
+ 
+  /* add it to allocation */
+  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT) == -1)
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+    return -1;
+  }
+
+  /* send Connect success response */
+  if(!(hdr = turn_msg_connect_response_create(0, message->msg->turn_msg_id, &iov[index])))
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+  index++;
+
+  /* software (not fatal if it cannot be allocated) */
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+  {
+    hdr->turn_msg_len += iov[index].iov_len;
+    index++;
+  }
+
+  if(!(attr = turn_attr_connection_id_create(id, &iov[index])))
+  {
+    iovec_free_data(iov, index);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+  index++;
+
+  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
+  {
+    iovec_free_data(iov, index);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  /* send message */
+  if(speer) /* TLS */
+  {
+    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
+  }
+  else if(transport_protocol == IPPROTO_UDP) /* UDP */
+  {
+    nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
+  }
+  else /* TCP */
+  {
+    nb = turn_tcp_send(sock, iov, index);
+  }
+
+  if(nb == -1)
+  {
+    debug(DBG_ATTR, "turn_*_send failed\n");
+  }
+
+  iovec_free_data(iov, index);
+  return 0;
+}
+
+/**
+ * \brief Process a TURN ConnectionBind request (draft-ietf-behave-turn-tcp-05).
+ * \param transport_protocol transport protocol used
+ * \param sock socket
+ * \param message STUN message
+ * \param saddr source address
+ * \param saddr_size sizeof address
+ * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
+ * \return 0 if success, -1 otherwise
+ */
+static int turnserver_process_connectionbind_request(int transport_protocol, int sock, const struct turn_message* message,
+                                                     const struct sockaddr* saddr, socklen_t saddr_size,
+                                                     struct tls_peer* speer, struct account_desc* account,
+                                                     struct list_head* allocation_list)
+{
+  uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
+  uint16_t method = STUN_GET_METHOD(hdr_msg_type);
+  struct allocation_tcp_relay* tcp_relay = NULL;
+  struct list_head* get = NULL;
+  struct list_head* n = NULL;
+  struct allocation_desc* desc = NULL;
+
+  debug(DBG_ATTR, "ConnectionBind request received!\n");
+
+  if(!message->connection_id)
+  {
+    debug(DBG_ATTR, "No CONNECTION-ID attribute!\n");
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    return -1;
+  }
+
+  /* find corresponding allocation for TCP connection ID */
+  list_iterate_safe(get, n, allocation_list)
+  {
+    struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
+    struct list_head* get2 = NULL;
+    struct list_head* n2 = NULL;
+
+    if(tmp->relayed_transport_protocol != IPPROTO_TCP || memcmp(tmp->key, account->key, sizeof(tmp->key) != 0))
+    {
+      continue;
+    }
+
+    list_iterate_safe(get2, n2, &tmp->tcp_relays)
+    {
+      struct allocation_tcp_relay* tmp2 = list_get(get2, struct allocation_tcp_relay, list);
+
+      if(tmp2->connection_id == message->connection_id->turn_attr_id)
+      {
+        desc = tmp;
+        break;
+      }
+    }
+
+    /* found ? */
+    if(desc)
+    {
+      break;
+    }
+  }
+
+  /* check if allocation exists and if its ID exists 
+   * for this allocation
+   * otherwise => error 400
+   */
+  if(!desc || !(tcp_relay = allocation_desc_find_tcp_relay_id(desc, message->connection_id->turn_attr_id)))
+  {
+    debug(DBG_ATTR, "No allocation or no allocation for CONNECTION-ID\n");
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    return -1;
+  }
+
+  /* initialized client socket */
+  tcp_relay->client_sock = sock;
+
+  /* now on this socket no other TURN messaging is allowed,
+   * remove the socket from the TCP remote sockets list
+   */
+  list_iterate_safe(get, n, &g_tcp_socket_list)
+  {
+    struct socket_desc* tmp = list_get(get, struct socket_desc, list);
+
+    if(tmp->sock == sock)
+    {
+      tmp->sock = -1;
+      break;
+    }
+  }
+
+  tcp_relay->new  = 1;
+
+  /* stop timer */
+  allocation_tcp_relay_set_timer(tcp_relay, 0);
+
   return 0;
 }
 
@@ -794,6 +1106,9 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   int optval = 0;
   int save_val = 0;
   socklen_t optlen = sizeof(int);
+  struct sockaddr_storage storage;
+  uint8_t* peer_addr = NULL;
+  uint16_t peer_port = 0;
 
   debug(DBG_ATTR, "ChannelData received!\n");
 
@@ -831,6 +1146,13 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     return -1;
   }
 
+  if(desc->relayed_transport_protocol != IPPROTO_UDP)
+  {
+    /* ignore for TCP relayed allocation */
+    debug(DBG_ATTR, "ChannelData does not intend to work with TCP relayed address!");
+    return -1;
+  }
+
   alloc_channel = allocation_desc_find_channel_number(desc, channel_number);
 
   if(!alloc_channel)
@@ -853,87 +1175,74 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     return -1;
   }
 
-  if(desc->relayed_transport_protocol == IPPROTO_UDP)
-  {
-    struct sockaddr_storage storage;
-    uint8_t* peer_addr = alloc_channel->peer_addr;
-    uint16_t peer_port = alloc_channel->peer_port;
+  peer_addr = alloc_channel->peer_addr;
+  peer_port = alloc_channel->peer_port;
 
-    switch(desc->relayed_addr.ss_family)
-    {
-      case AF_INET:
-        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
-        ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
-        memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
-        break;
-      case AF_INET6:
-        ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
-        memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
-        ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
-        ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
-        ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+  switch(desc->relayed_addr.ss_family)
+  {
+    case AF_INET:
+      ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
+      memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
+      ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
+      memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+      break;
+    case AF_INET6:
+      ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
+      memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
+      ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
+      ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
+      ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
 #ifdef SIN6_LEN
-        ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
+      ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-        break;
-      default:
-        return -1;
-        break;
-    }
-
-    /* draft-ietf-behave-turn-ipv6-08:  If present, the
-     * DONT-FRAGMENT attribute MUST be ignored by the server for 
-     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
-     */
-    if(desc->relayed_addr.ss_family == AF_INET && 
-       (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 && 
-       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
-    {
-#ifdef OS_SET_DF_SUPPORT 
-      /* alternate behavior */
-      optval = IP_PMTUDISC_DONT;
-
-      if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
-      {
-        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
-      }
-      else
-      {
-        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-         * in case getsockopt failed
-         */
-        optlen = 0;
-      }
-#else
-      /* avoid compilation warning */
-      optval = 0;
-      optlen = 0;
-      save_val = 0;
-#endif
-    }
-
-    debug(DBG_ATTR, "Send ChannelData to peer\n");
-    nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
-
-#ifdef OS_SET_DF_SUPPORT 
-    /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
-    if(optlen)
-    {
-      /* restore original value */
-      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
-    }
-#endif
+      break;
+    default:
+      return -1;
+      break;
   }
-  else /* TCP */
+
+  /* draft-ietf-behave-turn-ipv6-08:  If present, the
+   * DONT-FRAGMENT attribute MUST be ignored by the server for 
+   * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+   */
+  if(desc->relayed_addr.ss_family == AF_INET && 
+     (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 && 
+     IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
   {
-    /* Relaying with TCP is not in the standard TURN specification.
-     * draft-ietf-behave-turn-tcp-04 specify a TURN extension to do this.
-     * It is currently not supported.
-     */
-    return -1;
-    /* nb = send(desc->relayed_sock, msg, len, 0); */
+#ifdef OS_SET_DF_SUPPORT 
+    /* alternate behavior */
+    optval = IP_PMTUDISC_DONT;
+
+    if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+    {
+      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+    }
+    else
+    {
+      /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+       * in case getsockopt failed
+       */
+      optlen = 0;
+    }
+#else
+    /* avoid compilation warning */
+    optval = 0;
+    optlen = 0;
+    save_val = 0;
+#endif
   }
+
+  debug(DBG_ATTR, "Send ChannelData to peer\n");
+  nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
+
+#ifdef OS_SET_DF_SUPPORT 
+  /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
+  if(optlen)
+  {
+    /* restore original value */
+    setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
+  }
+#endif
 
   if(nb == -1)
   {
@@ -966,6 +1275,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   socklen_t optlen = sizeof(int);
   char str[INET6_ADDRSTRLEN];
   int family = 0;
+  struct sockaddr_storage storage;
 
   debug(DBG_ATTR, "Send indication received!\n");
 
@@ -1037,102 +1347,88 @@ static int turnserver_process_send_indication(const struct turn_message* message
       return -1;
     }
 
-    if(desc->relayed_transport_protocol == IPPROTO_UDP)
+    switch(desc->relayed_addr.ss_family)
     {
-      struct sockaddr_storage storage;
-
-      switch(desc->relayed_addr.ss_family)
-      {
-        case AF_INET:
-          ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-          memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
-          ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
-          memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
-          break;
-        case AF_INET6:
-          ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
-          memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
-          ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
-          ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
-          ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+      case AF_INET:
+        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
+        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
+        ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
+        memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+        break;
+      case AF_INET6:
+        ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
+        memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
+        ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
+        ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
+        ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
 #ifdef SIN6_LEN
-          ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
+        ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-          break;
-        default:
-          return -1;
-          break;
-      }
-
-      /* draft-ietf-behave-turn-ipv6-08:  If present, the
-       * DONT-FRAGMENT attribute MUST be ignored by the server for 
-       * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
-       */
-      if(desc->relayed_addr.ss_family == AF_INET && 
-         (desc->tuple.client_addr.ss_family == AF_INET ||(desc->tuple.client_addr.ss_family == AF_INET6 && 
-         IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
-      {
-        /* following is for IPv4-IPv4 relay only */
-#ifdef OS_SET_DF_SUPPORT 
-        if(message->dont_fragment)
-        {
-          optval = IP_PMTUDISC_DO;
-          debug(DBG_ATTR, "Will set DF flag\n");
-        }
-        else /* IPv4-IPv4 relay but no DONT-FRAGMENT attribute */
-        {
-          /* alternate behavior, set DF to 0 */
-          optval = IP_PMTUDISC_DONT;
-          debug(DBG_ATTR, "Will not set DF flag\n");
-        }
-
-        if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
-        {
-          setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
-        }
-        else
-        {
-          /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-           * in case getsockopt failed
-           */
-          optlen = 0;
-        }
-#else
-        /* avoid compilation warning */
-        optval = 0;
-        optlen = 0;
-        save_val = 0;
-
-        if(message->dont_fragment)
-        {
-          /* ignore message */
-          debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
-          return -1;
-        }
-#endif
-      }
-
-      debug(DBG_ATTR, "Send data to peer\n");
-      nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
-
-      /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
-#ifdef OS_SET_DF_SUPPORT 
-      if(optlen)
-      {
-        /* restore original value */
-        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
-      }
-#endif
+        break;
+      default:
+        return -1;
+        break;
     }
-    else /* TCP */
+
+    /* draft-ietf-behave-turn-ipv6-08:  If present, the
+     * DONT-FRAGMENT attribute MUST be ignored by the server for 
+     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+     */
+    if(desc->relayed_addr.ss_family == AF_INET && 
+       (desc->tuple.client_addr.ss_family == AF_INET ||(desc->tuple.client_addr.ss_family == AF_INET6 && 
+       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
     {
-      /* Relaying with TCP is not in the standard TURN specification.
-       * draft-ietf-behave-turn-tcp-04 specify a TURN extension to do this.
-       * It is currently not supported.
-       */
-      return -1;
-      /* nb = send(desc->relayed_sock, msg, msg_len, 0); */
+      /* following is for IPv4-IPv4 relay only */
+#ifdef OS_SET_DF_SUPPORT 
+      if(message->dont_fragment)
+      {
+        optval = IP_PMTUDISC_DO;
+        debug(DBG_ATTR, "Will set DF flag\n");
+      }
+      else /* IPv4-IPv4 relay but no DONT-FRAGMENT attribute */
+      {
+        /* alternate behavior, set DF to 0 */
+        optval = IP_PMTUDISC_DONT;
+        debug(DBG_ATTR, "Will not set DF flag\n");
+      }
+
+      if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+      {
+        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+      }
+      else
+      {
+        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+         * in case getsockopt failed
+         */
+        optlen = 0;
+      }
+#else
+      /* avoid compilation warning */
+      optval = 0;
+      optlen = 0;
+      save_val = 0;
+
+      if(message->dont_fragment)
+      {
+        /* ignore message */
+        debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
+        return -1;
+      }
+#endif
     }
+
+    debug(DBG_ATTR, "Send data to peer\n");
+    nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
+
+    /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
+#ifdef OS_SET_DF_SUPPORT 
+    if(optlen)
+    {
+      /* restore original value */
+      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
+    }
+#endif
 
     if(nb == -1)
     {
@@ -1770,6 +2066,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t port = 0;
   uint16_t reservation_port = 0;
   int relayed_sock = -1;
+  int relayed_sock_tcp = -1; /* draft-ietf-behave-turn-tcp-05 */
   int reservation_sock = -1;
   socklen_t relayed_size = sizeof(struct sockaddr_storage);
   size_t quit_loop = 0;
@@ -1892,12 +2189,27 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 #endif
 
   /* check if server supports requested transport */
-  /* for the moment, support only UDP */
-  if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP) 
+  if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP && message->requested_transport->turn_attr_protocol != IPPROTO_TCP) 
   {
     /* unsupported transport protocol => error 442 */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, account->key);
     return 0;
+  }
+
+  if(message->requested_transport->turn_attr_protocol == IPPROTO_TCP)
+  {
+    /* draft-ietf-behave-turn-tcp-05:
+     * - do not permit to allocate TCP relay with an 
+     * UDP-based connection 
+     * - requests do not contains DONT-FRAGMENT, 
+     * RESERVATION-TOKEN or EVEN-PORT.
+     * => error 400 
+     */
+    if(transport_protocol == IPPROTO_UDP || message->dont_fragment || message->reservation_token || message->even_port)
+    {
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+      return 0;
+    }
   }
 
   if(message->even_port && message->reservation_token)
@@ -1909,8 +2221,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_addr_family && message->reservation_token)
   {
-    /* draft-ietf-behave-turn-ipv6-08: cannot have both 
-     * REQUESTED-ADDRESS-FAMILY and RESERVATION-TOKEN => error 400
+    /* draft-ietf-behave-turn-ipv6-08: cannot have both REQUESTED-ADDRESS-FAMILY 
+     * and RESERVATION-TOKEN => error 400
      */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
     return 0;
@@ -2031,15 +2343,42 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       port++;
     }
 
-    /* for the moment only UDP */
-    relayed_sock = socket_create(IPPROTO_UDP, str, port);
+    /* TCP or UDP */
+    relayed_sock = socket_create(message->requested_transport->turn_attr_protocol, str, port);
 
     if(relayed_sock == -1)
     {
       quit_loop++;
       continue;
     }
+
+    if(message->requested_transport->turn_attr_protocol == IPPROTO_TCP)
+    {
+      /* special handling for TCP relay:
+       * create a second socket bind on the same address/port,
+       * the first one will be used to listen incoming connections, 
+       * the second will be used to connect peer (Connect request)
+       */
+      relayed_sock_tcp = socket_create(message->requested_transport->turn_attr_protocol, str, port);
  
+      if(relayed_sock_tcp == -1)
+      {
+        /* system error */
+        close(relayed_sock);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+        return -1;
+      }
+
+      if(listen(relayed_sock, 5) == -1)
+      {
+        /* system error */
+        close(relayed_sock);
+        close(relayed_sock_tcp);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+        return -1;
+      }
+    }
+
     if(r_flag)
     {
       reservation_port = port + 1;
@@ -2102,6 +2441,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   desc->bucket_tokenup = desc->bucket_capacity;
   desc->bucket_tokendown = desc->bucket_capacity;
 
+  desc->relayed_transport_protocol = message->requested_transport->turn_attr_protocol;
+
   /* increment number of allocations */
   account->allocations++;
   debug(DBG_ATTR, "Account %s, allocations used: %u\n", account->username, account->allocations);
@@ -2123,6 +2464,12 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   /* assign the sockets to the allocation */
   desc->relayed_sock = relayed_sock;
+
+  if(message->requested_transport->turn_attr_protocol == IPPROTO_TCP)
+  {
+    desc->relayed_sock_tcp = relayed_sock_tcp;
+  }
+
   desc->tuple_sock = sock;
 
   /* add to the list */
@@ -2275,6 +2622,21 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     return turnserver_process_binding_request(transport_protocol, sock, message, saddr, saddr_size, speer);
   }
 
+  /* draft-ietf-behave-turn-tcp-05 */
+  /* find right tuple for a TCP allocation (ConnectionBind case) */
+  if(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_CONNECTIONBIND)
+  {
+    /* ConnectionBind is only for TCP or TLS over TCP <-> TCP */
+    if(transport_protocol == IPPROTO_TCP)
+    {
+      return turnserver_process_connectionbind_request(transport_protocol, sock, message, saddr, saddr_size, speer, account, allocation_list);
+    }
+    else
+    {
+      return turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    }
+  }
+
   /* check the 5-tuple except for an Allocate request */
   if(!(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_ALLOCATE))
   {
@@ -2329,7 +2691,26 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
         turnserver_process_createpermission_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
         break;
       case TURN_METHOD_CHANNELBIND:
-        turnserver_process_channelbind_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
+        /* ChannelBind is only for UDP relay */
+        if(desc->relayed_transport_protocol == IPPROTO_UDP)
+        {
+          turnserver_process_channelbind_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
+        }
+        else
+        {
+          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+        }
+        break;
+      case TURN_METHOD_CONNECT: /* draft-ietf-behave-turn-tcp-05 */
+        /* Connect is only for TCP or TLS over TCP <-> TCP */
+        if(transport_protocol == IPPROTO_TCP && desc->relayed_transport_protocol == IPPROTO_TCP)
+        {
+          turnserver_process_connect_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
+        }
+        else
+        {
+          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+        }
         break;
       default:
         return -1;
@@ -2345,7 +2726,10 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     switch(method)
     {
       case TURN_METHOD_SEND:
-        turnserver_process_send_indication(message, desc);
+        if(desc->relayed_transport_protocol == IPPROTO_UDP)
+        {
+          turnserver_process_send_indication(message, desc);
+        }
         break;
       case TURN_METHOD_DATA:
         /* should not happen */
@@ -2454,7 +2838,9 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
      method != TURN_METHOD_CREATEPERMISSION &&
      method != TURN_METHOD_CHANNELBIND &&
      method != TURN_METHOD_SEND &&
-     method != TURN_METHOD_DATA)
+     method != TURN_METHOD_DATA &&
+     method != TURN_METHOD_CONNECT &&
+     method != TURN_METHOD_CONNECTIONBIND)
   {
     debug(DBG_ATTR, "Unknown method\n");
     return -1;
@@ -3198,6 +3584,122 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
 }
 
 /**
+ * \brief Handle incoming TCP connection (draft-ietf-behave-turn-tcp-05).
+ * \param sock TCP listen socket
+ * \param desc allocation descriptor
+ * \param speer TLS peer, if not NULL send data in TLS
+ */
+static void turnserver_handle_tcp_incoming_connection(int sock, struct allocation_desc* desc, struct tls_peer* speer)
+{
+  int family = 0;
+  uint8_t peer_addr[16];
+  uint16_t peer_port = 0;
+  uint32_t id = 0;
+  uint8_t msg_id[12]; /* for ConnectionAttempt message ID */
+  size_t index = 0;
+  struct turn_msg_hdr* hdr = NULL;
+  struct turn_attr_hdr* attr = NULL;
+  struct iovec iov[8];
+  int nb = -1;
+  int rsock = -1;
+  struct sockaddr_storage saddr;
+  socklen_t saddr_size = sizeof(struct sockaddr_storage);
+
+  rsock = accept(sock, (struct sockaddr*)&saddr, &saddr_size);
+
+  if(rsock == -1)
+  {
+    debug(DBG_ATTR, "Cannot process incoming TCP connection on listening socket.\n");
+    return;
+  }
+
+  if(!allocation_desc_find_permission_sockaddr(desc, (struct sockaddr*)&saddr))
+  {
+    /* no permission installed so close socket */
+    close(rsock);
+    return;
+  }
+
+  /* generate unique ID */
+  random_bytes_generate((uint8_t*)&id, 4);
+
+  turn_generate_transaction_id(msg_id);
+
+  switch(saddr.ss_family)
+  {
+    case AF_INET:
+      family = AF_INET;
+      memcpy(peer_addr, &((struct sockaddr_in*)&saddr)->sin_addr, 4);
+      peer_port = ntohs(((struct sockaddr_in*)&saddr)->sin_port);
+      break;
+    case AF_INET6:
+      family = AF_INET6;
+      memcpy(peer_addr, &((struct sockaddr_in6*)&saddr)->sin6_addr, 16);
+      peer_port = ntohs(((struct sockaddr_in6*)&saddr)->sin6_port);
+      break;
+    default:
+      return;
+      break;
+  }
+
+  /* add it to allocation */
+  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT) == -1)
+  {
+    close(rsock);
+    return;
+  }
+
+  /* now send ConnectionAttempt to client */
+  if(!(hdr = turn_msg_connectionattempt_indication_create(0, msg_id, &iov[index])))
+  {
+    /* ignore ? */
+    close(rsock);
+    return;
+  }
+  index++;
+
+  /* software (not fatal if it cannot be allocated) */
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+  {
+    hdr->turn_msg_len += iov[index].iov_len;
+    index++;
+  }
+
+  if(!(attr = turn_attr_connection_id_create(id, &iov[index])))
+  {
+    close(rsock);
+    iovec_free_data(iov, index);
+    return;
+  }
+  index++;
+
+  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
+  {
+    close(rsock);
+    iovec_free_data(iov, index);
+    return;
+  }
+
+  /* send message */
+  if(speer) /* TLS */
+  {
+    nb = turn_tls_send(speer, (struct sockaddr*)&saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
+  }
+  else /* TCP */
+  {
+    nb = turn_tcp_send(desc->tuple_sock, iov, index);
+  }
+
+  if(nb == -1)
+  {
+    debug(DBG_ATTR, "turn_*_send failed\n");
+  }
+
+  iovec_free_data(iov, index);
+  return;
+}
+
+/**
  * \brief Handle TCP or TLS over TCP accept().
  * \param sock listen TCP or TLS socket
  * \param tcp_socket_list list of remote TCP sockets
@@ -3313,15 +3815,36 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     nsock = MAX(nsock, sockets->sock_dtls->sock);
   }
 
-  /* add relayed sockets */
+  /* add UDP and TCP relayed sockets */
   list_iterate_safe(get, n, allocation_list)
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
+    struct list_head* get2 = NULL;
+    struct list_head* n2 = NULL;
 
     if(tmp->relayed_sock < max_fd)
     {
       SFD_SET(tmp->relayed_sock, &fdsr);
       nsock = MAX(nsock, tmp->relayed_sock);
+    }
+
+    /* draft-ietf-behave-turn-tcp-05 */
+    /* add peer and client data connection sockets */
+    list_iterate_safe(get2, n2, &tmp->tcp_relays)
+    {
+      struct allocation_tcp_relay* tmp2 = list_get(get2, struct allocation_tcp_relay, list);
+
+      if(tmp2->peer_sock > 0 && tmp2->peer_sock < max_fd)
+      {
+        SFD_SET(tmp2->peer_sock, &fdsr);
+        nsock = MAX(nsock, tmp2->peer_sock);
+      }
+
+      if(tmp2->client_sock > 0 && tmp2->client_sock < max_fd)
+      {
+        SFD_SET(tmp2->client_sock, &fdsr);
+        nsock = MAX(nsock, tmp2->client_sock);
+      }
     }
   }
 
@@ -3331,10 +3854,16 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);
 
     /* TCP remote socket */
-    if(tmp->sock < max_fd)
+    if(tmp->sock < max_fd && tmp->sock > 0)
     {
       SFD_SET(tmp->sock, &fdsr);
       nsock = MAX(nsock, tmp->sock);
+    }
+    else
+    {
+      /* TCP connection after ConnectionBind, must be removed */
+      LIST_DEL(&tmp->list);
+      free(tmp);
     }
   }
 
@@ -3502,40 +4031,126 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       turnserver_handle_tcp_accept(sockets->sock_tls->sock, tcp_socket_list, 1);
     }
 
-    /* relayed addresses */
+    /* relayed UDP-based addresses and TCP-based relayed listen addresses */
     list_iterate_safe(get, n, allocation_list)
     {
       struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
+      struct list_head* get2 = NULL;
+      struct list_head* n2 = NULL;
 
       /* relayed address */
       if(sfd_has_data(tmp->relayed_sock, max_fd, &fdsr))
       {
-        debug(DBG_ATTR, "Received UDP on a relayed address\n");
-        saddr_size = sizeof(struct sockaddr_storage);
-        daddr_size = sizeof(struct sockaddr_storage);
-
-        /* for the moment manage only UDP relay as described in draft-ietf-behave-turn-16 */
-        getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
-        nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
-
-        if(nb > 0)
+        /* UDP relay is described in draft-ietf-behave-turn-16 
+         * and TCP relay is described in draft-ietf-behave-turn-tcp-05
+         */
+        if(tmp->relayed_transport_protocol == IPPROTO_UDP)
         {
-          struct tls_peer* speer = NULL;
+          debug(DBG_ATTR, "Received UDP on a relayed address\n");
+          saddr_size = sizeof(struct sockaddr_storage);
+          daddr_size = sizeof(struct sockaddr_storage);
 
-          if(tmp->relayed_tls)
-          {
-            speer = sockets->sock_tls;
-          }
-          else if(tmp->relayed_dtls)
-          {
-            speer = sockets->sock_dtls;
-          }
+          getsockname(tmp->relayed_sock, (struct sockaddr*)&daddr, &daddr_size);
+          nb = recvfrom(tmp->relayed_sock, buf, sizeof(buf), 0, (struct sockaddr*)&saddr, &saddr_size);
 
-          turnserver_relayed_recv(buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, speer);
+          if(nb > 0)
+          {
+            struct tls_peer* speer = NULL;
+
+            if(tmp->relayed_tls)
+            {
+              speer = sockets->sock_tls;
+            }
+            else if(tmp->relayed_dtls)
+            {
+              speer = sockets->sock_dtls;
+            }
+
+            turnserver_relayed_recv(buf, nb, (struct sockaddr*)&saddr, (struct sockaddr*)&daddr, saddr_size, allocation_list, speer);
+          }
+          else
+          {
+            get_error(errno, error_str, sizeof(error_str));
+          }
         }
-        else
+        else if(tmp->relayed_transport_protocol == IPPROTO_TCP)
         {
-          get_error(errno, error_str, sizeof(error_str));
+          /* draft-ietf-behave-turn-tcp-05 */
+          /* handle incoming TCP connection on relayed address */
+          debug(DBG_ATTR, "Received incoming connection on a listening TCP relayed address\n");
+          turnserver_handle_tcp_incoming_connection(tmp->relayed_sock, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL);
+        }
+      }
+
+      /* draft-ietf-behave-turn-tcp-05 */
+      /* relayed TCP-based addresses */
+      list_iterate_safe(get2, n2, &tmp->tcp_relays)
+      {
+        struct allocation_tcp_relay* tmp2 = list_get(get2, struct allocation_tcp_relay, list);
+
+        if(sfd_has_data(tmp2->peer_sock, max_fd, &fdsr))
+        {
+          debug(DBG_ATTR, "Receive data from TCP peer\n");
+
+          /* relay data from peer to client */
+          nb = recv(tmp2->peer_sock, buf, sizeof(buf), 0);
+ 
+          if(nb > 0)
+          {
+            if(send(tmp2->client_sock, buf, nb, 0) == -1)
+            {
+              perror("send");
+            }
+          }
+          else
+          {
+            /* problem on the socket, remove relay */
+            debug(DBG_ATTR, "Error TCP relay: %s\n", get_error(errno, error_str, sizeof(error_str)));
+
+            /* protect the removing of the expired list if any */
+            turnserver_block_realtime_signal();
+            allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
+            LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
+            turnserver_unblock_realtime_signal();
+            allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
+
+            /* if relay is removed no need to test client_sock 
+             * since it is removed!
+             */
+            continue;
+          }
+        }
+ 
+        if(sfd_has_data(tmp2->client_sock, max_fd, &fdsr))
+        {
+          /* case when peer connect first */
+          if(tmp2->new)
+          {
+            tmp2->new = 0;
+            continue;
+          }
+
+          debug(DBG_ATTR, "Receive data from TCP client to TCP peer\n");
+ 
+          /* relay data from client to peer */
+          nb = recv(tmp2->client_sock, buf, sizeof(buf), 0);
+
+          if(nb > 0)
+          {
+            send(tmp2->peer_sock, buf, nb, 0);
+          }
+          else
+          {
+            /* problem on the socket, remove relay */
+            debug(DBG_ATTR, "Error TCP relay: %s\n", get_error(errno, error_str, sizeof(error_str)));
+
+            /* protect the removing of the expired list if any */
+            turnserver_block_realtime_signal();
+            allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
+            LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
+            turnserver_unblock_realtime_signal();
+            allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
+          }
         }
       }
     }
@@ -3581,7 +4196,6 @@ int main(int argc, char** argv)
 {
   struct list_head allocation_list;
   struct list_head account_list;
-  struct list_head tcp_socket_list;
   struct list_head* n = NULL;
   struct list_head* get = NULL;
   struct listen_sockets sockets;
@@ -3592,7 +4206,7 @@ int main(int argc, char** argv)
   /* initialize lists */
   INIT_LIST(allocation_list);
   INIT_LIST(account_list);
-  INIT_LIST(tcp_socket_list);
+  INIT_LIST(g_tcp_socket_list);
   INIT_LIST(g_token_list);
   INIT_LIST(g_denied_address_list);
 
@@ -3601,6 +4215,7 @@ int main(int argc, char** argv)
   INIT_LIST(g_expired_permission_list);
   INIT_LIST(g_expired_channel_list);
   INIT_LIST(g_expired_token_list);
+  INIT_LIST(g_expired_tcp_relay_list);
 
   /* initialize sockets */
   sockets.sock_udp = -1;
@@ -3681,6 +4296,12 @@ int main(int argc, char** argv)
   if(sigaction(SIGRT_EXPIRE_TOKEN, &sa, NULL) == -1)
   {
     debug(DBG_ATTR, "SIGRT_EXPIRE_TOKEN will not be catched\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if(sigaction(SIGRT_EXPIRE_TCP_RELAY, &sa, NULL) == -1)
+  {
+    debug(DBG_ATTR, "SIGRT_EXPIRE_TCP_RELAY will not be catched\n");
     exit(EXIT_FAILURE);
   }
 
@@ -4090,11 +4711,33 @@ int main(int argc, char** argv)
       }
     }
 
+    list_iterate_safe(get, n, &g_expired_tcp_relay_list)
+    {
+      struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list2);
+      LIST_DEL(&tmp->list);
+      LIST_DEL(&tmp->list2);
+
+      close(tmp->peer_sock);
+
+      /* if TCP relay has expired, it is because
+       * client does not send ConnectionBind in time
+       * so theoretically client_sock is not set
+       * but in case of we test it and close it
+       * if client_sock > 0
+       */
+      if(tmp->client_sock > 0)
+      {
+        close(tmp->client_sock);
+      }
+
+      free(tmp);
+    }
+
     /* re-enable realtime signal */
     turnserver_unblock_realtime_signal();
 
     /* wait messages and processing */
-    turnserver_main(&sockets, &tcp_socket_list, &allocation_list, &account_list);
+    turnserver_main(&sockets, &g_tcp_socket_list, &allocation_list, &account_list);
   }
 
   fprintf(stderr, "\n");
@@ -4129,6 +4772,31 @@ int main(int argc, char** argv)
     allocation_token_free(&tmp);
   }
 
+  list_iterate_safe(get, n, &g_expired_tcp_relay_list)
+  {
+    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list2);
+    LIST_DEL(&tmp->list);
+    LIST_DEL(&tmp->list2);
+ 
+    if(tmp->peer_sock > 0)
+    {
+      close(tmp->peer_sock);
+    }
+
+    /* if TCP relay has expired, it is because 
+     * client does not send ConnectionBind in time
+     * so theoretically client_sock is not set
+     * but in case of we test it and close it 
+     * if client_sock > 0
+     */
+    if(tmp->client_sock > 0)
+    {
+      close(tmp->client_sock);
+    }
+
+    free(tmp);
+  }
+
   /* close UDP and TCP sockets */
   if(sockets.sock_udp > 0)
   {
@@ -4141,7 +4809,7 @@ int main(int argc, char** argv)
   }
 
   /* close remote TCP client sockets */
-  list_iterate_safe(get, n, &tcp_socket_list)
+  list_iterate_safe(get, n, &g_tcp_socket_list)
   {
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);
     close(tmp->sock);
