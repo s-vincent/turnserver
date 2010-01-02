@@ -31,7 +31,7 @@
 
 /**
  * \file test_client_tcp_tcp.c
- * \brief TCP TURN client example.
+ * \brief TCP TURN-TCP client example.
  * \author Sebastien Vincent
  * \date 2008-2009
  */
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
   index++;
 
   /* LIFETIME */
-  attr = turn_attr_lifetime_create(0x01000005, &iov[index]);
+  attr = turn_attr_lifetime_create(0x0000001A, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
@@ -576,6 +576,7 @@ int main(int argc, char** argv)
     sock_tcp2 = socket_create(IPPROTO_TCP, argv[1] ? argv[1] : "127.0.0.1", 0);
     connect(sock_tcp2, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
+    sleep(10);
     printf("Send ConnectionBind request\n");
     nb = turn_tcp_send(sock_tcp2, iov, index);
 

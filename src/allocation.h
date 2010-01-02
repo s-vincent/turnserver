@@ -118,6 +118,9 @@ struct allocation_tcp_relay
   int client_sock; /**< Client data connection (client <-> server) */
   timer_t expire_timer; /**< Expire timer */
   int new; /**< If the connection is newly initiated */
+  char* buf; /**< Internal buffer for peer data (before receiving ConnectionBind) */
+  size_t buf_len; /**< Length of current data in internal buffer */
+  size_t buf_size; /**< Capacity of internal buffer */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };
@@ -251,9 +254,10 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, 
  * \param peer_addr peer address
  * \param peer_port peer port
  * \param timeout TCP relay timeout (if no ConnectionBind is received)
+ * \param buffer_size internal buffer size (for peer data)
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout);
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size);
 
 /**
  * \brief Remove a TCP relay.

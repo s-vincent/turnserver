@@ -751,7 +751,12 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
 
   debug(DBG_ATTR, "Connect request received!\n");
 
-  if(!message->peer_addr[0])
+  /* check also that allocation has a maximum of one 
+   * outgoing connection
+   * (if relayed_sock_tcp equals -1 it means that it exists 
+   * already an outgoing connection for this allocation)
+   */
+  if(!message->peer_addr[0] || desc->relayed_sock_tcp == -1)
   {
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
     return -1;
@@ -840,7 +845,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   random_bytes_generate((uint8_t*)&id, 4);
  
   /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT) == -1)
+  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, turnserver_cfg_tcp_buffer_size()) == -1)
   {
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
@@ -907,6 +912,8 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
  * \param saddr source address
  * \param saddr_size sizeof address
  * \param speer TLS peer, if not NULL the connection is in TLS so response is also in TLS
+ * \param account account descriptor
+ * \param allocation_list list of allocations
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_connectionbind_request(int transport_protocol, int sock, const struct turn_message* message,
@@ -971,6 +978,12 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
     return -1;
   }
 
+  /* only one ConnectionBind for a connection ID */
+  if(tcp_relay->client_sock != -1)
+  {
+    return 0;
+  }
+
   /* initialized client socket */
   tcp_relay->client_sock = sock;
 
@@ -988,10 +1001,46 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
     }
   }
 
-  tcp_relay->new  = 1;
+  /* when removed from tcp_socket_list, it will be checked
+   * again in tcp_relay list in select() so avoid it
+   */
+  tcp_relay->new = 1;
 
   /* stop timer */
   allocation_tcp_relay_set_timer(tcp_relay, 0);
+
+  /* send out buffered data if any */
+  if(tcp_relay->buf_len)
+  {
+    ssize_t nb_read = 0;
+    ssize_t nb_read2 = 0;
+
+    debug(DBG_ATTR, "Send buffered data to client (TURN-TCP)\n");
+
+    /* server has buffered data available, 
+     * send them to client
+     */
+    while(tcp_relay->buf_len)
+    {
+      nb_read = send(tcp_relay->client_sock, tcp_relay->buf + nb_read2, tcp_relay->buf_len, 0);
+
+      if(nb_read > 0)
+      {
+        tcp_relay->buf_len -= nb_read;
+        nb_read2 += nb_read;
+      }
+      else
+      {
+        tcp_relay->buf_len = 0;
+        break;
+      }
+    }
+  }
+
+  /* free memory now as it will not be used anymore */
+  free(tcp_relay->buf);
+  tcp_relay->buf = NULL;
+  tcp_relay->buf_size = 0;
 
   return 0;
 }
@@ -3643,7 +3692,7 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
   }
 
   /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT) == -1)
+  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, turnserver_cfg_tcp_buffer_size()) == -1)
   {
     close(rsock);
     return;
@@ -4097,9 +4146,36 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
  
           if(nb > 0)
           {
+            /* client has not send ConnectionBind yet,
+             * buffer data 
+             */
+            if(tmp2->client_sock == -1)
+            {
+              debug(DBG_ATTR, "Buffer data from peer (TURN-TCP)\n");
+              if((size_t)nb <= (tmp2->buf_size - tmp2->buf_len))
+              {
+                memcpy(tmp2->buf + tmp2->buf_len, buf, nb);
+                tmp2->buf_len += nb;
+              }
+              else
+              {
+                /* limit exceeded, remove TCP relay */
+                /* protect the removing of the expired list if any */
+                turnserver_block_realtime_signal();
+                allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
+                LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
+                turnserver_unblock_realtime_signal();
+                allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
+              }
+
+              /* client_sock is not set so process next TCP relay */
+              continue;
+            }
+
+            /* send just received data */
             if(send(tmp2->client_sock, buf, nb, 0) == -1)
             {
-              perror("send");
+              debug(DBG_ATTR, "Error sending data from peer to client (TURN-TCP)\n");
             }
           }
           else
@@ -4137,7 +4213,10 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
           if(nb > 0)
           {
-            send(tmp2->peer_sock, buf, nb, 0);
+            if(send(tmp2->peer_sock, buf, nb, 0) == -1)
+            {
+              debug(DBG_ATTR, "Error sending data from client to peer (TURN-TCP)\n");
+            }
           }
           else
           {
@@ -4473,7 +4552,7 @@ int main(int argc, char** argv)
       debug(DBG_ATTR, "TCP socket failed to listen()\n");
       syslog(LOG_ERR, "TCP socket failed to listen()");
       close(sockets.sock_tcp);
-      sockets.sock_tcp  = -1;
+      sockets.sock_tcp = -1;
     }
   }
 
@@ -4714,23 +4793,7 @@ int main(int argc, char** argv)
     list_iterate_safe(get, n, &g_expired_tcp_relay_list)
     {
       struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list2);
-      LIST_DEL(&tmp->list);
-      LIST_DEL(&tmp->list2);
-
-      close(tmp->peer_sock);
-
-      /* if TCP relay has expired, it is because
-       * client does not send ConnectionBind in time
-       * so theoretically client_sock is not set
-       * but in case of we test it and close it
-       * if client_sock > 0
-       */
-      if(tmp->client_sock > 0)
-      {
-        close(tmp->client_sock);
-      }
-
-      free(tmp);
+      allocation_tcp_relay_list_remove(&g_expired_tcp_relay_list, tmp);
     }
 
     /* re-enable realtime signal */
@@ -4775,26 +4838,7 @@ int main(int argc, char** argv)
   list_iterate_safe(get, n, &g_expired_tcp_relay_list)
   {
     struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list2);
-    LIST_DEL(&tmp->list);
-    LIST_DEL(&tmp->list2);
- 
-    if(tmp->peer_sock > 0)
-    {
-      close(tmp->peer_sock);
-    }
-
-    /* if TCP relay has expired, it is because 
-     * client does not send ConnectionBind in time
-     * so theoretically client_sock is not set
-     * but in case of we test it and close it 
-     * if client_sock > 0
-     */
-    if(tmp->client_sock > 0)
-    {
-      close(tmp->client_sock);
-    }
-
-    free(tmp);
+    allocation_tcp_relay_list_remove(&g_expired_tcp_relay_list, tmp);
   }
 
   /* close UDP and TCP sockets */

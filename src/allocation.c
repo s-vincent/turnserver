@@ -178,26 +178,7 @@ void allocation_desc_free(struct allocation_desc** desc)
   list_iterate_safe(get, n, &ret->tcp_relays)
   {
     struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
-    LIST_DEL(&tmp->list);
-
-    printf("delete timer\n");
-    timer_delete(tmp->expire_timer);
-
-    /* close sockets */
-
-    if(tmp->peer_sock > 0)
-    {
-      close(tmp->peer_sock);
-    }
-    tmp->peer_sock = -1;
-
-    if(tmp->client_sock > 0)
-    {
-      close(tmp->client_sock);
-    }
-    tmp->client_sock = -1;
-    
-    free(tmp);
+    allocation_tcp_relay_list_remove(&ret->tcp_relays, tmp);
   }
 
   if(ret->relayed_sock > 0)
@@ -565,7 +546,7 @@ struct allocation_desc* allocation_list_find_relayed(struct list_head* list, con
   return NULL;
 }
 
-int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout)
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size)
 {
   struct allocation_tcp_relay* ret = NULL;
   struct sigevent event;
@@ -574,6 +555,15 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
   {
     return -1;
   }
+
+  if(!(ret->buf = malloc(sizeof(char) * buffer_size)))
+  {
+    free(ret);
+    return -1;
+  }
+
+  ret->buf_len = 0;
+  ret->buf_size = buffer_size;
 
   ret->connection_id = id;
   ret->family = family;
@@ -611,13 +601,27 @@ void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_
 {
   list = list; /* not used */
 
-  /* close socket */
-  close(relay->peer_sock);
-  close(relay->client_sock);
   LIST_DEL(&relay->list);
+  LIST_DEL(&relay->list2);
+
+  /* close socket */
+  if(relay->peer_sock > 0)
+  {
+    close(relay->peer_sock);
+  }
+
+  if(relay->client_sock > 0)
+  {
+    close(relay->client_sock);
+  }
 
   /* stop timer */
   timer_delete(relay->expire_timer);
+
+  if(relay->buf)
+  {
+    free(relay->buf);
+  }
 
   free(relay);
 }
