@@ -93,7 +93,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.3"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.4"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
@@ -872,6 +872,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
     return -1;
   }
+  hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
@@ -2238,7 +2239,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 #endif
 
   /* check if server supports requested transport */
-  if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP && message->requested_transport->turn_attr_protocol != IPPROTO_TCP) 
+  if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP && 
+     (message->requested_transport->turn_attr_protocol != IPPROTO_TCP || !turnserver_cfg_turn_tcp())) 
   {
     /* unsupported transport protocol => error 442 */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, account->key);
@@ -2817,6 +2819,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   size_t total_len = 0;
   uint16_t type = 0;
   ssize_t nb = -1;
+  int turn_tcp = turnserver_cfg_turn_tcp();
 
   /* protocol mismatch */
   if(transport_protocol != IPPROTO_UDP && transport_protocol != IPPROTO_TCP)
@@ -2888,8 +2891,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
      method != TURN_METHOD_CHANNELBIND &&
      method != TURN_METHOD_SEND &&
      method != TURN_METHOD_DATA &&
-     method != TURN_METHOD_CONNECT &&
-     method != TURN_METHOD_CONNECTIONBIND)
+     (method != TURN_METHOD_CONNECT || !turn_tcp) &&
+     (method != TURN_METHOD_CONNECTIONBIND || !turn_tcp))
   {
     debug(DBG_ATTR, "Unknown method\n");
     return -1;
@@ -3720,6 +3723,7 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
     iovec_free_data(iov, index);
     return;
   }
+  hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
@@ -3732,7 +3736,7 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
   /* send message */
   if(speer) /* TLS */
   {
-    nb = turn_tls_send(speer, (struct sockaddr*)&saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
+    nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
   }
   else /* TCP */
   {

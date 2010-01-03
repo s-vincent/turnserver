@@ -156,6 +156,12 @@ int turnserver_cfg_tls(void);
 int turnserver_cfg_dtls(void);
 
 /**
+ * \brief Run with or without TURN-TCP extension.
+ * \return 1 if TURN-TCP is enable, 0 otherwise
+ */
+int turnserver_cfg_turn_tcp(void);
+
+/**
  * \brief Get TURN-TCP internal buffer size for peer data.
  * \return internal buffer size
  */

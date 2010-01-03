@@ -15,7 +15,8 @@
  * This protocol allows a client to obtain IP addresses and ports from such a relay. It is most useful for elements 
  * behind symmetric NATs or firewalls that wish to be on the receiving end of a connection to a single peer.
  *
- * TurnServer supports also draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4) and the STUN Binding request (RFC5389).
+ * TurnServer supports also draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4), 
+ * draft-ietf-behave-turn-tcp (allow relay with TCP peers) and the STUN Binding request (RFC5389).
  *
  * \section section-modules Modules
  *
