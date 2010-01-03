@@ -3852,7 +3852,7 @@ int main(int argc, char** argv)
       debug(DBG_ATTR, "TCP socket failed to listen()\n");
       syslog(LOG_ERR, "TCP socket failed to listen()");
       close(sockets.sock_tcp);
-      sockets.sock_tcp  = -1;
+      sockets.sock_tcp = -1;
     }
   }
 

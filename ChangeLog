@@ -1,4 +1,4 @@
-2009-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
+2009-01-03  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
   * Version 0.3     - Add turn-ipv6-08 draft support;
                     - Add credentials reload support;
