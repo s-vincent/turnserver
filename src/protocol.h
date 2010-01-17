@@ -623,6 +623,21 @@ int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen);
 int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen);
 
 /**
+ * \brief Send TURN message.
+ * \param transport_protocol transport protocol of the socket (TCP or UDP)
+ * \param sock socket descriptor
+ * \param speer TLS peer if send with TLS (could be NULL)
+ * \param addr destination address
+ * \param addr_size sizeof addr
+ * \param total_len total length of the message to send
+ * \param iov vector which contains messages and attributes
+ * \param iovlen number of element in iov
+ * \return number of bytes sent or -1 if error
+ */
+int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr, 
+                      socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen);
+
+/**
  * \brief Generate a 96 bit transaction ID.
  * \param id that will be filled with username value (MUST be 12 bytes length)
  * \return 0 if success, -1 otherwise

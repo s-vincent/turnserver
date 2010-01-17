@@ -1252,6 +1252,23 @@ int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t 
   return nb;
 }
 
+int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr, 
+                      socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen)
+{
+  if(speer) /* TLS */
+  {
+    return turn_tls_send(speer, addr, addr_size, total_len, iov, iovlen);
+  }
+  else if(transport_protocol == IPPROTO_UDP)
+  {
+    return turn_udp_send(sock, addr, addr_size, iov, iovlen);
+  }
+  else /* TCP */
+  {
+    return turn_tcp_send(sock, iov, iovlen);
+  }
+}
+
 int turn_generate_transaction_id(uint8_t* id)
 {
   /* 96 bit transaction ID */

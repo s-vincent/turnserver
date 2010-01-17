@@ -591,7 +591,6 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   size_t index = 0;
-  ssize_t nb = -1;
 
   switch(error)
   {
@@ -662,20 +661,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
 
   /* finally send the response */
-  if(speer) /* TLS */
-  {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index);
-  }
-  else if(transport_protocol == IPPROTO_UDP) /* UDP */
-  {
-    nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-  }
-  else /* TCP */
-  {
-    nb = turn_tcp_send(sock, iov, index);
-  }
-
-  if(nb == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
@@ -701,7 +687,6 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   size_t index = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
-  ssize_t nb = -1;
 
   debug(DBG_ATTR, "Binding request received!\n");
 
@@ -747,20 +732,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
-  if(speer) /* TLS */
-  {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-  }
-  else if(transport_protocol == IPPROTO_UDP) /* UDP */
-  {
-    nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-  }
-  else /* TCP */
-  {
-    nb = turn_tcp_send(sock, iov, index);
-  }
-
-  if(nb == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
@@ -928,7 +900,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   else /* TCP */
   {
     /* Relaying with TCP is not in the standard TURN specification.
-     * draft-ietf-behave-turn-tcp-04 specify a TURN extension to do this.
+     * draft-ietf-behave-turn-tcp-05 specify a TURN extension to do this.
      * It is currently not supported.
      */
     return -1;
@@ -1127,7 +1099,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
     else /* TCP */
     {
       /* Relaying with TCP is not in the standard TURN specification.
-       * draft-ietf-behave-turn-tcp-04 specify a TURN extension to do this.
+       * draft-ietf-behave-turn-tcp-05 specify a TURN extension to do this.
        * It is currently not supported.
        */
       return -1;
@@ -1172,7 +1144,6 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   struct turn_attr_hdr* attr = NULL;
   struct iovec iov[4]; /* header, software, integrity, fingerprint */
   size_t index = 0;
-  ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
   char str2[INET6_ADDRSTRLEN];
   char str3[INET6_ADDRSTRLEN];
@@ -1339,20 +1310,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   debug(DBG_ATTR, "CreatePermission successful, send success CreatePermission response\n");
 
   /* finally send the response */
-  if(speer) /* TLS */
-  {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-  }
-  else if(transport_protocol == IPPROTO_UDP) /* UDP */
-  {
-    nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-  }
-  else /* TCP */
-  {
-    nb = turn_tcp_send(sock, iov, index);
-  }
 
-  if(nb == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
@@ -1391,7 +1350,6 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   size_t len = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
-  ssize_t nb = -1;
   char str[INET6_ADDRSTRLEN];
   char str2[INET6_ADDRSTRLEN];
   char str3[INET6_ADDRSTRLEN];
@@ -1562,20 +1520,7 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   debug(DBG_ATTR, "ChannelBind successful, send success ChannelBind response\n");
 
   /* finally send the response */
-  if(speer) /* TLS */
-  {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-  }
-  else if(transport_protocol == IPPROTO_UDP) /* UDP */
-  {
-    nb = turn_udp_send(sock, saddr, saddr_size, iov, index); 
-  }
-  else /* TCP */
-  {
-    nb = turn_tcp_send(sock, iov, index);
-  }
-
-  if(nb == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
@@ -1609,7 +1554,6 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   size_t index = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
-  ssize_t nb = -1;
   uint8_t key[16];
 
   debug(DBG_ATTR, "Refresh request received!\n");
@@ -1721,20 +1665,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   debug(DBG_ATTR, "Refresh successful, send success refresh response\n");
 
   /* finally send the response */
-  if(speer) /* TLS */
-  {
-    nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-  }
-  else if(transport_protocol == IPPROTO_UDP) /* UDP */
-  {
-    nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-  }
-  else /* TCP */
-  {
-    nb = turn_tcp_send(sock, iov, index);
-  }
-
-  if(nb == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
@@ -1872,17 +1803,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       return -1;
     }
 
-    if(speer) /* TLS */
+    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
     {
-      nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-    }
-    else if(transport_protocol == IPPROTO_UDP) /* UDP */
-    {
-      nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-    }
-    else /* TCP */
-    {
-      nb = turn_tcp_send(sock, iov, index);
+      debug(DBG_ATTR, "turn_*_send failed\n");
     }
 
     /* free sent data */
@@ -2138,7 +2061,6 @@ send_success_response:
     struct turn_msg_hdr* hdr = NULL;
     struct turn_attr_hdr* attr = NULL;
     size_t index = 0;
-    ssize_t nb = -1;
 
     if(!(hdr = turn_msg_allocate_response_create(0, message->msg->turn_msg_id, &iov[index])))
     {
@@ -2219,20 +2141,7 @@ send_success_response:
 
     debug(DBG_ATTR, "Allocation successful, send success allocate response\n");
 
-    if(speer) /* TLS */
-    {
-      nb = turn_tls_send(speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-    }
-    else if(transport_protocol == IPPROTO_UDP) /* UDP */
-    {
-      nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-    }
-    else /* TCP */
-    {
-      nb = turn_tcp_send(sock, iov, index);
-    }
-
-    if(nb == -1)
+    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
     {
       debug(DBG_ATTR, "turn_*_send failed\n");
     }
@@ -2383,7 +2292,6 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   uint16_t hdr_msg_type = 0;
   size_t total_len = 0;
   uint16_t type = 0;
-  ssize_t nb = -1;
 
   /* protocol mismatch */
   if(transport_protocol != IPPROTO_UDP && transport_protocol != IPPROTO_TCP)
@@ -2522,20 +2430,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
-      if(speer) /* TLS */
-      {
-        nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-      }
-      else if(transport_protocol == IPPROTO_UDP) /* UDP */
-      {
-        nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-      }
-      else /* TCP */
-      {
-        nb = turn_tcp_send(sock, iov, index);
-      }
-
-      if(nb == -1)
+      if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
       {
         debug(DBG_ATTR, "turn_*_send failed\n");
       }
@@ -2583,20 +2478,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
-      if(speer) /* TLS */
-      {
-        nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-      }
-      else if(transport_protocol == IPPROTO_UDP) /* UDP */
-      {
-        nb = turn_udp_send(sock, saddr, saddr_size, iov, index); 
-      }
-      else /* TCP */
-      {
-        nb = turn_tcp_send(sock, iov, index);
-      }
-
-      if(nb == -1)
+      if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
       {
         debug(DBG_ATTR, "turn_*_send failed\n");
       }
@@ -2662,20 +2544,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
-        if(speer) /* TLS */
-        {
-          nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-        }
-        else if(transport_protocol == IPPROTO_UDP) /* UDP */
-        {
-          nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-        }
-        else /* TCP */
-        {
-          nb = turn_tcp_send(sock, iov, index);
-        }
-
-        if(nb == -1)
+        if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
         {
           debug(DBG_ATTR, "turn_*_send failed\n");
         }
@@ -2747,17 +2616,9 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
-        if(speer) /* TLS */
+        if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
         {
-          nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-        }
-        else if(transport_protocol == IPPROTO_UDP) /* UDP */
-        {
-          nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-        }
-        else /* TCP */
-        {
-          nb = turn_tcp_send(sock, iov, index);
+          debug(DBG_ATTR, "turn_*_send failed\n");
         }
 
         /* free sent data */
@@ -2799,17 +2660,9 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     /* convert to big endian */
     error->turn_msg_len = htons(error->turn_msg_len);
 
-    if(speer) /* TLS */
+    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
     {
-      nb = turn_tls_send(speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
-    }
-    else if(transport_protocol == IPPROTO_UDP) /* UDP */
-    {
-      nb = turn_udp_send(sock, saddr, saddr_size, iov, index);
-    }
-    else /* TCP */
-    {
-      nb = turn_tcp_send(sock, iov, index);
+      debug(DBG_ATTR, "turn_*_send failed\n");
     }
 
     /* free sent data */
