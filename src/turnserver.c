@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@
  * \def OS_SET_DF_SUPPORT
  * \brief Current operating system can set the DF flag.
  */
-#define OS_SET_DF_SUPPORT 1
+#define OS_SET_DF_SUPPORT 1 
 #endif
 
 /**
@@ -374,7 +374,7 @@ static void turnserver_parse_cmdline(int argc, char** argv, char** configuration
         break;
       case 'v': /* version */
         fprintf(stdout, "TurnServer %s\n", PACKAGE_VERSION);
-        fprintf(stdout, "Copyright (C) 2008-2009 Sebastien Vincent.\n");
+        fprintf(stdout, "Copyright (C) 2008-2010 Sebastien Vincent.\n");
         fprintf(stdout, "This is free software; see the source for copying conditions.  There is NO\n");
         fprintf(stdout, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
         exit(EXIT_SUCCESS);
@@ -661,7 +661,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
 
   /* finally send the response */
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_*_send failed\n");
   }
@@ -1778,7 +1778,6 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     struct turn_msg_hdr* error = NULL;
     struct turn_attr_hdr* attr = NULL;
     size_t index = 0;
-    ssize_t nb = 0;
 
     /* send error 420 */
     unknown[0] = TURN_ATTR_DONT_FRAGMENT;

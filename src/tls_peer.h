@@ -87,7 +87,8 @@ extern "C"
  * \def LIBSSL_CLEANUP
  * \brief Cleanup libssl.
  * \note You have to call it when your program exit.
- * \note It is normal if your program still leaks 48 bytes due to libssl.
+ * \note It is normal if your program still leaks 48 bytes on x86 
+ * or 88 bytes on x86_64 due to libssl.
  */
 #define LIBSSL_CLEANUP {EVP_cleanup(); ERR_remove_state(0); ERR_free_strings(); CRYPTO_cleanup_all_ex_data(); }while(0)
 
