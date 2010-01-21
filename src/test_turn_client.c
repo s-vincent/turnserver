@@ -108,7 +108,7 @@ static void client_parse_cmdline(int argc, char** argv, struct client_configurat
         exit(EXIT_SUCCESS);
         break;
       case 'v': /* version */
-        fprintf(stdout, SOFTWARE_DESCRIPTION);
+        fprintf(stdout, "%s\n", SOFTWARE_DESCRIPTION);
         fprintf(stdout, "Copyright (C) 2010 Sebastien Vincent.\n");
         fprintf(stdout, "This is free software; see the source for copying conditions.  There is NO\n");
         fprintf(stdout, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
