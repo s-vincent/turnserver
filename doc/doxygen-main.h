@@ -12,11 +12,14 @@
  *
  * This is the API documentation of TurnServer, an OpenSource implementation of Traversal Using Relay NAT (TURN) protocol.
  *
- * This protocol allows a client to obtain IP addresses and ports from such a relay. It is most useful for elements 
+ * The TURN protocol allows a client to obtain IP addresses and ports from such a relay. It is most useful for elements 
  * behind symmetric NATs or firewalls that wish to be on the receiving end of a connection to a single peer.
  *
- * TurnServer supports also draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4) and the STUN Binding request (RFC5389).
+ * TURN clients can connect to TurnServer with the following protocols: UDP, TCP and TLS over TCP. Experimental DTLS 
+ * support is also provided. For the moment relaying messages can only be done with UDP protocol.
  *
+ * TurnServer supports also draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4) and the STUN Binding request (RFC5389).
+ * 
  * \section section-modules Modules
  *
  * The API is decomposed in several modules: 
@@ -31,11 +34,11 @@
  * There are basics unit tests in test directory of source tree. Note that you have to install <a href="http://check.sourceforge.net/">check</a> 
  * framework in order to use it.
  *
- * There also three programs that can generate a suite of TURN packets (Allocate request, wait for an answer, Refresh requests, 
- * ...) using the modules above, one for each protocol supported by STUN / TURN. So we provide UDP, TCP and TLS over TCP basics 
- * TURN packet generators.
+ * We provide also a "test" client application (test_turn_client) that can generate a suite of TURN packets (Allocate request, 
+ * wait for an answer, Refresh requests, ...) using the modules above. It can connect to TURN server with UDP, TCP, TLS over TCP 
+ * or DTLS.
  *
- * Note that TurnServer uses <a href="http://www.openssl.org/">OpenSSL</a> (for cryptographics and TLS stuff) and 
+ * Note that TurnServer uses <a href="http://www.openssl.org/">OpenSSL</a> (for cryptographics and TLS stuff) and
  * <a href="http://www.nongnu.org/confuse/">Confuse</a> (for parsing configuration file), so you need to have these libraries 
  * on your system.
  *

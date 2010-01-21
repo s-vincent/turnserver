@@ -1,4 +1,4 @@
-.TH turnserver 1 "December 27, 2009" "TurnServer"
+.TH turnserver 1 "January 21, 2010" "TurnServer"
 
 .SH NAME
 turnserver \- TURN server implementation
@@ -9,11 +9,17 @@ turnserver \- TURN server implementation
 
 .SH DESCRIPTION
 TurnServer is an implementation of Traversal Using Relays around NATs (TURN) protocol.
-This protocol allows a client to obtain IP addresses and ports from such a relay.
+The TURN protocol allows a client to obtain IP addresses and ports from such a relay.
 It is most useful for elements behind symmetric NATs or firewalls that wish to be on the
 receiving end of a connection to a single peer.
 
-TurnServer offers also the possibility to allocate an IPv6 address to IPv4 TURN client and vice-versa.
+TURN clients can connect to TurnServer with the following protocols: UDP, TCP and TLS over TCP.
+Experimental DTLS support is also provided. For the moment relaying messages can only be done with
+UDP protocol.
+
+TurnServer supports also draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4)
+and the STUN Binding request (RFC5389).
+
 .br
 .br
 

@@ -7,7 +7,7 @@ AM_CFLAGS += -DNDEBUG
 endif
 
 INCLUDE = -I.
-bin_PROGRAMS = turnserver test_turn_client test_client_udp test_client_tcp test_client_tls test_client_dtls test_echo_server
+bin_PROGRAMS = turnserver test_turn_client test_echo_server
 noinst_HEADERS = turnserver.h \
 								 turn.h \
 								 protocol.h \
@@ -31,30 +31,6 @@ turnserver_SOURCES = turnserver.c \
 										 conf.c
 
 test_turn_client_SOURCES = test_turn_client.c \
-											protocol.c \
-											util_crypto.c \
-											tls_peer.c \
-											util_sys.c
-
-test_client_udp_SOURCES = test_client_udp.c \
-											protocol.c \
-											util_crypto.c \
-											tls_peer.c \
-											util_sys.c
-
-test_client_tcp_SOURCES = test_client_tcp.c \
-											protocol.c \
-											util_crypto.c \
-											tls_peer.c \
-											util_sys.c
-
-test_client_tls_SOURCES = test_client_tls.c \
-											protocol.c \
-											util_crypto.c \
-											tls_peer.c \
-											util_sys.c
-
-test_client_dtls_SOURCES = test_client_dtls.c \
 											protocol.c \
 											util_crypto.c \
 											tls_peer.c \

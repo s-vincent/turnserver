@@ -1,3 +1,7 @@
+2010-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
+
+	* Version 0.4			- Add multiprotocol client example (UDP/TCP/TLS/DTLS).
+
 2010-01-03  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
   * Version 0.3     - Add turn-ipv6-08 draft support;
