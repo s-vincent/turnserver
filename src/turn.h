@@ -96,6 +96,15 @@ typedef unsigned __int64 uint64_t;
 /* ChannelBind method */
 #define TURN_METHOD_CHANNELBIND         0x0009
 
+/* Connect method (draft-ietf-behave-turn-tcp-05) */
+#define TURN_METHOD_CONNECT             0x000A
+
+/* ConnectionBind method (draft-ietf-behave-turn-tcp-05) */
+#define TURN_METHOD_CONNECTIONBIND      0x000B
+
+/* ConnectionAttempt method (draft-ietf-behave-turn-tcp-05) */
+#define TURN_METHOD_CONNECTIONATTEMPT   0x000C
+
 /* Indications */
 
 /* Send method */
@@ -171,6 +180,9 @@ typedef unsigned __int64 uint64_t;
 /* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-08) */
 #define TURN_ATTR_REQUESTED_ADDRESS_FAMILY  0x0017
 
+/* CONNECTION-ID (draft-ietf-behave-turn-tcp-05) */
+#define TURN_ATTR_CONNECTION_ID         0x002A
+
 /* STUN error codes */
 #define STUN_ERROR_TRY_ALTERNATE        300
 #define STUN_ERROR_BAD_REQUEST          400
@@ -191,6 +203,10 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED   440
 #define TURN_ERROR_PEER_ADDRESS_FAMILY_MISMATCH   443
 
+/* draft-ietf-behave-turn-tcp-05 */
+#define TURN_ERROR_CONNECTON_ALREADY_EXIST        446
+#define TURN_ERROR_CONNECTON_TIMEOUT              447
+
 /* STUN error recommended reasons */
 #define STUN_ERROR_300            "Try Alternate"
 #define STUN_ERROR_400            "Bad request"
@@ -210,6 +226,10 @@ typedef unsigned __int64 uint64_t;
 /* draft-ietf-behave-turn-ipv6-08 */
 #define TURN_ERROR_440            "Address family not supported"
 #define TURN_ERROR_443            "Peer address family mismatch"
+
+/* draft-ietf-behave-turn-tcp-05 */
+#define TURN_ERROR_446            "Connection Already Exists"
+#define TURN_ERROR_447            "Connection Timeout or Failure"
 
 /* STUN magic cookie */
 #define STUN_MAGIC_COOKIE               0x2112A442
@@ -238,6 +258,10 @@ typedef unsigned __int64 uint64_t;
 
 /* lifetime of a token (in seconds) */
 #define TURN_DEFAULT_TOKEN_LIFETIME           60
+
+/* draft-ietf-behave-turn-tcp-05 */
+/* Timeout of TCP relay when no ConnectionBind is received (in seconds) */
+#define TURN_DEFAULT_TCP_RELAY_TIMEOUT        30
 
 /**
  * \struct turn_msg_hdr
@@ -521,6 +545,17 @@ struct turn_attr_requested_address_family
   uint16_t turn_attr_len; /**< Length of "value" */
   uint32_t turn_attr_family : 8; /**<  Family (IPv4 or IPv6) requested */
   uint32_t turn_attr_reserved : 24; /**< Reserved */
+}__attribute__((packed));
+
+/**
+ * \struct turn_attr_connection_id
+ * \brief CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-05).
+ */
+struct turn_attr_connection_id
+{
+  uint16_t turn_attr_type; /**< Attribute type */
+  uint16_t turn_attr_len; /**< Length of "value" */
+  uint32_t turn_attr_id; /**<  Connection ID */
 }__attribute__((packed));
 
 #endif /* TURN_H */

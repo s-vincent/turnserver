@@ -105,6 +105,27 @@ struct allocation_channel
 };
 
 /**
+ * \struct allocation_tcp_relay
+ * \brief TCP relay information.
+ */
+struct allocation_tcp_relay
+{
+  uint32_t connection_id; /**< Connection ID */
+  int family; /**< TCP relay family (IPv4 or IPv6) */
+  uint8_t peer_addr[16]; /**< Peer address */
+  uint16_t peer_port; /**< Peer port */
+  int peer_sock; /**< Peer data connection (server <-> peer) */
+  int client_sock; /**< Client data connection (client <-> server) */
+  timer_t expire_timer; /**< Expire timer */
+  int new; /**< If the connection is newly initiated */
+  char* buf; /**< Internal buffer for peer data (before receiving ConnectionBind) */
+  size_t buf_len; /**< Length of current data in internal buffer */
+  size_t buf_size; /**< Capacity of internal buffer */
+  struct list_head list; /**< For list management */
+  struct list_head list2; /**< For list management (expired list) */
+};
+
+/**
  * \struct allocation_desc
  * \brief Allocation descriptor.
  */
@@ -119,7 +140,10 @@ struct allocation_desc
   struct allocation_tuple tuple; /**< 5-tuple */
   struct list_head peers_channels; /**< List of channel to peer bindings */
   struct list_head peers_permissions; /**< List of peers permissions */
+  struct list_head tcp_relays; /**< TCP relays information */
   int relayed_sock; /**< Socket for the allocated transport address */
+  int relayed_sock_tcp; /**< Socket for the allocated transport address to contact TCP peer (draft-ietf-behave-turn-tcp-05).
+                             It is set to -1 if Connect request succeed */
   int relayed_tls; /**< If allocation has been set in TLS */
   int relayed_dtls; /**< If allocation has been set in DTLS */
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
@@ -220,6 +244,54 @@ struct allocation_channel* allocation_desc_find_channel_number(struct allocation
  * \return 0 if success, -1 otherwise
  */
 int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const uint8_t* peer_addr, uint16_t peer_port);
+
+/**
+ * \brief Add a TCP relay.
+ * \param desc allocation descriptor
+ * \param id connection ID
+ * \param peer_sock peer data connection socket
+ * \param family peer address family (IPv4 or IPv6)
+ * \param peer_addr peer address
+ * \param peer_port peer port
+ * \param timeout TCP relay timeout (if no ConnectionBind is received)
+ * \param buffer_size internal buffer size (for peer data)
+ * \return 0 if success, -1 otherwise
+ */
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size);
+
+/**
+ * \brief Remove a TCP relay.
+ * \param list list of TCP relays
+ * \param relay relay to remove
+ */
+void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_tcp_relay* relay);
+
+/**
+ * \brief Find a TCP relay identified by its connection ID.
+ * \param desc allocation descriptor
+ * \param id connection ID
+ * \return TCP relay if found, NULL otherwise
+ */
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation_desc* desc, uint32_t id);
+
+/**
+ * Find a TCP relay identified by its peer address and port.
+ * \param desc allocation descriptor
+ * \param family peer family address (IPv4 or IPv6)
+ * \param peer_addr peer address
+ * \param peer_port peer port
+ * \return TCP relay if found, NULL otherwise
+ */
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port);
+
+/**
+ * \brief Set timer of an TCP relay.
+ * 
+ * If timeout is 0, the timer is stopped.
+ * \param relay TCP relay
+ * \param timeout timeout to set
+ */
+void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay, uint32_t timeout);
 
 /**
  * \brief Reset the timer of the channel.

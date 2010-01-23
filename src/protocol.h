@@ -92,6 +92,7 @@ struct turn_message
   struct turn_attr_dont_fragment* dont_fragment; /**< DONT-FRAGMENT attribute */
   struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
   struct turn_attr_requested_address_family* requested_addr_family; /**< REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-08) */
+  struct turn_attr_connection_id* connection_id; /**< CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-05) */
   size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
 
@@ -188,16 +189,6 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, stru
 struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
- * \brief Create a complete error 443.
- * \param method method used
- * \param id transaction ID
- * \param iov vector
- * \param index will be filled with the number of element added
- * \return pointer on turn_msg_hdr or NULL if problem
- */
-struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index);
-
-/**
  * \brief Create a complete error 441.
  * \param method method used
  * \param id transaction ID
@@ -216,6 +207,36 @@ struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, stru
  * \return pointer on turn_msg_hdr or NULL if problem
  */
 struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 443.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 446.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id, struct iovec* iov, size_t* index);
+
+/**
+ * \brief Create a complete error 447.
+ * \param method method used
+ * \param id transaction ID
+ * \param iov vector
+ * \param index will be filled with the number of element added
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id, struct iovec* iov, size_t* index);
 
 /**
  * \brief Create a complete error 486.
@@ -411,6 +432,69 @@ struct turn_msg_hdr* turn_msg_send_indication_create(uint16_t len, const uint8_t
 struct turn_msg_hdr* turn_msg_data_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov);
 
 /**
+ * \brief Create a TURN Connect Request.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connect_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN Connect Response.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connect_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN Connect Error.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connect_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN ConnectionBind Request.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connectionbind_request_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN ConnectionBind Response.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connectionbind_response_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN ConnectionBind Error.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connectionbind_error_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
+ * \brief Create a TURN ConnectionAttempt Indication.
+ * \param len length of the message
+ * \param id 96 bit transaction ID
+ * \param iov vector
+ * \return pointer on turn_msg_hdr or NULL if problem
+ */
+struct turn_msg_hdr* turn_msg_connectionattempt_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov);
+
+/**
  * \brief Create a MAPPED-ADDRESS attribute.
  * \param address address
  * \param iov vector
@@ -589,6 +673,14 @@ struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, s
  * \return pointer on turn_attr_hdr or NULL if problem
  */
 struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, struct iovec* iov);
+
+/**
+ * \brief Create a CONNECTION-ID attribute.
+ * \param id 32 bits ID 
+ * \param iov vector
+ * \return pointer on turn_attr_hdr or NULL if problem
+ */
+struct turn_attr_hdr* turn_attr_connection_id_create(uint32_t id, struct iovec* iov);
 
 /**
  * \brief Send TURN message (which may contains attributes) over UDP.

@@ -615,6 +615,12 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 443: /* Peer address family mismatch */
       hdr = turn_error_response_443(method, id, &iov[index], &index);
       break;
+    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-05) */
+      hdr = turn_error_response_446(method, id, &iov[index], &index);
+      break;
+    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-05) */
+      hdr = turn_error_response_447(method, id, &iov[index], &index);
+      break;
     case 486: /* Allocation quota reached */
       hdr = turn_error_response_486(method, id, &iov[index], &index);
       break;
@@ -766,6 +772,9 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   int optval = 0;
   int save_val = 0;
   socklen_t optlen = sizeof(int);
+  struct sockaddr_storage storage;
+  uint8_t* peer_addr = NULL;
+  uint16_t peer_port = 0;
 
   debug(DBG_ATTR, "ChannelData received!\n");
 
@@ -803,6 +812,13 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     return -1;
   }
 
+  if(desc->relayed_transport_protocol != IPPROTO_UDP)
+  {
+    /* ignore for TCP relayed allocation */
+    debug(DBG_ATTR, "ChannelData does not intend to work with TCP relayed address!");
+    return -1;
+  }
+
   alloc_channel = allocation_desc_find_channel_number(desc, channel_number);
 
   if(!alloc_channel)
@@ -825,87 +841,74 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     return -1;
   }
 
-  if(desc->relayed_transport_protocol == IPPROTO_UDP)
-  {
-    struct sockaddr_storage storage;
-    uint8_t* peer_addr = alloc_channel->peer_addr;
-    uint16_t peer_port = alloc_channel->peer_port;
+  peer_addr = alloc_channel->peer_addr;
+  peer_port = alloc_channel->peer_port;
 
-    switch(desc->relayed_addr.ss_family)
-    {
-      case AF_INET:
-        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
-        ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
-        memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
-        break;
-      case AF_INET6:
-        ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
-        memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
-        ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
-        ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
-        ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+  switch(desc->relayed_addr.ss_family)
+  {
+    case AF_INET:
+      ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
+      memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
+      ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
+      memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+      break;
+    case AF_INET6:
+      ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
+      memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
+      ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
+      ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
+      ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
 #ifdef SIN6_LEN
-        ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
+      ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-        break;
-      default:
-        return -1;
-        break;
-    }
-
-    /* draft-ietf-behave-turn-ipv6-08:  If present, the
-     * DONT-FRAGMENT attribute MUST be ignored by the server for 
-     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
-     */
-    if(desc->relayed_addr.ss_family == AF_INET && 
-       (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 && 
-       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
-    {
-#ifdef OS_SET_DF_SUPPORT 
-      /* alternate behavior */
-      optval = IP_PMTUDISC_DONT;
-
-      if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
-      {
-        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
-      }
-      else
-      {
-        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-         * in case getsockopt failed
-         */
-        optlen = 0;
-      }
-#else
-      /* avoid compilation warning */
-      optval = 0;
-      optlen = 0;
-      save_val = 0;
-#endif
-    }
-
-    debug(DBG_ATTR, "Send ChannelData to peer\n");
-    nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
-
-#ifdef OS_SET_DF_SUPPORT 
-    /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
-    if(optlen)
-    {
-      /* restore original value */
-      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
-    }
-#endif
+      break;
+    default:
+      return -1;
+      break;
   }
-  else /* TCP */
+
+  /* draft-ietf-behave-turn-ipv6-08:  If present, the
+   * DONT-FRAGMENT attribute MUST be ignored by the server for 
+   * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+   */
+  if(desc->relayed_addr.ss_family == AF_INET && 
+     (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 && 
+     IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
   {
-    /* Relaying with TCP is not in the standard TURN specification.
-     * draft-ietf-behave-turn-tcp-05 specify a TURN extension to do this.
-     * It is currently not supported.
-     */
-    return -1;
-    /* nb = send(desc->relayed_sock, msg, len, 0); */
+#ifdef OS_SET_DF_SUPPORT 
+    /* alternate behavior */
+    optval = IP_PMTUDISC_DONT;
+
+    if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+    {
+      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+    }
+    else
+    {
+      /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+       * in case getsockopt failed
+       */
+      optlen = 0;
+    }
+#else
+    /* avoid compilation warning */
+    optval = 0;
+    optlen = 0;
+    save_val = 0;
+#endif
   }
+
+  debug(DBG_ATTR, "Send ChannelData to peer\n");
+  nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
+
+#ifdef OS_SET_DF_SUPPORT 
+  /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
+  if(optlen)
+  {
+    /* restore original value */
+    setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
+  }
+#endif
 
   if(nb == -1)
   {
@@ -938,6 +941,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
   socklen_t optlen = sizeof(int);
   char str[INET6_ADDRSTRLEN];
   int family = 0;
+  struct sockaddr_storage storage;
 
   debug(DBG_ATTR, "Send indication received!\n");
 
@@ -1009,102 +1013,88 @@ static int turnserver_process_send_indication(const struct turn_message* message
       return -1;
     }
 
-    if(desc->relayed_transport_protocol == IPPROTO_UDP)
+    switch(desc->relayed_addr.ss_family)
     {
-      struct sockaddr_storage storage;
-
-      switch(desc->relayed_addr.ss_family)
-      {
-        case AF_INET:
-          ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-          memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
-          ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
-          memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
-          break;
-        case AF_INET6:
-          ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
-          memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
-          ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
-          ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
-          ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
+      case AF_INET:
+        ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
+        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, peer_addr, 4);
+        ((struct sockaddr_in*)&storage)->sin_port = htons(peer_port);
+        memset(&((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof((struct sockaddr_in*)&storage)->sin_zero);
+        break;
+      case AF_INET6:
+        ((struct sockaddr_in6*)&storage)->sin6_family = AF_INET6;
+        memcpy(&((struct sockaddr_in6*)&storage)->sin6_addr, peer_addr, 16);
+        ((struct sockaddr_in6*)&storage)->sin6_port = htons(peer_port);
+        ((struct sockaddr_in6*)&storage)->sin6_flowinfo = htonl(0);
+        ((struct sockaddr_in6*)&storage)->sin6_scope_id = htonl(0);
 #ifdef SIN6_LEN
-          ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
+        ((struct sockaddr_in6*)&storage)->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-          break;
-        default:
-          return -1;
-          break;
-      }
-
-      /* draft-ietf-behave-turn-ipv6-08:  If present, the
-       * DONT-FRAGMENT attribute MUST be ignored by the server for 
-       * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
-       */
-      if(desc->relayed_addr.ss_family == AF_INET && 
-         (desc->tuple.client_addr.ss_family == AF_INET ||(desc->tuple.client_addr.ss_family == AF_INET6 && 
-         IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
-      {
-        /* following is for IPv4-IPv4 relay only */
-#ifdef OS_SET_DF_SUPPORT 
-        if(message->dont_fragment)
-        {
-          optval = IP_PMTUDISC_DO;
-          debug(DBG_ATTR, "Will set DF flag\n");
-        }
-        else /* IPv4-IPv4 relay but no DONT-FRAGMENT attribute */
-        {
-          /* alternate behavior, set DF to 0 */
-          optval = IP_PMTUDISC_DONT;
-          debug(DBG_ATTR, "Will not set DF flag\n");
-        }
-
-        if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
-        {
-          setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
-        }
-        else
-        {
-          /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
-           * in case getsockopt failed
-           */
-          optlen = 0;
-        }
-#else
-        /* avoid compilation warning */
-        optval = 0;
-        optlen = 0;
-        save_val = 0;
-
-        if(message->dont_fragment)
-        {
-          /* ignore message */
-          debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
-          return -1;
-        }
-#endif
-      }
-
-      debug(DBG_ATTR, "Send data to peer\n");
-      nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
-
-      /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
-#ifdef OS_SET_DF_SUPPORT 
-      if(optlen)
-      {
-        /* restore original value */
-        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
-      }
-#endif
+        break;
+      default:
+        return -1;
+        break;
     }
-    else /* TCP */
+
+    /* draft-ietf-behave-turn-ipv6-08:  If present, the
+     * DONT-FRAGMENT attribute MUST be ignored by the server for 
+     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+     */
+    if(desc->relayed_addr.ss_family == AF_INET && 
+       (desc->tuple.client_addr.ss_family == AF_INET ||(desc->tuple.client_addr.ss_family == AF_INET6 && 
+       IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
     {
-      /* Relaying with TCP is not in the standard TURN specification.
-       * draft-ietf-behave-turn-tcp-05 specify a TURN extension to do this.
-       * It is currently not supported.
-       */
-      return -1;
-      /* nb = send(desc->relayed_sock, msg, msg_len, 0); */
+    /* following is for IPv4-IPv4 relay only */
+#ifdef OS_SET_DF_SUPPORT 
+      if(message->dont_fragment)
+      {
+        optval = IP_PMTUDISC_DO;
+        debug(DBG_ATTR, "Will set DF flag\n");
+      }
+      else /* IPv4-IPv4 relay but no DONT-FRAGMENT attribute */
+      {
+        /* alternate behavior, set DF to 0 */
+        optval = IP_PMTUDISC_DONT;
+        debug(DBG_ATTR, "Will not set DF flag\n");
+      }
+
+      if(!getsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, &optlen))
+      {
+        setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(int));
+      }
+      else
+      {
+        /* little hack for not setting the old value of *_MTU_DISCOVER after sending message
+         * in case getsockopt failed
+         */
+        optlen = 0;
+      }
+#else
+      /* avoid compilation warning */
+      optval = 0;
+      optlen = 0;
+      save_val = 0;
+
+      if(message->dont_fragment)
+      {
+        /* ignore message */
+        debug(DBG_ATTR, "DONT-FRAGMENT attribute present and OS cannot set DF flag, ignore packet!\n");
+        return -1;
+      }
+#endif
     }
+
+    debug(DBG_ATTR, "Send data to peer\n");
+    nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
+
+    /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
+#ifdef OS_SET_DF_SUPPORT 
+    if(optlen)
+    {
+      /* restore original value */
+      setsockopt(desc->relayed_sock, IPPROTO_IP, IP_MTU_DISCOVER, &save_val, sizeof(int));
+    }
+#endif
 
     if(nb == -1)
     {
@@ -2237,7 +2227,15 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
         turnserver_process_createpermission_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
         break;
       case TURN_METHOD_CHANNELBIND:
-        turnserver_process_channelbind_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
+        /* ChannelBind is only for UDP relay */
+        if(desc->relayed_transport_protocol == IPPROTO_UDP)
+        {
+          turnserver_process_channelbind_request(transport_protocol, sock, message, saddr, saddr_size, desc, speer);
+        }
+        else
+        {
+          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+        }
         break;
       default:
         return -1;
@@ -2253,7 +2251,10 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     switch(method)
     {
       case TURN_METHOD_SEND:
-        turnserver_process_send_indication(message, desc);
+        if(desc->relayed_transport_protocol == IPPROTO_UDP)
+        {
+          turnserver_process_send_indication(message, desc);
+        }
         break;
       case TURN_METHOD_DATA:
         /* should not happen */
@@ -3183,7 +3184,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
     struct socket_desc* tmp = list_get(get, struct socket_desc, list);
 
     /* TCP remote socket */
-    if(tmp->sock < max_fd)
+    if(tmp->sock < max_fd && tmp->sock > 0)
     {
       SFD_SET(tmp->sock, &fdsr);
       nsock = MAX(nsock, tmp->sock);

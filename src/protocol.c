@@ -345,6 +345,40 @@ struct turn_msg_hdr* turn_msg_channelbind_error_create(uint16_t len, const uint8
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_ERROR_RESP), len, id, iov);
 }
 
+struct turn_msg_hdr* turn_msg_connect_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CONNECT | STUN_REQUEST), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_connect_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CONNECT | STUN_SUCCESS_RESP), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_connect_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CONNECT | STUN_ERROR_RESP), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_connectionbind_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CONNECTIONBIND | STUN_REQUEST), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_connectionbind_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CONNECTIONBIND | STUN_SUCCESS_RESP), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_connectionbind_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+  return turn_msg_create((TURN_METHOD_CONNECTIONBIND | STUN_ERROR_RESP), len, id, iov);
+}
+
+struct turn_msg_hdr* turn_msg_connectionattempt_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+{
+    return turn_msg_create((TURN_METHOD_CONNECTIONATTEMPT | STUN_INDICATION), len, id, iov);
+}
 /* STUN attributes */
 
 struct turn_attr_hdr* turn_attr_mapped_address_create(const struct sockaddr* address, struct iovec* iov)
@@ -824,6 +858,25 @@ struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, 
   return (struct turn_attr_hdr*)ret;
 }
 
+struct turn_attr_hdr* turn_attr_connection_id_create(uint32_t id, struct iovec* iov)
+{
+  struct turn_attr_connection_id* ret = NULL;
+
+  if(!(ret = malloc(sizeof(struct turn_attr_connection_id))))
+  {
+    return NULL;
+  }
+
+  ret->turn_attr_type = htons(TURN_ATTR_CONNECTION_ID);
+  ret->turn_attr_len = htons(4);
+  ret->turn_attr_id = id;
+
+  iov->iov_base = ret;
+  iov->iov_len = sizeof(struct turn_attr_connection_id);
+
+  return (struct turn_attr_hdr*)ret;
+}
+
 struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
@@ -1062,30 +1115,6 @@ struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index)
-{
-  struct turn_msg_hdr* error = NULL;
-  struct turn_attr_hdr* attr = NULL;
-
-  /* header */
-  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
-  {
-    return NULL;
-  }
-  (*index)++;
-
-  /* error-code */
-  if(!(attr = turn_attr_error_create(443, TURN_ERROR_443, sizeof(TURN_ERROR_443), &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  return error;
-}
-
 struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
@@ -1124,6 +1153,78 @@ struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, stru
 
   /* error-code */
   if(!(attr = turn_attr_error_create(442, TURN_ERROR_442, sizeof(TURN_ERROR_442), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(443, TURN_ERROR_443, sizeof(TURN_ERROR_443), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(446, TURN_ERROR_446, sizeof(TURN_ERROR_446), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(447, TURN_ERROR_447, sizeof(TURN_ERROR_447), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1675,6 +1776,9 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         break;
       case TURN_ATTR_REQUESTED_ADDRESS_FAMILY:
         message->requested_addr_family = (struct turn_attr_requested_address_family*)ptr;
+        break;
+      case TURN_ATTR_CONNECTION_ID:
+        message->connection_id = (struct turn_attr_connection_id*)ptr;
         break;
       default:
         if(attr->turn_attr_type <= 0x7fff)

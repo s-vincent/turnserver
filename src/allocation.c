@@ -114,6 +114,9 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
   /* list of channels */
   INIT_LIST(ret->peers_channels);
 
+  /* list of TCP relays */
+  INIT_LIST(ret->tcp_relays);
+
   /* linked lists, second ones used when timer has expired */
   INIT_LIST(ret->list);
   INIT_LIST(ret->list2);
@@ -136,6 +139,7 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   /* sockets */
   ret->relayed_sock = -1;
+  ret->relayed_sock_tcp = -1;
   ret->tuple_sock = -1;
 
   return ret;
@@ -171,12 +175,25 @@ void allocation_desc_free(struct allocation_desc** desc)
     free(tmp);
   }
 
+  list_iterate_safe(get, n, &ret->tcp_relays)
+  {
+    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
+    allocation_tcp_relay_list_remove(&ret->tcp_relays, tmp);
+  }
+
   if(ret->relayed_sock > 0)
   {
     close(ret->relayed_sock);
   }
 
   ret->relayed_sock = -1;
+
+  if(ret->relayed_sock_tcp > 0)
+  {
+    close(ret->relayed_sock_tcp);
+  }
+
+  ret->relayed_sock_tcp = -1;
 
   /* the tuple sock is closed by the user-defined application */
   ret->tuple_sock = -1;
@@ -527,6 +544,148 @@ struct allocation_desc* allocation_list_find_relayed(struct list_head* list, con
 
   /* not found */
   return NULL;
+}
+
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size)
+{
+  struct allocation_tcp_relay* ret = NULL;
+  struct sigevent event;
+
+  if(!(ret = malloc(sizeof(struct allocation_tcp_relay))))
+  {
+    return -1;
+  }
+
+  if(!(ret->buf = malloc(sizeof(char) * buffer_size)))
+  {
+    free(ret);
+    return -1;
+  }
+
+  ret->buf_len = 0;
+  ret->buf_size = buffer_size;
+
+  ret->connection_id = id;
+  ret->family = family;
+  ret->peer_sock = peer_sock;
+  memcpy(&ret->peer_addr, peer_addr, family == AF_INET6 ? 16 : 4);
+  ret->peer_port = peer_port;
+
+  /* client_sock will be initialized when client will send 
+   * a ConnectionBind request 
+   */
+  ret->client_sock = -1;
+
+  /* timer */
+  memset(&event, 0x00, sizeof(struct sigevent));
+  event.sigev_value.sival_ptr = ret;
+  event.sigev_notify = SIGEV_SIGNAL;
+  event.sigev_signo = SIGRT_EXPIRE_TCP_RELAY;
+
+  memset(&ret->expire_timer, 0x00, sizeof(timer_t));
+  if(timer_create(CLOCK_REALTIME, &event, &ret->expire_timer) == -1)
+  {
+    free(ret);
+    return -1;
+  }
+
+  allocation_tcp_relay_set_timer(ret, timeout);
+
+  /* add to the list */
+  LIST_ADD(&ret->list, &desc->tcp_relays); 
+  INIT_LIST(ret->list2);
+  return 0;
+}
+
+void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_tcp_relay* relay)
+{
+  list = list; /* not used */
+
+  LIST_DEL(&relay->list);
+  LIST_DEL(&relay->list2);
+
+  /* close socket */
+  if(relay->peer_sock > 0)
+  {
+    close(relay->peer_sock);
+  }
+
+  if(relay->client_sock > 0)
+  {
+    close(relay->client_sock);
+  }
+
+  /* stop timer */
+  timer_delete(relay->expire_timer);
+
+  if(relay->buf)
+  {
+    free(relay->buf);
+  }
+
+  free(relay);
+}
+
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation_desc* desc, uint32_t id)
+{
+  struct list_head* get = NULL;
+  struct list_head* n = NULL;
+
+  list_iterate_safe(get, n, &desc->tcp_relays)
+  {
+    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
+
+    if(tmp->connection_id == id)
+    {
+      return tmp;
+    }
+  }
+
+  /* not found */
+  return NULL;
+}
+
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port)
+{
+  struct list_head* get = NULL;
+  struct list_head* n = NULL;
+
+  list_iterate_safe(get, n, &desc->tcp_relays)
+  {
+    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
+
+    if(tmp->family != family)
+    {
+      continue;
+    }
+
+    if(!memcmp(tmp->peer_addr, peer_addr, 4) && tmp->peer_port == peer_port)
+    {
+      return tmp;
+    }
+  }
+
+  /* not found */
+  return NULL;
+}
+
+void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay, uint32_t timeout)
+{
+  struct itimerspec expire;
+  struct itimerspec old;
+
+  /* start timer */
+  expire.it_value.tv_sec = (long)timeout;
+  expire.it_value.tv_nsec = 0;
+  expire.it_interval.tv_sec = 0; /* no interval */
+  expire.it_interval.tv_nsec = 0;
+  memset(&old, 0x00, sizeof(struct itimerspec));
+
+  /* set the timer */
+  if(timer_settime(relay->expire_timer, 0, &expire, &old) == -1)
+  {
+    return;
+  }
 }
 
 struct allocation_token* allocation_token_new(uint8_t* id, int sock, uint32_t lifetime)
