@@ -27,6 +27,12 @@ tls = false
 ## DTLS support. It is an experimental feature and is not defined in TURN standard.
 dtls = false
 
+## TURN-TCP support.
+turn_tcp = false
+
+## TURN-TCP internal buffer.
+tcp_buffer_size = 1500
+
 ## Daemon mode.
 daemon = false
 

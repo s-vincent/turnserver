@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "December 27, 2009" "TurnServer Configuration"
+.TH turnserver.conf 5 "January 23, 2010" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -54,6 +54,15 @@ Enable or not TLS over TCP connections.
 .BR "dtls " "= boolean"
 Enable or not TLS over UDP connections. It is an experimental feature of TurnServer and 
 it is not defined by TURN standard.
+
+.TP
+.BR "turn_tcp " "= boolean"
+Enable or not TURN-TCP extension. This extension is documented in draft-ietf-behave-turn-tcp.
+
+.TP
+.BR "tcp_buffer_size " "= number"
+TURN-TCP internal buffer size. It is used to bufferize data coming from TCP peer when
+client does not have sent ConnectionBind.
 
 .TP
 .BR "daemon " "= boolean"
@@ -147,6 +156,10 @@ tls_port = 5349
 tls = true
 
 dtls = false
+
+turn_tcp = false
+
+tcp_buffer_size = 1500
 
 daemon = false
 

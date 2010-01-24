@@ -74,6 +74,7 @@ struct client_configuration
   char* private_key_file; /**< SSL private key pathname */
   char* ca_file; /**< Certification authority pathname */
   char* protocol; /**< Transport protocol used (UDP, TCP, TLS or DTLS) */
+  char* relay_protocol; /**< Protocol used to relay data (for the moment only UDP) */
 };
 
 /**
@@ -96,7 +97,7 @@ static void client_print_help(const char* name, const char* version)
  */
 static void client_parse_cmdline(int argc, char** argv, struct client_configuration* conf)
 {
-  static const char* optstr = "t:s:p:w:k:c:a:hv";
+  static const char* optstr = "t:r:s:p:w:k:c:a:hv";
   int s = 0;
 
   while((s = getopt(argc, argv, optstr)) != -1)
@@ -117,6 +118,12 @@ static void client_parse_cmdline(int argc, char** argv, struct client_configurat
         if(optarg)
         {
           conf->protocol = optarg;
+        }
+        break;
+      case 'r': /* relay protocol */
+        if(optarg)
+        {
+          conf->relay_protocol = optarg;
         }
         break;
       case 's': /* TURN server address */
@@ -1046,6 +1053,12 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
+  /* relay with UDP if not specified */
+  if(!conf.relay_protocol)
+  {
+    conf.relay_protocol = "udp";
+  }
+
   /* check the protocol is supported ones */
   len = strlen(conf.protocol);
 
@@ -1078,6 +1091,23 @@ int main(int argc, char** argv)
     fprintf(stderr, "Bad protocol, possible choices are udp, tcp, tls or dtls\n");
     exit(EXIT_FAILURE);
   }
+
+  len = strlen(conf.relay_protocol);
+
+  if(strncmp(conf.relay_protocol, "udp", len) != 0)
+  {
+    fprintf(stderr, "Bad relay protocol, possible choice is only udp\n");
+    exit(EXIT_FAILURE);
+  }
+
+#if 0
+  /* if TURN-TCP is used, make sure that control connection is TCP */
+  if(!strncmp(conf.relay_protocol, "tcp", len) && transport_protocol != IPPROTO_TCP)
+  {
+    fprintf(stderr, "TCP relays work only when client have a TCP connection to its TURN server\n");
+    exit(EXIT_FAILURE);
+  }
+#endif
 
   /* make sure that if TLS is used, all mandatory related 
    * parameters are present

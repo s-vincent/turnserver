@@ -14,7 +14,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *    
+ *
  *  In addition, as a special exception, the copyright holders give
  *  permission to link the code of portions of this program with the
  *  OpenSSL library under certain conditions as described in each
@@ -266,7 +266,7 @@ char* encode_http_string(const char* str)
   return p;
 }
 
-#if defined(_XOPEN_SOURCE) &&  _XOPEN_SOURCE < 500
+#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE < 500
 char* strdup(const char* str)
 {
   char* ret = NULL;

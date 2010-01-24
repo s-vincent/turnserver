@@ -1,6 +1,7 @@
 2010-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.4			- Add multiprotocol client example (UDP/TCP/TLS/DTLS).
+	* Version 0.4			- Add multiprotocol client example (UDP/TCP/TLS/DTLS);
+										- Add turn-tcp-05 draft support.
 
 2010-01-03  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

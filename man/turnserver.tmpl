@@ -1,4 +1,4 @@
-.TH turnserver 1 "January 21, 2010" "TurnServer"
+.TH turnserver 1 "January 23, 2010" "TurnServer"
 
 .SH NAME
 turnserver \- TURN server implementation
@@ -14,11 +14,11 @@ It is most useful for elements behind symmetric NATs or firewalls that wish to b
 receiving end of a connection to a single peer.
 
 TURN clients can connect to TurnServer with the following protocols: UDP, TCP and TLS over TCP.
-Experimental DTLS support is also provided. For the moment relaying messages can only be done with
-UDP protocol.
-
-TurnServer supports also draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4)
-and the STUN Binding request (RFC5389).
+Experimental DTLS support is also provided. Relaying data can be done with UDP or TCP protocol.
+ 
+TurnServer supports also RFC5389 (STUN Binding request), draft-ietf-behave-turn-ipv6 (relay 
+IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4) and draft-ietf-behave-turn-tcp (relay data with TCP 
+protocol).
 
 .br
 .br
@@ -56,4 +56,7 @@ RFC5389: Session Traversal Utilities for NAT (STUN)
 draft-ietf-behave-turn-16: Traversal Using Relays around NAT (TURN): Relay Extensions to Session Traversal Utilities for NAT (STUN)
 .PP
 draft-ietf-behave-turn-ipv6-08: Traversal Using Relays around NAT (TURN) Extension for IPv6
+.PP
+draft-ietf-behave-turn-tcp-05: Traversal Using Relays around NAT (TURN) Extensions for TCP Allocations
+.PP
 
