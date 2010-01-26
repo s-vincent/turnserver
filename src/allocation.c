@@ -556,12 +556,16 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
     return -1;
   }
 
-  if(!(ret->buf = malloc(sizeof(char) * buffer_size)))
-  {
-    free(ret);
-    return -1;
-  }
+  ret->buf = NULL;
 
+  if(buffer_size)
+  {
+    if(!(ret->buf = malloc(sizeof(char) * buffer_size)))
+    {
+      free(ret);
+      return -1;
+    }
+  }
   ret->buf_len = 0;
   ret->buf_size = buffer_size;
 

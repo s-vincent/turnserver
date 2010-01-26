@@ -30,14 +30,19 @@ dtls = false
 ## TURN-TCP support.
 turn_tcp = false
 
-## TURN-TCP internal buffer.
-tcp_buffer_size = 1500
+## TURN-TCP buffering mode:
+# - true, use userspace buffering;
+# - false, use kernel buffering.
+tcp_buffer_userspace = true
+
+## TURN-TCP maximum buffer size.
+tcp_buffer_size = 32768 
 
 ## Daemon mode.
 daemon = false
 
-## Unprivileged user 
-## if you want to use this feature create a system user.
+## Unprivileged user.
+## If you want to use this feature create a system user.
 ## On Linux: adduser --system --group turnserver
 #unpriv_user = turnserver
 

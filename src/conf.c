@@ -89,6 +89,7 @@ static cfg_opt_t opts[]=
   CFG_BOOL("tls", cfg_false, CFGF_NONE),
   CFG_BOOL("dtls", cfg_false, CFGF_NONE),
   CFG_BOOL("turn_tcp", cfg_false, CFGF_NONE),
+  CFG_BOOL("tcp_buffer_userspace", cfg_true, CFGF_NONE),
   CFG_INT("tcp_buffer_size", 1500, CFGF_NONE),
   CFG_BOOL("daemon", cfg_false, CFGF_NONE),
   CFG_STR("unpriv_user", NULL, CFGF_NONE),
@@ -294,6 +295,11 @@ int turnserver_cfg_dtls(void)
 int turnserver_cfg_turn_tcp(void)
 {
   return cfg_getbool(g_cfg, "turn_tcp");
+}
+
+int turnserver_cfg_tcp_buffer_userspace(void)
+{
+  return cfg_getbool(g_cfg, "tcp_buffer_userspace");
 }
 
 uint32_t turnserver_cfg_tcp_buffer_size(void)

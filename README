@@ -75,7 +75,9 @@ Here are important parameters,
 - ca_file               : Certification Authority (must set if tls = true)
 - cert_file             : server certificate (must set if tls = true)
 - private_key_file      : server private key (must set if tls = true)
-- turn-tcp              : enable TURN-TCP extension
+- turn_tcp              : enable TURN-TCP extension
+- tcp_buffer_userspace  : enable userspace buffering for TURN-TCP extension, if false OS buffering will be used
+- tcp_buffer_size       : maximum amount of bytes that can be buffered for TURN-TCP extension
 
 Other parameters such as allocations number quota or experimental features are documented in
 manpages:

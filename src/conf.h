@@ -162,6 +162,12 @@ int turnserver_cfg_dtls(void);
 int turnserver_cfg_turn_tcp(void);
 
 /**
+ * \brief Get TURN-TCP buffering mode.
+ * \return 1 for userspace buffering, 0 for kernel buffering
+ */
+int turnserver_cfg_tcp_buffer_userspace(void);
+
+/**
  * \brief Get TURN-TCP internal buffer size for peer data.
  * \return internal buffer size
  */

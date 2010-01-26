@@ -53,6 +53,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/ioctl.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -733,6 +734,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   uint32_t id = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
+  size_t buffer_size = turnserver_cfg_tcp_buffer_userspace() ? turnserver_cfg_tcp_buffer_size() : 0;
 
   debug(DBG_ATTR, "Connect request received!\n");
 
@@ -830,7 +832,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   random_bytes_generate((uint8_t*)&id, 4);
  
   /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, turnserver_cfg_tcp_buffer_size()) == -1)
+  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, buffer_size) == -1)
   {
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
@@ -1011,9 +1013,12 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
   }
 
   /* free memory now as it will not be used anymore */
-  free(tcp_relay->buf);
-  tcp_relay->buf = NULL;
-  tcp_relay->buf_size = 0;
+  if(tcp_relay->buf)
+  {
+    free(tcp_relay->buf);
+    tcp_relay->buf = NULL;
+    tcp_relay->buf_size = 0;
+  }
 
   return 0;
 }
@@ -3493,6 +3498,7 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
   int rsock = -1;
   struct sockaddr_storage saddr;
   socklen_t saddr_size = sizeof(struct sockaddr_storage);
+  size_t buffer_size = turnserver_cfg_tcp_buffer_userspace() ? turnserver_cfg_tcp_buffer_size() : 0;
 
   rsock = accept(sock, (struct sockaddr*)&saddr, &saddr_size);
 
@@ -3532,7 +3538,7 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
   }
 
   /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, turnserver_cfg_tcp_buffer_size()) == -1)
+  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, buffer_size) == -1)
   {
     close(rsock);
     return;
@@ -3717,8 +3723,45 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
       if(tmp2->peer_sock > 0 && tmp2->peer_sock < max_fd)
       {
-        SFD_SET(tmp2->peer_sock, &fdsr);
-        nsock = MAX(nsock, tmp2->peer_sock);
+        /* if client has not send its ConnectionBind yet, and if 
+         * userspace buffering is not enable, OS will perform
+         * buffering
+         */
+        if(tmp2->client_sock != -1 || turnserver_cfg_tcp_buffer_userspace())
+        {
+          SFD_SET(tmp2->peer_sock, &fdsr);
+          nsock = MAX(nsock, tmp2->peer_sock);
+        }
+        else
+        {
+          /* here, buffering is done in OS
+           * but see if TCP receive buffer size does 
+           * not exceed the limit.
+           */
+          uint32_t val = 0;
+
+          /* use FIONREAD (same as SIOCINQ) to see how much 
+           * ready-to-ready bytes are in TCP receive queue
+           */
+          if(ioctl(tmp2->peer_sock, FIONREAD, &val) >= 0)
+          {
+            printf("val=%u\n", val);
+            if(val > turnserver_cfg_tcp_buffer_size())
+            {
+              /* limit exceeded, remove TCP relay */
+              debug(DBG_ATTR, "Exceed TCP buffer size limit (OS buffering)!\n");
+
+              /* protect the removing of the expired list if any */
+              turnserver_block_realtime_signal();
+              allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
+              LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
+              turnserver_unblock_realtime_signal();
+              allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
+              
+              continue;
+            }
+          }
+        }
       }
 
       if(tmp2->client_sock > 0 && tmp2->client_sock < max_fd)
@@ -3992,6 +4035,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
               else
               {
                 /* limit exceeded, remove TCP relay */
+                debug(DBG_ATTR, "Exceed TCP buffer size limit (userspace buffering)!\n");
+
                 /* protect the removing of the expired list if any */
                 turnserver_block_realtime_signal();
                 allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */

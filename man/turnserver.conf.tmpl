@@ -60,6 +60,10 @@ it is not defined by TURN standard.
 Enable or not TURN-TCP extension. This extension is documented in draft-ietf-behave-turn-tcp.
 
 .TP
+.BR "tcp_buffer_userspace " "= boolean"
+Enable or not userspace buffering for TURN-TCP extension. If false server will use OS buffering.
+
+.TP
 .BR "tcp_buffer_size " "= number"
 TURN-TCP internal buffer size. It is used to bufferize data coming from TCP peer when
 client does not have sent ConnectionBind.
