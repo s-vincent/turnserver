@@ -58,13 +58,19 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h>
 #endif
 
+#ifdef __cplusplus
+#extern "C" { /* } */
+#endif
+
 /* STUN message classes */
 #define STUN_REQUEST                    0x0000
 #define STUN_INDICATION                 0x0010
 #define STUN_SUCCESS_RESP               0x0100
 #define STUN_ERROR_RESP                 0x0110
 
-/* macros from RFC5389 to determine class of the message */
+/* macros from RFC5389 to determine if message is a request,
+ * success/error response or indication 
+ */
 #define STUN_IS_REQUEST(msg_type)       (((msg_type) & 0x0110) == STUN_REQUEST)
 #define STUN_IS_INDICATION(msg_type)    (((msg_type) & 0x0110) == STUN_INDICATION)
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)
@@ -557,6 +563,10 @@ struct turn_attr_connection_id
   uint16_t turn_attr_len; /**< Length of "value" */
   uint32_t turn_attr_id; /**<  Connection ID */
 }__attribute__((packed));
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* TURN_H */
 
