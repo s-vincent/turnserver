@@ -734,7 +734,6 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   uint32_t id = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
-  size_t buffer_size = turnserver_cfg_tcp_buffer_userspace() ? turnserver_cfg_tcp_buffer_size() : 0;
 
   debug(DBG_ATTR, "Connect request received!\n");
 
@@ -832,7 +831,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   random_bytes_generate((uint8_t*)&id, 4);
  
   /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, buffer_size) == -1)
+  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, 0) == -1)
   {
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
