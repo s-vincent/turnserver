@@ -31,7 +31,8 @@
 
 /**
  * \file test_turn_client.c
- * \brief TURN client example that supports UDP, TCP, TLS and DTLS.
+ * \brief TURN client example that supports UDP, TCP, TLS and DTLS
+ * and relay protocol with UDP or TCP.
  * \author Sebastien Vincent
  */
 
@@ -46,6 +47,9 @@
 #include <getopt.h>
 
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/select.h>
+
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -74,7 +78,7 @@ struct client_configuration
   char* private_key_file; /**< SSL private key pathname */
   char* ca_file; /**< Certification authority pathname */
   char* protocol; /**< Transport protocol used (UDP, TCP, TLS or DTLS) */
-  char* relay_protocol; /**< Protocol used to relay data (for the moment only UDP) */
+  char* relay_protocol; /**< Protocol used to relay data (UDP or TCP) */
 };
 
 /**
@@ -85,8 +89,9 @@ struct client_configuration
 static void client_print_help(const char* name, const char* version)
 {
   fprintf(stdout, "TURN client example %s\n", version);
-  fprintf(stdout, "Usage: %s -t transport_protocol -s turnserver_address -p peer_address -w peer_port\n\t[-k private_key] [-c certificate] [-h] [-v]\n\n", name);
+  fprintf(stdout, "Usage: %s -t transport_protocol -s turnserver_address -p peer_address -w peer_port\n\t[-r relay_protocol -k private_key] [-c certificate] [-h] [-v]\n\n", name);
   fprintf(stdout, "Transport protocol could be \"udp\", \"tcp\", \"tls\" or \"dtls\"\n");
+  fprintf(stdout, "Relay protocol could be \"udp\" or \"tcp\"\n");
 }
 
 /**
@@ -199,7 +204,7 @@ static int client_recv_message(int transport_protocol, int sock, struct tls_peer
       return -1;
     }
   }
-  else
+  else /* IPPROTO_TCP */
   {
     if((nb = recv(sock, buffer, sizeof(buffer), 0)) == -1)
     {
@@ -327,6 +332,7 @@ static int client_connect_server(int transport_protocol, const struct sockaddr* 
 /**
  * \brief Send a TURN Allocate request.
  * \param transport_protocol transport protocol used
+ * \param relay_protocol relay protocol used
  * \param sock socket descriptor
  * \param speer TLS peer
  * \param addr server address
@@ -339,9 +345,11 @@ static int client_connect_server(int transport_protocol, const struct sockaddr* 
  * \param nonce_len nonce length, for first request server nonce length will be filled into this variable
  * \return 0 if success or -1 if error. Note that the first request will returns -1 (need nonce)
  */
-static int client_allocate_address(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr, 
-                                   socklen_t addr_size, uint8_t family, const char* user, const char* password,
-                                   const char* domain, uint8_t* nonce, size_t* nonce_len)
+static int client_allocate_address(int transport_protocol, int relay_protocol, int sock, 
+                                   struct tls_peer* speer, const struct sockaddr* addr, 
+                                   socklen_t addr_size, uint8_t family, const char* user,
+                                   const char* password, const char* domain, uint8_t* nonce, 
+                                   size_t* nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -386,7 +394,7 @@ static int client_allocate_address(int transport_protocol, int sock, struct tls_
     index++;
 
     /* LIFETIME */
-    attr = turn_attr_lifetime_create(0x00000005, &iov[index]);
+    attr = turn_attr_lifetime_create(0x000000A5, &iov[index]);
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
@@ -396,7 +404,7 @@ static int client_allocate_address(int transport_protocol, int sock, struct tls_
     index++;
 
     /* REQUESTED-TRANSPORT */
-    attr = turn_attr_requested_transport_create(IPPROTO_UDP, &iov[index]);
+    attr = turn_attr_requested_transport_create(relay_protocol, &iov[index]);
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
@@ -931,7 +939,7 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
     free(userdomainpass);
     return -1;
   }
- 
+
   free(userdomainpass);
 
   fprintf(stdout, "Send CreatePermission request\n");
@@ -1015,6 +1023,352 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
 }
 
 /**
+ * \brief Send a TURN-TCP Connect request and if success, send a ConnectionBind.
+ * \param transport_protocol transport protocol used
+ * \param sock socket descriptor
+ * \param speer TLS peer
+ * \param addr server address
+ * \param addr_size sizeof addr
+ * \param peer_addr peer address
+ * \param sock_tcp pointer that will receive socket descriptor if function succeed
+ * \param user username
+ * \param password user password
+ * \param domain domain
+ * \param nonce nonce
+ * \param nonce_len nonce length
+ * \return 0 if success or -1 if error.
+ */
+static int client_send_connect(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
+                               socklen_t addr_size, const struct sockaddr* peer_addr, int* sock_tcp,
+                               const char* user, const char* password, const char* domain,
+                               uint8_t* nonce, size_t nonce_len)
+{
+  struct turn_message message;
+  struct turn_msg_hdr* hdr = NULL;
+  struct turn_attr_hdr* attr = NULL;
+  struct iovec iov[16];
+  size_t index = 0;
+  uint8_t id[12];
+  ssize_t nb = -1;
+  char buf[1500];
+  uint16_t tabu[16];
+  size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
+  unsigned char* userdomainpass = NULL;
+  size_t userdomainpass_len = 0;
+  unsigned char md_buf[16]; /* MD5 */
+
+  turn_generate_transaction_id(id);
+
+  /* Connect request */
+  hdr = turn_msg_connect_request_create(0, id, &iov[index]);
+  index++;
+
+  /* NONCE */
+  attr = turn_attr_nonce_create(nonce, nonce_len, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* REALM */
+  attr = turn_attr_realm_create(domain, strlen(domain), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* USERNAME */
+  attr = turn_attr_username_create(user, strlen(user), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* SOFTWARE */
+  attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, strlen(SOFTWARE_DESCRIPTION), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
+  userdomainpass = malloc(userdomainpass_len);
+
+  if(!userdomainpass)
+  {
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
+
+  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
+
+  if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
+  {
+    /* MESSAGE-INTEGRITY option has to be in message, so
+     * deallocate ressources and return
+     */
+    iovec_free_data(iov, index);
+    free(userdomainpass);
+    return -1;
+  }
+
+  free(userdomainpass);
+
+  fprintf(stdout, "Send Connect request\n");
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  {
+    fprintf(stderr, "Send failed!\n");
+    perror("send");
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  iovec_free_data(iov, index);
+  index = 0;
+
+  nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
+
+  if(nb == -1)
+  {
+    fprintf(stderr, "Receive failed!\n");
+    return -1;
+  }
+
+  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1)
+  {
+    fprintf(stderr, "Parsing failed!\n");
+    return -1;
+  }
+
+  if(!message.connection_id)
+  {
+    fprintf(stderr, "No connection ID\n");
+    return -1;
+  }
+
+  *sock_tcp = socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+
+  /* establish relay connection */
+  if(*sock_tcp == -1 || connect(*sock_tcp, addr, addr_size) == -1)
+  {
+    fprintf(stderr, "Failed to connect to TURN server\n");
+    return -1;
+  }
+
+  turn_generate_transaction_id(id);
+
+  /* ConnectionBind request */
+  hdr = turn_msg_connectionbind_request_create(0, id, &iov[index]);
+  index++;
+
+  /* CONNECTION-ID */
+  attr = turn_attr_connection_id_create(message.connection_id->turn_attr_id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* NONCE */
+  attr = turn_attr_nonce_create(nonce, nonce_len, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* REALM */
+  attr = turn_attr_realm_create(domain, strlen(domain), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* USERNAME */
+  attr = turn_attr_username_create(user, strlen(user), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* SOFTWARE */
+  attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, strlen(SOFTWARE_DESCRIPTION), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
+  {
+    /* MESSAGE-INTEGRITY option has to be in message, so
+     * deallocate ressources and return
+     */
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  fprintf(stdout, "Send ConnectionBind request\n");
+  if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  {
+    fprintf(stderr, "Send failed!\n");
+    perror("send");
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  iovec_free_data(iov, index);
+  return 0;
+}
+
+/**
+ * \brief Wait a ConnectionAttempt and send ConnectionBind request.
+ * \param transport_protocol transport protocol used
+ * \param sock socket descriptor
+ * \param speer TLS peer
+ * \param addr server address
+ * \param addr_size sizeof addr
+ * \param peer_addr peer address
+ * \param sock_tcp pointer that will receive socket descriptor if function succeed
+ * \param user username
+ * \param password user password
+ * \param domain domain
+ * \param nonce nonce
+ * \param nonce_len nonce length
+ * \return 0 if success or -1 if error.
+ */
+static int client_wait_connection(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
+                                  socklen_t addr_size, const struct sockaddr* peer_addr, int* sock_tcp,
+                                  const char* user, const char* password, const char* domain,
+                                  uint8_t* nonce, size_t nonce_len)
+{
+  struct turn_message message;
+  struct turn_msg_hdr* hdr = NULL;
+  struct turn_attr_hdr* attr = NULL;
+  struct iovec iov[16];
+  size_t index = 0;
+  uint8_t id[12];
+  ssize_t nb = -1;
+  char buf[1500];
+  uint16_t tabu[16];
+  size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
+  unsigned char* userdomainpass = NULL;
+  size_t userdomainpass_len = 0;
+  unsigned char md_buf[16]; /* MD5 */
+  fd_set fdsr;
+  struct timeval tv;
+  int nsock = 0;
+
+  tv.tv_sec = 10; /* 10 seconds before timeout */
+  tv.tv_usec = 0;
+  FD_ZERO(&fdsr);
+  FD_SET(sock, &fdsr);
+
+  nsock = sock + 1;
+
+  if(select(nsock, &fdsr, NULL, NULL, &tv) <= 0)
+  {
+    /* timeout or error */
+    perror("select");
+    return -1;
+  }
+
+  /* here we are sure that data are available on socket */
+
+  nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
+
+  if(nb == -1)
+  {
+    fprintf(stderr, "Receive failed!\n");
+    return -1;
+  }
+
+  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1)
+  {
+    fprintf(stderr, "Parsing failed!\n");
+    return -1;
+  }
+
+  if(!message.connection_id)
+  {
+    fprintf(stderr, "No connection ID\n");
+    return -1;
+  }
+
+  turn_generate_transaction_id(id);
+
+  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
+  userdomainpass = malloc(userdomainpass_len);
+
+  if(!userdomainpass)
+  {
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
+  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
+  free(userdomainpass);
+
+  *sock_tcp = socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+
+  /* establish relay connection */
+  if(*sock_tcp == -1 || connect(*sock_tcp, addr, addr_size) == -1)
+  {
+    fprintf(stderr, "Failed to connect to TURN server\n");
+    return -1;
+  }
+
+  turn_generate_transaction_id(id);
+
+  /* ConnectionBind request */
+  hdr = turn_msg_connectionbind_request_create(0, id, &iov[index]);
+  index++;
+
+  /* CONNECTION-ID */
+  attr = turn_attr_connection_id_create(message.connection_id->turn_attr_id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* NONCE */
+  attr = turn_attr_nonce_create(nonce, nonce_len, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* REALM */
+  attr = turn_attr_realm_create(domain, strlen(domain), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* USERNAME */
+  attr = turn_attr_username_create(user, strlen(user), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* SOFTWARE */
+  attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, strlen(SOFTWARE_DESCRIPTION), &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* XOR-PEER-ADDRESS */
+  attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
+  {
+    /* MESSAGE-INTEGRITY option has to be in message, so
+     * deallocate ressources and return
+     */
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  fprintf(stdout, "Send ConnectionBind request\n");
+  if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  {
+    fprintf(stderr, "Send failed!\n");
+    perror("send");
+    iovec_free_data(iov, index);
+    return -1;
+  }
+
+  iovec_free_data(iov, index);
+  return 0;
+}
+
+/**
  * \brief Entry point of the program.
  * \param argc number of argument
  * \param argv array of argument
@@ -1023,6 +1377,7 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
 int main(int argc, char** argv)
 {
   int transport_protocol = 0;
+  int relay_protocol = 0;
   int sock = -1;
   struct tls_peer* speer = NULL;
   size_t len = 0;
@@ -1094,20 +1449,26 @@ int main(int argc, char** argv)
 
   len = strlen(conf.relay_protocol);
 
-  if(strncmp(conf.relay_protocol, "udp", len) != 0)
+  if(!strncmp(conf.relay_protocol, "udp", len))
+  {
+    relay_protocol = IPPROTO_UDP;
+  }
+  else if(!strncmp(conf.relay_protocol, "tcp", len))
+  {
+    relay_protocol = IPPROTO_TCP;
+  }
+  else
   {
     fprintf(stderr, "Bad relay protocol, possible choice is only udp\n");
     exit(EXIT_FAILURE);
   }
 
-#if 0
   /* if TURN-TCP is used, make sure that control connection is TCP */
   if(!strncmp(conf.relay_protocol, "tcp", len) && transport_protocol != IPPROTO_TCP)
   {
     fprintf(stderr, "TCP relays work only when client have a TCP connection to its TURN server\n");
     exit(EXIT_FAILURE);
   }
-#endif
 
   /* make sure that if TLS is used, all mandatory related 
    * parameters are present
@@ -1198,8 +1559,7 @@ int main(int argc, char** argv)
   fprintf(stdout, "sock: %d speer: %p connected!\n", sock, (void*)speer);
 
   /* first request always failed but response contains the nonce */
-  client_allocate_address(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, password, domain, nonce, &nonce_len); 
-
+  client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, password, domain, nonce, &nonce_len); 
   if(nonce_len == 0)
   {
     fprintf(stderr, "Allocation: bad message received (no nonce)\n");
@@ -1218,7 +1578,7 @@ int main(int argc, char** argv)
   /* second request should succeed otherwise credentials are wrong or 
    * requested family is not supported by TURN server
    */
-  if(client_allocate_address(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, password, domain, nonce, &nonce_len) == -1)
+  if(client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, password, domain, nonce, &nonce_len) == -1)
   {
     fprintf(stderr, "Probably wrong credentials or requested family not supported\n");
     if(speer)
@@ -1253,45 +1613,116 @@ int main(int argc, char** argv)
 
   fprintf(stdout, "Permission installed!\n");
 
-  /* send data with Send indication */
-  memset(data, 0xfe, sizeof(data));
-  if(client_send_data(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, data, sizeof(data), user, password, domain, nonce, nonce_len) == -1)
+  if(relay_protocol == IPPROTO_UDP)
   {
-    fprintf(stderr, "Send indication failed\n");
-    if(speer)
+    /* send data with Send indication */
+    memset(data, 0xfe, sizeof(data));
+    if(client_send_data(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, data, sizeof(data), user, password, domain, nonce, nonce_len) == -1)
     {
-      tls_peer_free(&speer);
-      LIBSSL_CLEANUP;
+      fprintf(stderr, "Send indication failed\n");
+      if(speer)
+      {
+        tls_peer_free(&speer);
+        LIBSSL_CLEANUP;
+      }
+      else
+      {
+        close(sock);
+      }
+      exit(EXIT_FAILURE);
+    }
+
+    /* bind to a channel */
+    if(client_channelbind(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, channel, user, password, domain, nonce, nonce_len) == -1)
+    {
+      fprintf(stderr, "ChannelBind failed\n");
+      if(speer)
+      {
+        tls_peer_free(&speer);
+        LIBSSL_CLEANUP;
+      }
+      else
+      {
+        close(sock);
+      }
+      exit(EXIT_FAILURE);
+    }
+
+    fprintf(stderr, "Channel bound to %u\n", channel);
+
+    /* send data with ChannelData */
+    if(client_send_channeldata(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, channel, data, sizeof(data)) == -1)
+    {
+      fprintf(stderr, "ChannelData failed\n");
+    }
+  }
+  else
+  {
+    /* relay data with TCP */
+    int sock_tcp = -1;
+    int sock_tcp2 = -1;
+    char buf[1500];
+    ssize_t nb = -1;
+
+    memset(data, 0xef, sizeof(data));
+
+    /* send a Connect request and if success, send a ConnectionBind */
+    if(client_send_connect(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp, user, password, domain, nonce, nonce_len) == -1)
+    {
+      fprintf(stderr, "Connect failed\n");
+      if(speer)
+      {
+        tls_peer_free(&speer);
+        LIBSSL_CLEANUP;
+      }
+      else
+      {
+        close(sock);
+      }
+      exit(EXIT_FAILURE);
+    }
+
+    /* ok now send data on dedicated TCP socket */
+    if(send(sock_tcp, data, sizeof(data), 0) == -1)
+    {
+      fprintf(stderr, "Failed to send data to TURN-TCP relay\n");
     }
     else
     {
-      close(sock);
+      if((nb = recv(sock_tcp, buf, sizeof(buf), 0)) != -1)
+      {
+        fprintf(stdout, "Receive %d bytes (TURN-TCP)\n", (int)nb);
+      }
     }
-    exit(EXIT_FAILURE);
-  }
 
-  /* bind to a channel */
-  if(client_channelbind(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, channel, user, password, domain, nonce, nonce_len) == -1)
-  {
-    fprintf(stderr, "ChannelBind failed\n");
-    if(speer)
+    /* to test this code part, you have to connect to 
+     * the TCP allocated port on the server (use 
+     * netstat -aptn | grep turnserver).
+     */
+
+    /* wait ConnectionAttempt and then send ConnectionBind */
+    if(client_wait_connection(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp2, user, password, domain, nonce, nonce_len) == -1)
     {
-      tls_peer_free(&speer);
-      LIBSSL_CLEANUP;
+      fprintf(stderr, "Error no incoming connection before timeout or system error\n");
     }
     else
     {
-      close(sock);
+      /* ok now send data on dedicated TCP socket */
+      if((nb = recv(sock_tcp2, buf, sizeof(buf), 0)) != -1)
+      {
+        fprintf(stdout, "Receive %d bytes (TURN-TCP incoming connection)\n", (int)nb);
+      }
     }
-    exit(EXIT_FAILURE);
-  }
 
-  fprintf(stderr, "Channel bound to %u\n", channel);
+    if(sock_tcp > 0)
+    {
+      close(sock_tcp);
+    }
 
-  /* send data with ChannelData */
-  if(client_send_channeldata(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, channel, data, sizeof(data)) == -1)
-  {
-    fprintf(stderr, "ChannelData failed\n");
+    if(sock_tcp2 > 0)
+    {
+      close(sock_tcp2);
+    }
   }
 
   /* release allocation by setting its lifetime to 0 */
