@@ -71,6 +71,9 @@
  */
 struct client_configuration
 {
+  char* username; /**< User */
+  char* password; /**< User password */
+  char* realm; /**< Realm */
   char* server_address; /**< TURN server address */
   char* peer_address; /**< Peer address */
   char* peer_port; /**< Peer port */
@@ -89,7 +92,8 @@ struct client_configuration
 static void client_print_help(const char* name, const char* version)
 {
   fprintf(stdout, "TURN client example %s\n", version);
-  fprintf(stdout, "Usage: %s -t transport_protocol -s turnserver_address -p peer_address -w peer_port\n\t[-r relay_protocol -k private_key] [-c certificate] [-h] [-v]\n\n", name);
+  fprintf(stdout, "Usage: %s -t transport_protocol -s turnserver_address -p peer_address -w peer_port [-r relay_protocol]\n"
+      "\t[-u user] [-g password] [-d realm] [-k private_key] [-c certificate] [-a ca] [-h] [-v]\n\n", name);
   fprintf(stdout, "Transport protocol could be \"udp\", \"tcp\", \"tls\" or \"dtls\"\n");
   fprintf(stdout, "Relay protocol could be \"udp\" or \"tcp\"\n");
 }
@@ -102,7 +106,7 @@ static void client_print_help(const char* name, const char* version)
  */
 static void client_parse_cmdline(int argc, char** argv, struct client_configuration* conf)
 {
-  static const char* optstr = "t:r:s:p:w:k:c:a:hv";
+  static const char* optstr = "t:r:s:p:w:k:c:a:u:g:d:hv";
   int s = 0;
 
   while((s = getopt(argc, argv, optstr)) != -1)
@@ -154,6 +158,24 @@ static void client_parse_cmdline(int argc, char** argv, struct client_configurat
           {
             conf->peer_port = optarg;
           }
+        }
+        break;
+      case 'u': /* user */
+        if(optarg)
+        {
+          conf->username = optarg;
+        }
+        break;
+      case 'g': /* password */
+        if(optarg)
+        {
+          conf->password = optarg;
+        }
+        break;
+      case 'd': /* realm */
+        if(optarg)
+        {
+          conf->realm = optarg;
         }
         break;
       case 'c': /* certificate file */
@@ -1390,9 +1412,9 @@ int main(int argc, char** argv)
   char port_str[8];
   uint8_t nonce[513];
   size_t nonce_len = 0;
-  const char* user = "toto";
-  const char* password = "password";
-  const char* domain = "domain.org";
+  char* user = "toto";
+  char* password = "password";
+  char* domain = "domain.org";
   const uint16_t channel = 0x4009;
   char data[1024];
   uint8_t family = 0;
@@ -1468,6 +1490,24 @@ int main(int argc, char** argv)
   {
     fprintf(stderr, "TCP relays work only when client have a TCP connection to its TURN server\n");
     exit(EXIT_FAILURE);
+  }
+
+  /* use configuration to set user/password/realm
+   * or use default if not set
+   */
+  if(conf.username)
+  {
+    user = conf.username;
+  }
+
+  if(conf.realm)
+  {
+    domain = conf.realm;
+  }
+
+  if(conf.password)
+  {
+    password = conf.password;
   }
 
   /* make sure that if TLS is used, all mandatory related 
