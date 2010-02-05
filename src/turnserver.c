@@ -983,7 +983,11 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
   /* stop timer */
   allocation_tcp_relay_set_timer(tcp_relay, 0);
 
-  /* send out buffered data if any */
+  /* send out buffered data
+   * note that it is only used if server
+   * has been configured to use userspace
+   * TCP internal buffer
+   */
   if(tcp_relay->buf_len)
   {
     ssize_t nb_read = 0;
@@ -1143,9 +1147,9 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
     return -1;
   }
 
+  /* with TCP, length MUST a multiple of four */
   if(transport_protocol == IPPROTO_TCP && (buflen % 4))
   {
-    /* with TCP, length MUST a multiple of four */
     debug(DBG_ATTR, "TCP length must be multiple of four!\n");
     return -1;
   }
@@ -3740,7 +3744,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           uint32_t val = 0;
 
           /* use FIONREAD (same as SIOCINQ) to see how much 
-           * ready-to-ready bytes are in TCP receive queue
+           * ready-to-read bytes are in TCP receive queue
            */
           if(ioctl(tmp2->peer_sock, FIONREAD, &val) >= 0)
           {
@@ -4048,7 +4052,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
               continue;
             }
 
-            /* send just received data */
+            /* send just received data to client */
             if(send(tmp2->client_sock, buf, nb, 0) == -1)
             {
               debug(DBG_ATTR, "Error sending data from peer to client (TURN-TCP)\n");
@@ -4089,6 +4093,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
           if(nb > 0)
           {
+            /* send just received data to peer */
             if(send(tmp2->peer_sock, buf, nb, 0) == -1)
             {
               debug(DBG_ATTR, "Error sending data from client to peer (TURN-TCP)\n");
@@ -4126,7 +4131,8 @@ static void turnserver_cleanup(void* arg)
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
-  list_head* accounts = arg; /* account_list */
+  /* account_list */
+  list_head* accounts = arg;
 
   /* configuration file */
   turnserver_cfg_free();
@@ -4188,6 +4194,11 @@ int main(int argc, char** argv)
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
 
+  /* catch signals that usealy stop application
+   * without performing cleanup such as SIGINT
+   * (i.e CTRL-C break) and SIGTERM
+   * (i.e kill -TERM command)
+   */
   if(sigaction(SIGINT, &sa, NULL) == -1)
   {
     debug(DBG_ATTR, "SIGINT will not be catched\n");
@@ -4320,9 +4331,10 @@ int main(int argc, char** argv)
   /* check if certificates and key stuff are in configuration file 
    * if TLS is used
    */
-  if(turnserver_cfg_tls() && (!turnserver_cfg_ca_file() || !turnserver_cfg_cert_file() || !turnserver_cfg_private_key_file()))
+  if((turnserver_cfg_tls() || turnserver_cfg_dtls()) && (!turnserver_cfg_ca_file() || 
+     !turnserver_cfg_cert_file() || !turnserver_cfg_private_key_file()))
   {
-    fprintf(stderr, "Configuration error: TLS enabled but some elements are missing (cert file, ...).\n");
+    fprintf(stderr, "Configuration error: TLS and/or DTLS enabled but some elements are missing (cert file, ...).\n");
     turnserver_cfg_free();
     /* free the denied address list */
     list_iterate_safe(get, n, &g_denied_address_list)
@@ -4374,6 +4386,10 @@ int main(int argc, char** argv)
 
   if(turnserver_cfg_daemon())
   {
+    /* run as daemon, we take care to cleanup existing 
+     * allocated memory such as account and denied address list
+     * of the father process before _exit()
+     */
     if(go_daemon("./", 0, turnserver_cleanup, &account_list) == -1)
     {
       fprintf(stderr, "Failed to start daemon, exiting...\n");
@@ -4440,50 +4456,48 @@ int main(int argc, char** argv)
 
   if(turnserver_cfg_tls() || turnserver_cfg_dtls())
   {
+    struct tls_peer* speer = NULL;
+    
     /* libssl initialization */
     LIBSSL_INIT;
-  }
 
-  if(turnserver_cfg_tls())
-  {
-    struct tls_peer* speer = NULL;
-
-    /* TLS over TCP socket */
-    speer = tls_peer_new(IPPROTO_TCP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
-
-    if(speer)
+    if(turnserver_cfg_tls())
     {
-      if(listen(speer->sock, 5) == -1)
+      /* TLS over TCP socket */
+      speer = tls_peer_new(IPPROTO_TCP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
+
+      if(speer)
       {
-        debug(DBG_ATTR, "TLS socket failed to listen()\n");
-        syslog(LOG_ERR, "TLS socket failed to listen()");
-        tls_peer_free(&speer);
-        speer = NULL;
+        if(listen(speer->sock, 5) == -1)
+        {
+          debug(DBG_ATTR, "TLS socket failed to listen()\n");
+          syslog(LOG_ERR, "TLS socket failed to listen()");
+          tls_peer_free(&speer);
+          speer = NULL;
+        }
+
+        sockets.sock_tls = speer;
       }
-
-      sockets.sock_tls = speer;
+      else
+      {
+        debug(DBG_ATTR, "TLS initialization failed\n");
+      }
     }
-    else
-    {
-      debug(DBG_ATTR, "TLS initialization failed\n");
-    }
-  }
 
-  if(turnserver_cfg_dtls())
-  {
-    struct tls_peer* speer = NULL;
-
-    /* TLS over UDP socket */
-    speer = tls_peer_new(IPPROTO_UDP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
-
-    if(speer)
+    if(turnserver_cfg_dtls())
     {
-      sockets.sock_dtls = speer;
-    }
-    else
-    {
-      debug(DBG_ATTR, "DTLS initialization failed\n");
-      syslog(LOG_ERR, "DTLS initialization failed");
+      /* TLS over UDP socket */
+      speer = tls_peer_new(IPPROTO_UDP, listen_addr, turnserver_cfg_tls_port(), turnserver_cfg_ca_file(), turnserver_cfg_cert_file(), turnserver_cfg_private_key_file());
+
+      if(speer)
+      {
+        sockets.sock_dtls = speer;
+      }
+      else
+      {
+        debug(DBG_ATTR, "DTLS initialization failed\n");
+        syslog(LOG_ERR, "DTLS initialization failed");
+      }
     }
   }
 

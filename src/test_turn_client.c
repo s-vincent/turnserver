@@ -361,8 +361,8 @@ static int client_connect_server(int transport_protocol, const struct sockaddr* 
  * \param addr_size sizeof addr
  * \param family peer address family (STUN_ATTR_FAMILY_IPV4 or STUN_ATTR_FAMILY_IPV6)
  * \param user username
- * \param password user password
  * \param domain domain
+ * \param md_buf MD5 hash of user:domain:password
  * \param nonce nonce, for first request server nonce will be filled into this variable
  * \param nonce_len nonce length, for first request server nonce length will be filled into this variable
  * \return 0 if success or -1 if error. Note that the first request will returns -1 (need nonce)
@@ -370,7 +370,7 @@ static int client_connect_server(int transport_protocol, const struct sockaddr* 
 static int client_allocate_address(int transport_protocol, int relay_protocol, int sock, 
                                    struct tls_peer* speer, const struct sockaddr* addr, 
                                    socklen_t addr_size, uint8_t family, const char* user,
-                                   const char* password, const char* domain, uint8_t* nonce, 
+                                   const unsigned char* md_buf, const char* domain, uint8_t* nonce,
                                    size_t* nonce_len)
 {
   struct turn_message message;
@@ -383,13 +383,10 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
   char buf[8192];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
 
   turn_generate_transaction_id(id);
 
-  if(!user || !password || !domain || !nonce)
+  if(!user || !domain || !nonce)
   {
     return -1;
   }
@@ -435,30 +432,14 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
-    userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-    userdomainpass = malloc(userdomainpass_len);
-
-    if(!userdomainpass)
-    {
-      iovec_free_data(iov, index);
-      return -1;
-    }
-
-    snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-
-    md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
-    if(turn_add_message_integrity(iov, &index, md_buf, sizeof(md_buf), 1) == -1)
+    if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
     {
       /* MESSAGE-INTEGRITY option has to be in message, so
        * deallocate ressources and return
        */
       iovec_free_data(iov, index);
-      free(userdomainpass);
       return -1;
     }
-
-    free(userdomainpass);
   }
 
   fprintf(stdout, "Send Allocate request\n");
@@ -506,16 +487,15 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
  * \param addr_size sizeof addr
  * \param lifetime lifetime (0 to release allocation)
  * \param user username
- * \param password user password
+ * \param md_buf MD5 of user:domain:password 
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
 static int client_refresh_allocation(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                                     socklen_t addr_size, uint32_t lifetime,
-                                     const char* user, const char* password, const char* domain,
-                                     uint8_t* nonce, size_t nonce_len)
+                                     socklen_t addr_size, uint32_t lifetime, const char* user, 
+                                     const unsigned char* md_buf, const char* domain, uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -527,9 +507,6 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
 
   turn_generate_transaction_id(id);
 
@@ -562,30 +539,14 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-  userdomainpass = malloc(userdomainpass_len);
-
-  if(!userdomainpass)
-  {
-    iovec_free_data(iov, index);
-    return -1;
-  }
-
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
     iovec_free_data(iov, index);
-    free(userdomainpass);
     return -1;
   }
-
-  free(userdomainpass);
 
   fprintf(stdout, "Send Refresh request\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
@@ -624,7 +585,7 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
  * \param addr_size sizeof addr
  * \param peer_addr peer address
  * \param user username
- * \param password user password
+ * \param md_buf MD5 of user:domain:password 
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
@@ -632,7 +593,7 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
  */
 static int client_create_permission(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
                                     socklen_t addr_size, const struct sockaddr* peer_addr,
-                                    const char* user, const char* password, const char* domain,
+                                    const char* user, const unsigned char* md_buf, const char* domain,
                                     uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
@@ -645,9 +606,6 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
 
   turn_generate_transaction_id(id);
 
@@ -680,30 +638,14 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-  userdomainpass = malloc(userdomainpass_len);
-
-  if(!userdomainpass)
-  {
-    iovec_free_data(iov, index);
-    return -1;
-  }
-
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
     iovec_free_data(iov, index);
-    free(userdomainpass);
     return -1;
   }
-
-  free(userdomainpass);
 
   fprintf(stdout, "Send CreatePermission request\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
@@ -744,7 +686,7 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
  * \param data data to send
  * \param data_len data length
  * \param user username
- * \param password user password
+ * \param md_buf MD5 of user:domain:password 
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
@@ -752,7 +694,7 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
  */
 static int client_send_data(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
                             socklen_t addr_size, const struct sockaddr* peer_addr, const char* data, size_t data_len,
-                            const char* user, const char* password, const char* domain,
+                            const char* user, const unsigned char* md_buf, const char* domain,
                             uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
@@ -765,9 +707,6 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
 
   turn_generate_transaction_id(id);
 
@@ -810,30 +749,14 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-  userdomainpass = malloc(userdomainpass_len);
-
-  if(!userdomainpass)
-  {
-    iovec_free_data(iov, index);
-    return -1;
-  }
-
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
     iovec_free_data(iov, index);
-    free(userdomainpass);
     return -1;
   }
-
-  free(userdomainpass);
 
   fprintf(stdout, "Send Send indication\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
@@ -878,7 +801,7 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
  * \param peer_addr peer address
  * \param channel channel to bind
  * \param user username
- * \param password user password
+ * \param md_buf MD5 of user:domain:password
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
@@ -886,7 +809,7 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
  */
 static int client_channelbind(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
                               socklen_t addr_size, const struct sockaddr* peer_addr, uint16_t channel,
-                              const char* user, const char* password, const char* domain,
+                              const char* user, const unsigned char* md_buf, const char* domain,
                               uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
@@ -899,9 +822,6 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
 
   turn_generate_transaction_id(id);
 
@@ -939,30 +859,14 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-  userdomainpass = malloc(userdomainpass_len);
-
-  if(!userdomainpass)
-  {
-    iovec_free_data(iov, index);
-    return -1;
-  }
-
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
     iovec_free_data(iov, index);
-    free(userdomainpass);
     return -1;
   }
-
-  free(userdomainpass);
 
   fprintf(stdout, "Send CreatePermission request\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
@@ -1054,7 +958,7 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
  * \param peer_addr peer address
  * \param sock_tcp pointer that will receive socket descriptor if function succeed
  * \param user username
- * \param password user password
+ * \param md_buf MD5 of user:domain:password
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
@@ -1062,7 +966,7 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
  */
 static int client_send_connect(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
                                socklen_t addr_size, const struct sockaddr* peer_addr, int* sock_tcp,
-                               const char* user, const char* password, const char* domain,
+                               const char* user, const unsigned char* md_buf, const char* domain,
                                uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
@@ -1075,9 +979,6 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
 
   turn_generate_transaction_id(id);
 
@@ -1110,30 +1011,14 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-  userdomainpass = malloc(userdomainpass_len);
-
-  if(!userdomainpass)
-  {
-    iovec_free_data(iov, index);
-    return -1;
-  }
-
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
     iovec_free_data(iov, index);
-    free(userdomainpass);
     return -1;
   }
-
-  free(userdomainpass);
 
   fprintf(stdout, "Send Connect request\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
@@ -1244,7 +1129,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
  * \param peer_addr peer address
  * \param sock_tcp pointer that will receive socket descriptor if function succeed
  * \param user username
- * \param password user password
+ * \param md_buf MD5 of user:domain:password
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
@@ -1252,7 +1137,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
  */
 static int client_wait_connection(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
                                   socklen_t addr_size, const struct sockaddr* peer_addr, int* sock_tcp,
-                                  const char* user, const char* password, const char* domain,
+                                  const char* user, const unsigned char* md_buf, const char* domain,
                                   uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
@@ -1265,9 +1150,6 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  unsigned char* userdomainpass = NULL;
-  size_t userdomainpass_len = 0;
-  unsigned char md_buf[16]; /* MD5 */
   fd_set fdsr;
   struct timeval tv;
   int nsock = 0;
@@ -1309,19 +1191,6 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   }
 
   turn_generate_transaction_id(id);
-
-  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
-  userdomainpass = malloc(userdomainpass_len);
-
-  if(!userdomainpass)
-  {
-    iovec_free_data(iov, index);
-    return -1;
-  }
-
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-  free(userdomainpass);
 
   *sock_tcp = socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
 
@@ -1419,6 +1288,10 @@ int main(int argc, char** argv)
   char data[1024];
   uint8_t family = 0;
   struct client_configuration conf;
+  unsigned char* userdomainpass = NULL;
+  size_t userdomainpass_len = 0;
+  unsigned char md_buf[16]; /* MD5 */
+  int ret = EXIT_SUCCESS;
 
   memset(&conf, 0x00, sizeof(struct client_configuration));
   client_parse_cmdline(argc, argv, &conf);
@@ -1510,22 +1383,8 @@ int main(int argc, char** argv)
     password = conf.password;
   }
 
-  /* make sure that if TLS is used, all mandatory related 
-   * parameters are present
-   */
-  if(use_tls && (!conf.certificate_file || !conf.private_key_file || !conf.ca_file))
-  {
-    fprintf(stderr, "Missing parameters to setup TLS (required -c, -p, -a command line parameters)\n");
-    exit(EXIT_FAILURE);
-  }
-  else if(use_tls)
-  {
-    /* initialize libssl */
-    LIBSSL_INIT;
-  }
-
   fprintf(stdout, "Protocol: %s (%d) use TLS: %d\n", conf.protocol, transport_protocol, use_tls);
-
+  
   /* get address for server_address */
 
   /* convert uint16_t to string */
@@ -1540,7 +1399,7 @@ int main(int argc, char** argv)
   if(getaddrinfo(conf.server_address, port_str, &hints, &res) != 0)
   {
     perror("getaddrinfo");
-    return -1;
+    exit(EXIT_FAILURE);
   }
 
   memcpy(&server_addr, res->ai_addr, res->ai_addrlen);
@@ -1558,13 +1417,28 @@ int main(int argc, char** argv)
   if(getaddrinfo(conf.peer_address, conf.peer_port, &hints, &res) != 0)
   {
     perror("getaddrinfo");
-    return -1;
+    exit(EXIT_FAILURE);
   }
 
   memcpy(&peer_addr, res->ai_addr, res->ai_addrlen);
   /* get family */
   family = (res->ai_addrlen == sizeof(struct sockaddr_in6)) ? STUN_ATTR_FAMILY_IPV6 : STUN_ATTR_FAMILY_IPV4;
   freeaddrinfo(res);
+
+  /* make sure that if TLS is used, all mandatory related 
+   * parameters are present
+   */
+  if(use_tls && (!conf.certificate_file || !conf.private_key_file || !conf.ca_file))
+  {
+    fprintf(stderr, "Missing parameters to setup TLS (required -c, -p, -a command line parameters)\n");
+    free(userdomainpass);
+    exit(EXIT_FAILURE);
+  }
+  else if(use_tls)
+  {
+    /* initialize libssl */
+    LIBSSL_INIT;
+  }
 
   /* create local socket and connect to the TURN server */
   if(client_setup_socket(transport_protocol, (server_addr_size == sizeof(struct sockaddr_in6)) ? "::" : "0.0.0.0", 0, &sock, use_tls ? &speer : NULL, conf.ca_file, conf.certificate_file, conf.private_key_file) == -1)
@@ -1581,74 +1455,53 @@ int main(int argc, char** argv)
   if(client_connect_server(transport_protocol, (struct sockaddr*)&server_addr, server_addr_size, sock, speer) == -1)
   {
     fprintf(stderr, "Error connect to server\n");
+    ret = EXIT_FAILURE;
+    goto quit;
+  }
+  
+  /* calculate MD5 hash for user:domain:password */
+  userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
+  userdomainpass = malloc(userdomainpass_len);
 
-    if(speer)
-    {
-      tls_peer_free(&speer);
-      LIBSSL_CLEANUP;
-    }
-    else
-    {
-      close(sock);
-    }
-
+  if(!userdomainpass)
+  {
     exit(EXIT_FAILURE);
   }
+
+  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
+  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
+
 
   /* client connected and can send TURN message */
   fprintf(stdout, "sock: %d speer: %p connected!\n", sock, (void*)speer);
 
   /* first request always failed but response contains the nonce */
-  client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, password, domain, nonce, &nonce_len); 
+  client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len); 
   if(nonce_len == 0)
   {
     fprintf(stderr, "Allocation: bad message received (no nonce)\n");
-    if(speer)
-    {
-      tls_peer_free(&speer);
-      LIBSSL_CLEANUP;
-    }
-    else
-    {
-      close(sock);
-    }
-    exit(EXIT_FAILURE);
+    ret = EXIT_FAILURE;
+    goto quit;
   }
 
   /* second request should succeed otherwise credentials are wrong or 
    * requested family is not supported by TURN server
    */
-  if(client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, password, domain, nonce, &nonce_len) == -1)
+  if(client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len) == -1)
   {
     fprintf(stderr, "Probably wrong credentials or requested family not supported\n");
-    if(speer)
-    {
-      tls_peer_free(&speer);
-      LIBSSL_CLEANUP;
-    }
-    else
-    {
-      close(sock);
-    }
-    exit(EXIT_FAILURE);
+    ret = EXIT_FAILURE;
+    goto quit;
   }
 
   fprintf(stdout, "Allocate an address!\n");
 
   /* add permission(s) */
-  if(client_create_permission(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, user, password, domain, nonce, nonce_len) == -1)
+  if(client_create_permission(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, user, md_buf, domain, nonce, nonce_len) == -1)
   {
     fprintf(stderr, "CreatePermission failed\n");
-    if(speer)
-    {
-      tls_peer_free(&speer);
-      LIBSSL_CLEANUP;
-    }
-    else
-    {
-      close(sock);
-    }
-    exit(EXIT_FAILURE);
+    ret = EXIT_FAILURE;
+    goto quit;
   }
 
   fprintf(stdout, "Permission installed!\n");
@@ -1657,35 +1510,19 @@ int main(int argc, char** argv)
   {
     /* send data with Send indication */
     memset(data, 0xfe, sizeof(data));
-    if(client_send_data(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, data, sizeof(data), user, password, domain, nonce, nonce_len) == -1)
+    if(client_send_data(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, data, sizeof(data), user, md_buf, domain, nonce, nonce_len) == -1)
     {
       fprintf(stderr, "Send indication failed\n");
-      if(speer)
-      {
-        tls_peer_free(&speer);
-        LIBSSL_CLEANUP;
-      }
-      else
-      {
-        close(sock);
-      }
-      exit(EXIT_FAILURE);
+      ret = EXIT_FAILURE;
+      goto quit;
     }
 
     /* bind to a channel */
-    if(client_channelbind(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, channel, user, password, domain, nonce, nonce_len) == -1)
+    if(client_channelbind(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, channel, user, md_buf, domain, nonce, nonce_len) == -1)
     {
       fprintf(stderr, "ChannelBind failed\n");
-      if(speer)
-      {
-        tls_peer_free(&speer);
-        LIBSSL_CLEANUP;
-      }
-      else
-      {
-        close(sock);
-      }
-      exit(EXIT_FAILURE);
+      ret = EXIT_FAILURE;
+      goto quit;
     }
 
     fprintf(stderr, "Channel bound to %u\n", channel);
@@ -1707,19 +1544,11 @@ int main(int argc, char** argv)
     memset(data, 0xef, sizeof(data));
 
     /* send a Connect request and if success, send a ConnectionBind */
-    if(client_send_connect(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp, user, password, domain, nonce, nonce_len) == -1)
+    if(client_send_connect(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp, user, md_buf, domain, nonce, nonce_len) == -1)
     {
       fprintf(stderr, "Connect failed\n");
-      if(speer)
-      {
-        tls_peer_free(&speer);
-        LIBSSL_CLEANUP;
-      }
-      else
-      {
-        close(sock);
-      }
-      exit(EXIT_FAILURE);
+      ret = EXIT_FAILURE;
+      goto quit;
     }
 
     /* ok now send data on dedicated TCP socket */
@@ -1741,7 +1570,7 @@ int main(int argc, char** argv)
      */
 
     /* wait ConnectionAttempt and then send ConnectionBind */
-    if(client_wait_connection(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp2, user, password, domain, nonce, nonce_len) == -1)
+    if(client_wait_connection(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp2, user, md_buf, domain, nonce, nonce_len) == -1)
     {
       fprintf(stderr, "Error no incoming connection before timeout or system error\n");
     }
@@ -1766,14 +1595,17 @@ int main(int argc, char** argv)
   }
 
   /* release allocation by setting its lifetime to 0 */
-  if(client_refresh_allocation(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, 0, user, password, domain, nonce, nonce_len) == -1)
+  if(client_refresh_allocation(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, 0, user, md_buf, domain, nonce, nonce_len) == -1)
   {
     fprintf(stderr, "Refresh failed\n");
   }
 
   /* free resources */
   fprintf(stdout, "Cleanup and exit\n");
-
+  
+quit:
+  free(userdomainpass);
+  
   if(speer)
   {
     tls_peer_free(&speer);
@@ -1783,7 +1615,7 @@ int main(int argc, char** argv)
   {
     close(sock);
   }
-
-  return EXIT_SUCCESS;
+  
+  return ret;
 }
 
