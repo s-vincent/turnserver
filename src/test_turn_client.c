@@ -326,7 +326,7 @@ static int client_connect_server(int transport_protocol, const struct sockaddr* 
       return -1;
     }
 
-    fprintf(stdout, "TLS handshake OK\n");
+    fprintf(stdout, "TLS handshake OK.\n");
     return 0;
   }
   else if(sock != -1)
@@ -442,7 +442,7 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
     }
   }
 
-  fprintf(stdout, "Send Allocate request\n");
+  fprintf(stdout, "Send Allocate request.\n");
 
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
@@ -548,7 +548,7 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
     return -1;
   }
 
-  fprintf(stdout, "Send Refresh request\n");
+  fprintf(stdout, "Send Refresh request.\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -647,7 +647,7 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
     return -1;
   }
 
-  fprintf(stdout, "Send CreatePermission request\n");
+  fprintf(stdout, "Send CreatePermission request.\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -734,11 +734,6 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  /* DONT-FRAGMENT */
-  attr = turn_attr_dont_fragment_create(&iov[index]);
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
   /* DATA */
   attr = turn_attr_data_create(data, data_len, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
@@ -758,7 +753,7 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
     return -1;
   }
 
-  fprintf(stdout, "Send Send indication\n");
+  fprintf(stdout, "Send Send indication.\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -868,7 +863,7 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
     return -1;
   }
 
-  fprintf(stdout, "Send CreatePermission request\n");
+  fprintf(stdout, "Send CreatePermission request.\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -928,7 +923,7 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
   iov[index].iov_len = data_len;
   index++;
 
-  fprintf(stdout, "Send ChannelData\n");
+  fprintf(stdout, "Send ChannelData.\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, sizeof(struct turn_channel_data) + data_len, iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -1020,7 +1015,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
     return -1;
   }
 
-  fprintf(stdout, "Send Connect request\n");
+  fprintf(stdout, "Send Connect request.\n");
   if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -1048,7 +1043,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
 
   if(!message.connection_id)
   {
-    fprintf(stderr, "No connection ID\n");
+    fprintf(stderr, "No connection ID.\n");
     return -1;
   }
 
@@ -1057,7 +1052,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   /* establish relay connection */
   if(*sock_tcp == -1 || connect(*sock_tcp, addr, addr_size) == -1)
   {
-    fprintf(stderr, "Failed to connect to TURN server\n");
+    fprintf(stderr, "Failed to connect to TURN server.\n");
     return -1;
   }
 
@@ -1106,7 +1101,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
     return -1;
   }
 
-  fprintf(stdout, "Send ConnectionBind request\n");
+  fprintf(stdout, "Send ConnectionBind request.\n");
   if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -1150,18 +1145,18 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   char buf[1500];
   uint16_t tabu[16];
   size_t tabu_size = sizeof(tabu) / sizeof(uint16_t);
-  fd_set fdsr;
+  sfd_set fdsr;
   struct timeval tv;
   int nsock = 0;
 
   tv.tv_sec = 10; /* 10 seconds before timeout */
   tv.tv_usec = 0;
-  FD_ZERO(&fdsr);
-  FD_SET(sock, &fdsr);
+  SFD_ZERO(&fdsr);
+  SFD_SET(sock, &fdsr);
 
   nsock = sock + 1;
 
-  if(select(nsock, &fdsr, NULL, NULL, &tv) <= 0)
+  if(select(nsock, (fd_set*)(void*)&fdsr, NULL, NULL, &tv) <= 0)
   {
     /* timeout or error */
     perror("select");
@@ -1186,7 +1181,7 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
 
   if(!message.connection_id)
   {
-    fprintf(stderr, "No connection ID\n");
+    fprintf(stderr, "No connection ID.\n");
     return -1;
   }
 
@@ -1197,7 +1192,7 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   /* establish relay connection */
   if(*sock_tcp == -1 || connect(*sock_tcp, addr, addr_size) == -1)
   {
-    fprintf(stderr, "Failed to connect to TURN server\n");
+    fprintf(stderr, "Failed to connect to TURN server.\n");
     return -1;
   }
 
@@ -1246,7 +1241,7 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
     return -1;
   }
 
-  fprintf(stdout, "Send ConnectionBind request\n");
+  fprintf(stdout, "Send ConnectionBind request.\n");
   if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
@@ -1314,7 +1309,7 @@ int main(int argc, char** argv)
 
   if(len != 3 && len != 4)
   {
-    fprintf(stderr, "Bad protocol, possible choices are udp, tcp, tls or dtls\n");
+    fprintf(stderr, "Bad protocol, possible choices are udp, tcp, tls or dtls.\n");
     exit(EXIT_FAILURE);
   }
 
@@ -1338,7 +1333,7 @@ int main(int argc, char** argv)
   }
   else
   {
-    fprintf(stderr, "Bad protocol, possible choices are udp, tcp, tls or dtls\n");
+    fprintf(stderr, "Bad protocol, possible choices are udp, tcp, tls or dtls.\n");
     exit(EXIT_FAILURE);
   }
 
@@ -1354,14 +1349,14 @@ int main(int argc, char** argv)
   }
   else
   {
-    fprintf(stderr, "Bad relay protocol, possible choice is only udp\n");
+    fprintf(stderr, "Bad relay protocol, possible choice is only udp.\n");
     exit(EXIT_FAILURE);
   }
 
   /* if TURN-TCP is used, make sure that control connection is TCP */
   if(!strncmp(conf.relay_protocol, "tcp", len) && transport_protocol != IPPROTO_TCP)
   {
-    fprintf(stderr, "TCP relays work only when client have a TCP connection to its TURN server\n");
+    fprintf(stderr, "TCP relays work only when client have a TCP connection to its TURN server.\n");
     exit(EXIT_FAILURE);
   }
 
@@ -1383,7 +1378,7 @@ int main(int argc, char** argv)
     password = conf.password;
   }
 
-  fprintf(stdout, "Protocol: %s (%d) use TLS: %d\n", conf.protocol, transport_protocol, use_tls);
+  fprintf(stdout, "Protocol: %s (%d) use TLS: %d.\n", conf.protocol, transport_protocol, use_tls);
   
   /* get address for server_address */
 
@@ -1430,7 +1425,7 @@ int main(int argc, char** argv)
    */
   if(use_tls && (!conf.certificate_file || !conf.private_key_file || !conf.ca_file))
   {
-    fprintf(stderr, "Missing parameters to setup TLS (required -c, -p, -a command line parameters)\n");
+    fprintf(stderr, "Missing parameters to setup TLS (required -c, -p, -a command line parameters).\n");
     free(userdomainpass);
     exit(EXIT_FAILURE);
   }
@@ -1443,7 +1438,7 @@ int main(int argc, char** argv)
   /* create local socket and connect to the TURN server */
   if(client_setup_socket(transport_protocol, (server_addr_size == sizeof(struct sockaddr_in6)) ? "::" : "0.0.0.0", 0, &sock, use_tls ? &speer : NULL, conf.ca_file, conf.certificate_file, conf.private_key_file) == -1)
   {
-    fprintf(stderr, "Error creating local socket\n");
+    fprintf(stderr, "Error creating local socket.\n");
 
     if(use_tls)
     {
@@ -1454,7 +1449,7 @@ int main(int argc, char** argv)
 
   if(client_connect_server(transport_protocol, (struct sockaddr*)&server_addr, server_addr_size, sock, speer) == -1)
   {
-    fprintf(stderr, "Error connect to server\n");
+    fprintf(stderr, "Error connecting to server.\n");
     ret = EXIT_FAILURE;
     goto quit;
   }
@@ -1479,7 +1474,7 @@ int main(int argc, char** argv)
   client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len); 
   if(nonce_len == 0)
   {
-    fprintf(stderr, "Allocation: bad message received (no nonce)\n");
+    fprintf(stderr, "Allocation: bad message received (no nonce).\n");
     ret = EXIT_FAILURE;
     goto quit;
   }
@@ -1489,7 +1484,7 @@ int main(int argc, char** argv)
    */
   if(client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len) == -1)
   {
-    fprintf(stderr, "Probably wrong credentials or requested family not supported\n");
+    fprintf(stderr, "Probably wrong credentials or requested family not supported.\n");
     ret = EXIT_FAILURE;
     goto quit;
   }
@@ -1499,7 +1494,7 @@ int main(int argc, char** argv)
   /* add permission(s) */
   if(client_create_permission(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, user, md_buf, domain, nonce, nonce_len) == -1)
   {
-    fprintf(stderr, "CreatePermission failed\n");
+    fprintf(stderr, "CreatePermission failed.\n");
     ret = EXIT_FAILURE;
     goto quit;
   }
@@ -1512,7 +1507,7 @@ int main(int argc, char** argv)
     memset(data, 0xfe, sizeof(data));
     if(client_send_data(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, data, sizeof(data), user, md_buf, domain, nonce, nonce_len) == -1)
     {
-      fprintf(stderr, "Send indication failed\n");
+      fprintf(stderr, "Send indication failed.\n");
       ret = EXIT_FAILURE;
       goto quit;
     }
@@ -1520,17 +1515,17 @@ int main(int argc, char** argv)
     /* bind to a channel */
     if(client_channelbind(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, channel, user, md_buf, domain, nonce, nonce_len) == -1)
     {
-      fprintf(stderr, "ChannelBind failed\n");
+      fprintf(stderr, "ChannelBind failed.\n");
       ret = EXIT_FAILURE;
       goto quit;
     }
 
-    fprintf(stderr, "Channel bound to %u\n", channel);
+    fprintf(stderr, "Channel bound to %u.\n", channel);
 
     /* send data with ChannelData */
     if(client_send_channeldata(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, channel, data, sizeof(data)) == -1)
     {
-      fprintf(stderr, "ChannelData failed\n");
+      fprintf(stderr, "ChannelData failed.\n");
     }
   }
   else
@@ -1546,7 +1541,7 @@ int main(int argc, char** argv)
     /* send a Connect request and if success, send a ConnectionBind */
     if(client_send_connect(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp, user, md_buf, domain, nonce, nonce_len) == -1)
     {
-      fprintf(stderr, "Connect failed\n");
+      fprintf(stderr, "Connect to the server failed.\n");
       ret = EXIT_FAILURE;
       goto quit;
     }
@@ -1554,32 +1549,32 @@ int main(int argc, char** argv)
     /* ok now send data on dedicated TCP socket */
     if(send(sock_tcp, data, sizeof(data), 0) == -1)
     {
-      fprintf(stderr, "Failed to send data to TURN-TCP relay\n");
+      fprintf(stderr, "Failed to send data to TURN-TCP relay.\n");
     }
     else
     {
       if((nb = recv(sock_tcp, buf, sizeof(buf), 0)) != -1)
       {
-        fprintf(stdout, "Receive %d bytes (TURN-TCP)\n", (int)nb);
+        fprintf(stdout, "Receive %d bytes (TURN-TCP).\n", (int)nb);
       }
     }
 
     /* to test this code part, you have to connect to 
      * the TCP allocated port on the server (use 
-     * netstat -aptn | grep turnserver).
+     * netstat -aptn | grep turnserver)
      */
 
     /* wait ConnectionAttempt and then send ConnectionBind */
     if(client_wait_connection(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, (struct sockaddr*)&peer_addr, &sock_tcp2, user, md_buf, domain, nonce, nonce_len) == -1)
     {
-      fprintf(stderr, "Error no incoming connection before timeout or system error\n");
+      fprintf(stderr, "Error no incoming connection before timeout or system error.\n");
     }
     else
     {
       /* ok now send data on dedicated TCP socket */
       if((nb = recv(sock_tcp2, buf, sizeof(buf), 0)) != -1)
       {
-        fprintf(stdout, "Receive %d bytes (TURN-TCP incoming connection)\n", (int)nb);
+        fprintf(stdout, "Receive %d bytes (TURN-TCP incoming connection).\n", (int)nb);
       }
     }
 
@@ -1597,11 +1592,11 @@ int main(int argc, char** argv)
   /* release allocation by setting its lifetime to 0 */
   if(client_refresh_allocation(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, 0, user, md_buf, domain, nonce, nonce_len) == -1)
   {
-    fprintf(stderr, "Refresh failed\n");
+    fprintf(stderr, "Refresh failed.\n");
   }
 
   /* free resources */
-  fprintf(stdout, "Cleanup and exit\n");
+  fprintf(stdout, "Cleanup and exit.\n");
   
 quit:
   free(userdomainpass);

@@ -1,7 +1,8 @@
 2010-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
 
 	* Version 0.4			- Add multiprotocol client example (UDP/TCP/TLS/DTLS);
-										- Add turn-tcp-05 draft support.
+										- Add turn-tcp-05 draft support;
+										- Add allocation port number range configuration.
 
 2010-01-03  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
@@ -27,7 +28,7 @@
 2008-12-17  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
   * Version 0.2.1   - Fix CRC32 generation;
-                    - Drop privileges if run as root / setuid root.
+                    - Drop privileges if run as root/setuid root.
 
 2008-12-15  Sebastien Vincent <vincent@lsiit.u-strasbg.fr>
 
@@ -42,7 +43,7 @@
                     - Update wireshark parser (packet-stun2.c);
                     - Additionnal configuration parameters;
                     - Allocation number and bandwidth quota;
-                    - Address / port restrictions;
+                    - Address/port restrictions;
                     - Reconstruct fragmented TCP messages support;
                     - Prevent allocation hijacking support;
                     - Add logs support via syslog.

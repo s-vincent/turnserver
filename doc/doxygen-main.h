@@ -54,7 +54,7 @@
  *
  * TurnServer is known to run on the following systems: 
  * - GNU/Linux 2.6;
- * - FreeBSD 7.x.
+ * - FreeBSD 7.x, 8.
  *
  * \section section-license License
  *

@@ -27,6 +27,12 @@ tls = false
 ## DTLS support. It is an experimental feature and is not defined in TURN standard.
 dtls = false
 
+## Maximum allocation port number.
+max_port = 65535
+
+## Minimum allocation port number.
+min_port = 49152
+
 ## TURN-TCP support.
 turn_tcp = false
 

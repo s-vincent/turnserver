@@ -1940,8 +1940,11 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
     debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
-    /* adjust lifetime */
+    /* adjust lifetime (cannot be greater that maximum allowed */
     lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
+   
+    /* lifetime cannot be smaller than default */
+    lifetime = MAX(lifetime, TURN_DEFAULT_ALLOCATION_LIFETIME);
   }
   else
   {
@@ -2037,7 +2040,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
   struct sockaddr_storage relayed_addr;
   int r_flag = 0;
-  uint32_t lifetime =0;
+  uint32_t lifetime = 0;
   uint16_t port = 0;
   uint16_t reservation_port = 0;
   int relayed_sock = -1;
@@ -2051,6 +2054,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t port2 = 0;
   int has_token = 0;
   char* family_address = NULL;
+  const uint16_t max_port = turnserver_cfg_max_port();
+  const uint16_t min_port = turnserver_cfg_min_port();
 
   debug(DBG_ATTR, "Allocate request received!\n");
 
@@ -2242,8 +2247,11 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
-    /* adjust lifetime */
+    /* adjust lifetime (cannot be greater than maximum allowed */
     lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
+
+    /* lifetime cannot be smaller than default */
+    lifetime = MAX(lifetime, TURN_DEFAULT_ALLOCATION_LIFETIME);
   }
   else
   {
@@ -2301,8 +2309,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
    */
   while(!has_token && (relayed_sock == -1 && quit_loop < 5))
   {
-    /* pick up a port between 49152 - 65535 */
-    port = (uint16_t) (rand() % 16383) + 49152;
+    /* pick up a port (default between 49152 - 65535) */
+    port = (uint16_t) (rand() % (max_port - min_port)) + min_port;
 
     /* allocate a even port */
     if(message->even_port && (port % 2))
@@ -4136,7 +4144,11 @@ static void turnserver_cleanup(void* arg)
 
   /* configuration file */
   turnserver_cfg_free();
-  account_list_free(accounts);
+
+  if(accounts)
+  {
+    account_list_free(accounts);
+  }
 
   /* free the denied address list */
   list_iterate_safe(get, n, &g_denied_address_list)
@@ -4283,14 +4295,7 @@ int main(int argc, char** argv)
   if(turnserver_cfg_parse(configuration_file, &g_denied_address_list) != 0)
   {
     fprintf(stderr, "Parse configuration error, exiting...\n");
-    turnserver_cfg_free();
-    /* free the denied address list */
-    list_iterate_safe(get, n, &g_denied_address_list)
-    {
-      struct denied_address* tmp = list_get(get, struct denied_address, list);
-      LIST_DEL(&tmp->list);
-      free(tmp);
-    }
+    turnserver_cleanup(NULL);
     exit(EXIT_FAILURE);
   }
 
@@ -4302,14 +4307,16 @@ int main(int argc, char** argv)
   if(!turnserver_cfg_listen_address() && !turnserver_cfg_listen_addressv6())
   {
     fprintf(stderr, "Configuration error: must configure listen_address and/or listen_addressv6 in configuration file.\n");
-    turnserver_cfg_free();
-    /* free the denied address list */
-    list_iterate_safe(get, n, &g_denied_address_list)
-    {
-      struct denied_address* tmp = list_get(get, struct denied_address, list);
-      LIST_DEL(&tmp->list);
-      free(tmp);
-    }
+    turnserver_cleanup(NULL);
+    exit(EXIT_FAILURE);
+  }
+
+  if((turnserver_cfg_max_port() == 0 || turnserver_cfg_min_port() == 0) ||
+     (turnserver_cfg_max_port() - turnserver_cfg_min_port() < 0))
+  {
+    fprintf(stderr, "Configuration error: allocation minimum/maximum port number must not be equals to 0 and max_port must be greater"
+        "or equal than min_port.\n");
+    turnserver_cleanup(NULL);
     exit(EXIT_FAILURE);
   }
 
@@ -4317,14 +4324,7 @@ int main(int argc, char** argv)
   {
     /* for the moment only file method is implemented */
     fprintf(stderr, "Configuration error: method \"%s\" not implemented, exiting...\n", turnserver_cfg_account_method());
-    turnserver_cfg_free();
-    /* free the denied address list */
-    list_iterate_safe(get, n, &g_denied_address_list)
-    {
-      struct denied_address* tmp = list_get(get, struct denied_address, list);
-      LIST_DEL(&tmp->list);
-      free(tmp);
-    }
+    turnserver_cleanup(NULL);
     exit(EXIT_FAILURE);
   }
 
@@ -4335,28 +4335,14 @@ int main(int argc, char** argv)
      !turnserver_cfg_cert_file() || !turnserver_cfg_private_key_file()))
   {
     fprintf(stderr, "Configuration error: TLS and/or DTLS enabled but some elements are missing (cert file, ...).\n");
-    turnserver_cfg_free();
-    /* free the denied address list */
-    list_iterate_safe(get, n, &g_denied_address_list)
-    {
-      struct denied_address* tmp = list_get(get, struct denied_address, list);
-      LIST_DEL(&tmp->list);
-      free(tmp);
-    }
+    turnserver_cleanup(NULL);
     exit(EXIT_FAILURE);
   }
 
   if(!turnserver_cfg_nonce_key())
   {
-    fprintf(stderr, "Configuration error: nonce_key attribute is missing\n");
-    turnserver_cfg_free();
-    /* free the denied address list */
-    list_iterate_safe(get, n, &g_denied_address_list)
-    {
-      struct denied_address* tmp = list_get(get, struct denied_address, list);
-      LIST_DEL(&tmp->list);
-      free(tmp);
-    }
+    fprintf(stderr, "Configuration error: nonce_key attribute is missing.\n");
+    turnserver_cleanup(NULL);
     exit(EXIT_FAILURE);
   }
 
@@ -4364,14 +4350,7 @@ int main(int argc, char** argv)
   if(account_parse_file(&account_list, turnserver_cfg_account_file()) == -1)
   {
     fprintf(stderr, "Failed to parse account file, exiting...\n");
-    turnserver_cfg_free();
-    /* free the denied address list */
-    list_iterate_safe(get, n, &g_denied_address_list)
-    {
-      struct denied_address* tmp = list_get(get, struct denied_address, list);
-      LIST_DEL(&tmp->list);
-      free(tmp);
-    }
+    turnserver_cleanup(NULL);
     exit(EXIT_FAILURE);
   }
 
@@ -4393,15 +4372,7 @@ int main(int argc, char** argv)
     if(go_daemon("./", 0, turnserver_cleanup, &account_list) == -1)
     {
       fprintf(stderr, "Failed to start daemon, exiting...\n");
-      account_list_free(&account_list);
-      turnserver_cfg_free();
-      /* free the denied address list */
-      list_iterate_safe(get, n, &g_denied_address_list)
-      {
-        struct denied_address* tmp = list_get(get, struct denied_address, list);
-        LIST_DEL(&tmp->list);
-        free(tmp);
-      }
+      turnserver_cleanup(&account_list);
       exit(EXIT_FAILURE);
     }
   }

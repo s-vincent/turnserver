@@ -17,7 +17,7 @@ protocol).
 
 TurnServer is known to work on the following systems:
 - GNU/Linux 2.6;
-- FreeBSD 7.x.
+- FreeBSD 7.x, 8.
 
 1) Build / install
 ------------------

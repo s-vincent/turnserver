@@ -156,6 +156,32 @@ int turnserver_cfg_tls(void);
 int turnserver_cfg_dtls(void);
 
 /**
+ * \brief Get the maximum allocation port number.
+ *
+ * It is strongly discouraged to have ports under
+ * 49152 only if server knows there are not other
+ * services running on one on these ports.
+ * 
+ * It is more than discouraged to have ports for 
+ * range 1 - 1024. TURN client should not use 
+ * TURN server to run standard services.
+ */
+uint16_t turnserver_cfg_max_port(void);
+
+/**
+ * \brief Get the minumum allocation port number.
+ *
+ * It is strongly discouraged to have ports under
+ * 49152 only if server knows there are not other
+ * services running on one on these ports.
+ * 
+ * It is more than discouraged to have ports for 
+ * range 1 - 1024. TURN client should not use 
+ * TURN server to run standard services.
+ */
+uint16_t turnserver_cfg_min_port(void);
+
+/**
  * \brief Run with or without TURN-TCP extension.
  * \return 1 if TURN-TCP is enable, 0 otherwise
  */

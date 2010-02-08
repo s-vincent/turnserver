@@ -88,6 +88,8 @@ static cfg_opt_t opts[]=
   CFG_INT("tls_port", 5349, CFGF_NONE),
   CFG_BOOL("tls", cfg_false, CFGF_NONE),
   CFG_BOOL("dtls", cfg_false, CFGF_NONE),
+  CFG_INT("max_port", 65535, CFGF_NONE),
+  CFG_INT("min_port", 49152, CFGF_NONE),
   CFG_BOOL("turn_tcp", cfg_false, CFGF_NONE),
   CFG_BOOL("tcp_buffer_userspace", cfg_true, CFGF_NONE),
   CFG_INT("tcp_buffer_size", 1500, CFGF_NONE),
@@ -290,6 +292,16 @@ int turnserver_cfg_tls(void)
 int turnserver_cfg_dtls(void)
 {
   return cfg_getbool(g_cfg, "dtls");
+}
+
+uint16_t turnserver_cfg_max_port(void)
+{
+  return cfg_getint(g_cfg, "max_port");
+}
+
+uint16_t turnserver_cfg_min_port(void)
+{
+  return cfg_getint(g_cfg, "min_port");
 }
 
 int turnserver_cfg_turn_tcp(void)
