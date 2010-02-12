@@ -204,9 +204,10 @@ int tls_peer_is_encrypted(const char* buf, size_t len);
  * \param type transport protocol used
  * \param addr address or FQDN name
  * \param port to bind
+ * \param reuse allow socket to reuse transport address (SO_REUSE)
  * \return socket descriptor, -1 otherwise
  */
-int socket_create(enum protocol_type type, const char* addr, uint16_t port);
+int socket_create(enum protocol_type type, const char* addr, uint16_t port, int reuse);
 
 #ifdef __cplusplus
 }

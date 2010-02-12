@@ -1942,9 +1942,12 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
     /* adjust lifetime (cannot be greater that maximum allowed */
     lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
-   
-    /* lifetime cannot be smaller than default */
-    lifetime = MAX(lifetime, TURN_DEFAULT_ALLOCATION_LIFETIME);
+  
+    if(lifetime > 0)
+    {
+      /* lifetime cannot be smaller than default */
+      lifetime = MAX(lifetime, TURN_DEFAULT_ALLOCATION_LIFETIME);
+    }
   }
   else
   {
@@ -2319,7 +2322,10 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     }
 
     /* TCP or UDP */
-    relayed_sock = socket_create(message->requested_transport->turn_attr_protocol, str, port);
+    /* in case of TCP, allow socket to reuse transport address since we create 
+     * another socket that will be bound to the same address
+     */
+    relayed_sock = socket_create(message->requested_transport->turn_attr_protocol, str, port, message->requested_transport->turn_attr_protocol == IPPROTO_TCP);
 
     if(relayed_sock == -1)
     {
@@ -2334,7 +2340,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
        * the first one will be used to listen incoming connections,
        * the second will be used to connect peer (Connect request)
        */
-      relayed_sock_tcp = socket_create(message->requested_transport->turn_attr_protocol, str, port);
+      relayed_sock_tcp = socket_create(message->requested_transport->turn_attr_protocol, str, port, 1);
 
       if(relayed_sock_tcp == -1)
       {
@@ -2357,7 +2363,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(r_flag)
     {
       reservation_port = port + 1;
-      reservation_sock = socket_create(IPPROTO_UDP, str, reservation_port);
+      reservation_sock = socket_create(IPPROTO_UDP, str, reservation_port, 0);
 
       if(reservation_sock == -1)
       {
@@ -4397,7 +4403,7 @@ int main(int argc, char** argv)
 
   /* initialize listen sockets */
   /* UDP socket */
-  sockets.sock_udp = socket_create(IPPROTO_UDP, listen_addr, turnserver_cfg_udp_port());
+  sockets.sock_udp = socket_create(IPPROTO_UDP, listen_addr, turnserver_cfg_udp_port(), 0);
 
   if(sockets.sock_udp == -1)
   {
@@ -4406,7 +4412,7 @@ int main(int argc, char** argv)
   }
 
   /* TCP socket */
-  sockets.sock_tcp = socket_create(IPPROTO_TCP, listen_addr, turnserver_cfg_tcp_port());
+  sockets.sock_tcp = socket_create(IPPROTO_TCP, listen_addr, turnserver_cfg_tcp_port(), 0);
 
   if(sockets.sock_tcp > 0)
   {

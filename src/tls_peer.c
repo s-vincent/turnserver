@@ -318,8 +318,8 @@ static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file, const c
  * \return 0 if success, -1 otherwise
  * \note If returns -1, the caller must call tls_peer_free() as some memory could be allocated
  */
-static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const char* addr, uint16_t port, const char* ca_file,
-                          const char* cert_file, const char* key_file)
+static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const char* addr, uint16_t port,
+                          const char* ca_file, const char* cert_file, const char* key_file)
 {
   STACK_OF(X509_NAME)* calist = NULL;
   SSL_METHOD* method_server = NULL;
@@ -377,7 +377,7 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
     SSL_CTX_set_client_CA_list(peer->ctx_server, calist);
   }
 
-  peer->sock = socket_create(type, addr, port);
+  peer->sock = socket_create(type, addr, port, 0);
   peer->type = type;
 
   return (peer->sock > 0)  ? 0 : -1;
@@ -708,7 +708,7 @@ int tls_peer_is_encrypted(const char* buf, size_t len)
   return 0;
 }
 
-int socket_create(enum protocol_type type, const char* addr, uint16_t port)
+int socket_create(enum protocol_type type, const char* addr, uint16_t port, int reuse)
 {
   int sock = -1;
   struct addrinfo hints;
@@ -740,7 +740,10 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port)
       continue;
     }
 
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
+    if(reuse)
+    {
+      setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
+    }
 
     /* accept IPv6 and IPv4 on the same socket */ 
     on = 0;

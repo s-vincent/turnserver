@@ -289,7 +289,7 @@ static int client_setup_socket(int transport_protocol, const char* addr, uint16_
   }
   else if(sock)
   {
-    *sock = socket_create(transport_protocol, addr, port);
+    *sock = socket_create(transport_protocol, addr, port, 0);
     return (*sock != -1) ? 0 : -1;
   }
 
