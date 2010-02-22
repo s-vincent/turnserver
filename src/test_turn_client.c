@@ -34,6 +34,7 @@
  * \brief TURN client example that supports UDP, TCP, TLS and DTLS
  * and relay protocol with UDP or TCP.
  * \author Sebastien Vincent
+ * \date 2010
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,6 +47,16 @@
 #include <string.h>
 #include <getopt.h>
 
+#if defined(_WIN32) || defined(_WIN64)
+/* Windows needs Winsock2 include 
+ * to have access to network functions
+ */
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <winsock2.h>
+#else
+#include <unistd.h>
+
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -53,6 +64,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#endif
 
 #include "util_sys.h"
 #include "util_crypto.h"
@@ -1288,6 +1300,22 @@ int main(int argc, char** argv)
   unsigned char md_buf[16]; /* MD5 */
   int ret = EXIT_SUCCESS;
 
+#if defined(_WIN32) || defined(_WIN64)
+  /* Windows need to initialize and startup 
+   * WSAData object otherwise network-related
+   * functions will fail
+   */
+  WSADATA wsa;
+  if(WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+  {
+    /* no need to go further since program
+     * will not be able to bind/connect a socket
+     */
+    fprintf(stderr, "Error WSAStartup\n");
+    exit(EXIT_FAILURE);
+  }
+#endif
+
   memset(&conf, 0x00, sizeof(struct client_configuration));
   client_parse_cmdline(argc, argv, &conf);
 
@@ -1379,7 +1407,7 @@ int main(int argc, char** argv)
   }
 
   fprintf(stdout, "Protocol: %s (%d) use TLS: %d.\n", conf.protocol, transport_protocol, use_tls);
-  
+
   /* get address for server_address */
 
   /* convert uint16_t to string */
@@ -1453,7 +1481,7 @@ int main(int argc, char** argv)
     ret = EXIT_FAILURE;
     goto quit;
   }
-  
+
   /* calculate MD5 hash for user:domain:password */
   userdomainpass_len = strlen(user) + strlen(domain) + strlen(password) + 3; /* 2 ":" + 0x00 */
   userdomainpass = malloc(userdomainpass_len);
@@ -1597,10 +1625,10 @@ int main(int argc, char** argv)
 
   /* free resources */
   fprintf(stdout, "Cleanup and exit.\n");
-  
+
 quit:
   free(userdomainpass);
-  
+
   if(speer)
   {
     tls_peer_free(&speer);
@@ -1610,7 +1638,7 @@ quit:
   {
     close(sock);
   }
-  
+
   return ret;
 }
 

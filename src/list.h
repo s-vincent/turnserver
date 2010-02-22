@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- *  Copyright (C) 2006-2009 Sebastien Vincent.
+ *  Copyright (C) 2006-2010 Sebastien Vincent.
  *
  *  Permission to use, copy, modify, and distribute this software for any
  *  purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file list.h
  * \brief Doubly linked list management.
  * \author Sebastien Vincent
- * \date 2006-2009
+ * \date 2006-2010
  */
 
 #ifndef LIST_H
@@ -57,6 +57,13 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
+
+#if defined(_MSC_VER) && !defined(__cplusplus)
+/* Microsoft compiler does not know inline
+ * keyword in a pure C program
+ */
+#define inline __inline
 #endif
 
 #include <stddef.h> /* for offsetof */

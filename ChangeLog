@@ -2,7 +2,9 @@
 
 	* Version 0.4			- Add multiprotocol client example (UDP/TCP/TLS/DTLS);
 										- Add turn-tcp-05 draft support;
-										- Add allocation port number range configuration.
+										- Add allocation port number range configuration;
+										- Some files can compiled with MS Windows as well as
+										  multiplatform client example.
 
 2010-01-03  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

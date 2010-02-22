@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2008-2009 Sebastien Vincent.
+ * Copyright (C) 2008-2010 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@
  * \file tls_peer.c
  * \brief (D)TLS peer implementation.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,17 +61,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
-#ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <winsock2.h>
-
-#else
-
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
 
 #include <sys/types.h>
@@ -79,17 +71,19 @@
 #include <sys/select.h>
 
 #include <arpa/inet.h>
-
-#include <netinet/in.h>
 #include <netdb.h>
+#endif
 
-#if defined(__FreeBSD__) || defined(__OpenBSD) || defined(__NetBSD__)
+/* macro should be declared in netinet/in.h even in POSIX compilation 
+ * but it appeared that it is not defined on some BSD system
+ */
 #ifndef IPPROTO_IPV6
-/* macro should be declared in netinet/in.h even in POSIX compilation */
 #define IPPROTO_IPV6 41	
 #endif
-#endif
 
+/* MinGW does not define IPV6_V6ONLY */
+#ifndef IPV6_V6ONLY
+#define IPV6_V6ONLY 27
 #endif
 
 #include <openssl/evp.h>
@@ -747,7 +741,7 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port, int 
 
     /* accept IPv6 and IPv4 on the same socket */ 
     on = 0;
-    setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on));
+    setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
 
     if(bind(sock, p->ai_addr, p->ai_addrlen) == -1)
     {

@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
  * \file protocol.c
  * \brief Creation of STUN/TURN messages and attributes, helper functions.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,9 +42,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #include <openssl/sha.h>
 #include <openssl/md5.h>
@@ -1287,7 +1284,7 @@ int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size, co
 {
   ssize_t len = -1;
 
-#ifndef _WIN32
+#if !defined(_WIN32) || !defined(_WIN64)
   struct msghdr msg;
 
   memset(&msg, 0x00, sizeof(struct msghdr));
@@ -1296,7 +1293,6 @@ int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size, co
   msg.msg_iov = (struct iovec*)iov;
   msg.msg_iovlen = iovlen;
   len = sendmsg(sock, &msg, 0);
-
 #else
   len = sock_writev(sock, iov, iovlen, addr, addr_size);
 #endif
@@ -1307,14 +1303,13 @@ int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen)
 {
   ssize_t len = -1;
 
-#ifndef _WIN32
+#if !defined(_WIN32) || !defined(_WIN64)
   struct msghdr msg;
 
   memset(&msg, 0x00, sizeof(struct msghdr));
   msg.msg_iov = (struct iovec*)iov;
   msg.msg_iovlen = iovlen;
   len = sendmsg(sock, &msg, 0);
-
 #else
   len = sock_writev(sock, iov, iovlen, NULL, 0);
 #endif

@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2009 Sebastien Vincent.
+ * Copyright (C) 2006-2010 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file util_sys.c
  * \brief Some helper system functions.
  * \author Sebastien Vincent
- * \date 2006-2009
+ * \date 2006-2010
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,7 +61,7 @@
 
 #include <sys/stat.h>
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -102,7 +102,7 @@ int msleep(unsigned long usec)
 
 long get_dtablesize(void)
 {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
   return sysconf(_SC_OPEN_MAX);
   /*
      struct rlimit limit;
@@ -160,7 +160,7 @@ int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg), void* ar
   long max = 0;
   int fd = -1;
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
   return -1;
 #else
 
@@ -282,13 +282,13 @@ char* strdup(const char* str)
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size)
 {
-  /* it should be sufficient,
+  /* it should be sufficient, 
    * the dynamically allocation is timecost.
-   * We could use a static WSABUF* winiov but the function would be
-   * non reentrant.
+   * We could use a static WSABUF* winiov but 
+   * the function would be non reentrant.
    */
   WSABUF winiov[50];
   DWORD winiov_len = iovcnt;
@@ -328,8 +328,8 @@ ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct socka
 {
   /* it should be sufficient,
    * the dynamically allocation is timecost.
-   * We could use a static WSABUF* winiov but the function would be
-   * non reentrant.
+   * We could use a static WSABUF* winiov but
+   * the function would be non reentrant.
    */
   WSABUF winiov[50];
   DWORD winiov_len = iovcnt;
@@ -381,9 +381,10 @@ void iovec_free_data(struct iovec* iov, uint32_t nb)
 
 int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid_eff, const char* user_name)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
   return -1;
-#endif
+#else
+  /* Unix */
   gid_eff = 0; /* not used for the moment */
 
   if(uid_real == 0 || uid_eff == 0) 
@@ -429,13 +430,15 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid
 
   /* cannot lost our privileges */
   return -1;
+#endif
 }
 
 int uid_gain_privileges(uid_t uid_eff, gid_t gid_eff)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
   return -1;
-#endif
+#else
+  /* Unix */
 #ifdef _POSIX_SAVED_IDS
   setegid(gid_eff);
   return seteuid(uid_eff);
@@ -443,6 +446,7 @@ int uid_gain_privileges(uid_t uid_eff, gid_t gid_eff)
   /* i.e for *BSD */
   setregid(-1, gid_eff);
   return setreuid(-1, uid_eff);
+#endif
 #endif
 }
 

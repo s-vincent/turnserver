@@ -58,7 +58,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
 #endif
 
@@ -79,7 +79,7 @@ extern "C"
 
 int seed_prng_init(void)
 {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
   if(access("/dev/urandom", F_OK) != ENOENT)
   {
     /* OpenSSL use /dev/urandom by default */

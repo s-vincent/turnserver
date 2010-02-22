@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
  * \file protocol.h
  * \brief Creation of STUN/TURN messages and attributes, helper functions.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifndef PROTOCOL_H
@@ -43,13 +43,19 @@
 #include <config.h>
 #endif
 
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#else
+#include <winsock2.h>
+#endif
+
 #include "turn.h"
 #include "tls_peer.h"
-#include "turnserver.h"
  
 #ifdef __cplusplus
 extern "C"

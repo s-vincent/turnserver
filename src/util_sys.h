@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *    
+ *
  *  In addition, as a special exception, the copyright holders give
  *  permission to link the code of portions of this program with the
  *  OpenSSL library under certain conditions as described in each
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2009 Sebastien Vincent.
+ * Copyright (C) 2006-2010 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file util_sys.h
  * \brief Some helper system functions.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifndef UTIL_SYS_H
@@ -63,7 +63,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/uio.h>
 #include <sys/select.h>
 #else
@@ -85,14 +85,12 @@ typedef __int32 int32_t;
 typedef unsigned __int32 uint32_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
-typedef int pid_t;
 typedef int mode_t;
 typedef int ssize_t;
-typedef unsigned int size_t;
-typedef int socklen_t;
+#define inline __inline
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 /**
  * \struct iovec
  * \brief iovector structure for win32.
@@ -102,6 +100,15 @@ typedef struct iovec
   void* iov_base; /**< Pointer on data */
   size_t iov_len; /**< Size of data */
 }iovec;
+
+/* some unix types are not defined for Windows 
+ * (even with MinGW) so declare it here
+ */
+typedef int pid_t;
+typedef unsigned int size_t;
+typedef int socklen_t;
+typedef int uid_t;
+typedef int gid_t;
 #endif
 
 /**
@@ -142,7 +149,7 @@ typedef long int fd_mask;
  */
 typedef struct sfd_set
 {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_WIN64)
   fd_mask fds_bits[SFD_SETSIZE / (8 * sizeof(fd_mask)) + 1]; /**< Bitmask */
 
   /**
@@ -151,7 +158,8 @@ typedef struct sfd_set
    */
 #define __fds_bits fds_bits 
 #else
-  fd_mask fds_bits[SFD_SETSIZE]; /**< Bitmask */
+  SOCKET fd_array[SFD_SETSIZE]; /**< Bitmask */
+#define fd_mask 
 #endif
 }sfd_set;
 
@@ -159,7 +167,7 @@ typedef struct sfd_set
  * \def SFD_ZERO
  * \brief FD_ZERO wrapper.
  */
-#define SFD_ZERO(set) memset((set), 0x00, sizeof(sfd_set) / sizeof(fd_mask))
+#define SFD_ZERO(set) memset((set), 0x00, sizeof(sfd_set))
 
 /**
  * \def SFD_SET
@@ -388,7 +396,7 @@ void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t);
  */
 void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t);
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 /**
  * \brief The writev() function for win32 socket.
  * \param fd the socket descriptor to write the data
