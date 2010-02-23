@@ -283,7 +283,7 @@ char* strdup(const char* str)
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
-ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size)
+ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t* addr_size)
 {
   /* it should be sufficient, 
    * the dynamically allocation is timecost.
@@ -324,7 +324,7 @@ ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockad
   return (ssize_t)ret;
 }
 
-ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t addr_size)
+ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t addr_size)
 {
   /* it should be sufficient,
    * the dynamically allocation is timecost.

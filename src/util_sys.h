@@ -407,7 +407,7 @@ void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t);
  * \return number of bytes written or -1 if error
  * \warning this function work only with socket!
  */
-ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t addr_size);
+ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t addr_size);
 
 /**
  * \brief The readv() function for win32 socket.
@@ -419,7 +419,7 @@ ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, struct socka
  * \return number of bytes read or -1 if error
  * \warning this function work only with socket!
  */
-ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, struct sockaddr* addr, socklen_t* addr_size);
+ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t* addr_size);
 #endif
 
 #ifdef __cplusplus

@@ -1284,7 +1284,7 @@ int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size, co
 {
   ssize_t len = -1;
 
-#if !defined(_WIN32) || !defined(_WIN64)
+#if !defined(_WIN32) && !defined(_WIN64)
   struct msghdr msg;
 
   memset(&msg, 0x00, sizeof(struct msghdr));
@@ -1303,7 +1303,7 @@ int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen)
 {
   ssize_t len = -1;
 
-#if !defined(_WIN32) || !defined(_WIN64)
+#if !defined(_WIN32) && !defined(_WIN64)
   struct msghdr msg;
 
   memset(&msg, 0x00, sizeof(struct msghdr));
