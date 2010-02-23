@@ -67,17 +67,6 @@ extern "C"
 #include <sys/types.h>
 
 /**
- * \def DBG_THREAD_LOCK
- * \brief Print message on stderr when some pthread function are used.
- * If you do not want this, set to 0.
- */
-#ifndef DBG_THREAD_LOCK
-#define DBG_THREAD_LOCK 0
-#else
-#define DBG_THREAD_LOCK 1
-#endif
-
-/**
  * \def DBG_ATTR
  * \brief Current file and line seperated with a comma.
  */
@@ -138,7 +127,13 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  */
 #define debug_hexa dbg_print_hexa
 
-#if DBG_THREAD_LOCK != 0
+/**
+ * If you want to have debug message on stderr when some 
+ * pthread functions are used, define DBG_THREAD_LOCK.
+ * It could be useful when debugging deadlocks or other
+ * thread synchronization stuff.
+ */
+#ifdef DBG_THREAD_LOCK
 
 /**
  * \def pthread_mutex_lock
