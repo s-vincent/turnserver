@@ -1940,9 +1940,9 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
     debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
-    /* adjust lifetime (cannot be greater that maximum allowed */
+    /* adjust lifetime (cannot be greater that maximum allowed) */
     lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
-  
+
     if(lifetime > 0)
     {
       /* lifetime cannot be smaller than default */
@@ -2250,7 +2250,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     debug(DBG_ATTR, "lifetime: %u seconds\n", lifetime);
 
-    /* adjust lifetime (cannot be greater than maximum allowed */
+    /* adjust lifetime (cannot be greater than maximum allowed) */
     lifetime = MIN(lifetime, TURN_MAX_ALLOCATION_LIFETIME);
 
     /* lifetime cannot be smaller than default */
@@ -3774,7 +3774,6 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
               LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
               turnserver_unblock_realtime_signal();
               allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
-              
               continue;
             }
           }
@@ -4434,7 +4433,7 @@ int main(int argc, char** argv)
   if(turnserver_cfg_tls() || turnserver_cfg_dtls())
   {
     struct tls_peer* speer = NULL;
-    
+
     /* libssl initialization */
     LIBSSL_INIT;
 

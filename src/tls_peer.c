@@ -72,7 +72,20 @@
 
 #include <arpa/inet.h>
 #include <netdb.h>
+#elif defined(_MSC_VER)
+/* Microsoft compiler does not want users
+ * to use snprintf directly...
+ */
+#define snprintf _snprintf
 #endif
+
+#include <openssl/evp.h>
+#include <openssl/crypto.h>
+#include <openssl/pem.h>
+#include <openssl/pkcs7.h>
+#include <openssl/x509v3.h>
+
+#include "tls_peer.h"
 
 /* macro should be declared in netinet/in.h even in POSIX compilation 
  * but it appeared that it is not defined on some BSD system
@@ -86,13 +99,6 @@
 #define IPV6_V6ONLY 27
 #endif
 
-#include <openssl/evp.h>
-#include <openssl/crypto.h>
-#include <openssl/pem.h>
-#include <openssl/pkcs7.h>
-#include <openssl/x509v3.h>
-
-#include "tls_peer.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -324,13 +330,13 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
 
   if(type == UDP)
   {
-    method_client = DTLSv1_client_method();
-    method_server = DTLSv1_server_method();
+    method_client = (SSL_METHOD*)DTLSv1_client_method();
+    method_server = (SSL_METHOD*)DTLSv1_server_method();
   }
   else
   {
-    method_client = TLSv1_client_method();
-    method_server = TLSv1_server_method();
+    method_client = (SSL_METHOD*)TLSv1_client_method();
+    method_server = (SSL_METHOD*)TLSv1_server_method();
   }
 
   peer->ctx_client = SSL_CTX_new(method_client);

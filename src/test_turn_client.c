@@ -43,9 +43,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <getopt.h>
+
+#ifndef _MSC_VER
+/* Microsoft compiler does not have it */
+#include <stdint.h>
+#else
+/* Microsoft compiler does not want users
+ * to use snprintf directly...
+ */
+#define snprintf _snprintf
+/* Microsoft compiler use closesocket()
+ * instead of close() to close a socket
+ */
+#define close closesocket
+#endif
 
 #if defined(_WIN32) || defined(_WIN64)
 /* Windows needs Winsock2 include 

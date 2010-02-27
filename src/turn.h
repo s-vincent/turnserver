@@ -54,6 +54,11 @@ typedef __int32 int32_t;
 typedef unsigned __int32 uint32_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
+/* __attribute__ is a GCC extension
+ * and it is not recognized by Microsoft
+ * compiler, so define it as nothing
+ */
+#define __attribute__(x) 
 #else
 #include <stdint.h>
 #endif
@@ -268,6 +273,13 @@ typedef unsigned __int64 uint64_t;
 /* draft-ietf-behave-turn-tcp-05 */
 /* Timeout of TCP relay when no ConnectionBind is received (in seconds) */
 #define TURN_DEFAULT_TCP_RELAY_TIMEOUT        30
+
+/* Microsoft compiler use pragma pack to "packed" structure
+ * instead of GCC that use __attribute__((packed)
+ */
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 
 /**
  * \struct turn_msg_hdr
@@ -563,6 +575,11 @@ struct turn_attr_connection_id
   uint16_t turn_attr_len; /**< Length of "value" */
   uint32_t turn_attr_id; /**<  Connection ID */
 }__attribute__((packed));
+
+/* end of "packed" structure for Microsoft compiler */
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 #ifdef __cplusplus
 }
