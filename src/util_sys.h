@@ -87,6 +87,7 @@ typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 typedef int mode_t;
 typedef int ssize_t;
+typedef int pid_t;
 #define inline __inline
 #endif
 
@@ -104,8 +105,6 @@ typedef struct iovec
 /* some unix types are not defined for Windows 
  * (even with MinGW) so declare it here
  */
-typedef int pid_t;
-typedef unsigned int size_t;
 typedef int socklen_t;
 typedef int uid_t;
 typedef int gid_t;
