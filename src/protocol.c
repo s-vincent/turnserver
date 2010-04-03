@@ -129,7 +129,7 @@ static struct turn_attr_hdr* turn_attr_address_create(uint16_t type, const struc
  * \return pointer on turn_attr_hdr or NULL if problem
  */
 static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const struct sockaddr* address, uint32_t cookie,
-                                                          const uint8_t* id, struct iovec* iov)
+    const uint8_t* id, struct iovec* iov)
 {
   struct turn_attr_xor_mapped_address* ret = NULL; /* XOR-MAPPED-ADDRESS are the same as XOR-PEER-ADDRESS and XOR-RELAYED-ADDRESS */
   size_t len = 0;
@@ -188,7 +188,7 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   msb_cookie = ((uint8_t*)&cookie)[0] << 8 | ((uint8_t*)&cookie)[1];
   port ^= msb_cookie;
 
-  /* IPv4/IPv6 XOR cookie (just the first four bytes of IPv6 address) */ 
+  /* IPv4/IPv6 XOR cookie (just the first four bytes of IPv6 address) */
   for(i = 0 ; i < 4 ; i++)
   {
     ptr[i] ^= p[i];
@@ -484,19 +484,19 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
 
   if(is_little_endian())
   {
-    ret->turn_attr_reserved_class = class << 16; 
+    ret->turn_attr_reserved_class = class << 16;
   }
   else /* big endian */
   {
-    ret->turn_attr_reserved_class = class; 
+    ret->turn_attr_reserved_class = class;
   }
 
   ret->turn_attr_number = number;
 
-  /* even if strlen(reason) < len, strncpy will add extra-zero 
+  /* even if strlen(reason) < len, strncpy will add extra-zero
    * also no need to add final NULL character since length is known (TLV)
    */
-  strncpy((char*)ret->turn_attr_reason, reason, real_len); 
+  strncpy((char*)ret->turn_attr_reason, reason, real_len);
 
   iov->iov_base = ret;
   iov->iov_len = sizeof(struct turn_attr_error_code) + real_len;
@@ -505,7 +505,7 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
 }
 
 struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknown_attributes, size_t attr_size,
-                                                          struct iovec* iov)
+    struct iovec* iov)
 {
   size_t len = 0;
   size_t tmp_len = 0;
@@ -513,13 +513,13 @@ struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknow
   uint16_t* ptr = NULL;
   size_t i = 0;
 
-  /* length of the attributes MUST be a multiple of 4 bytes 
-   * so it must be a pair number of attributes 
+  /* length of the attributes MUST be a multiple of 4 bytes
+   * so it must be a pair number of attributes
    */
   len = attr_size + (attr_size % 2);
 
   /* each attribute has 2 bytes length */
-  if(!(ret = malloc(sizeof(struct turn_attr_unknown_attribute) + (len * 2) ))) 
+  if(!(ret = malloc(sizeof(struct turn_attr_unknown_attribute) + (len * 2) )))
   {
     return NULL;
   }
@@ -554,7 +554,7 @@ struct turn_attr_hdr* turn_attr_realm_create(const char* realm, size_t len, stru
   struct turn_attr_realm* ret = NULL;
   size_t real_len = len;
 
-  /* realm can be as long as 763 bytes */ 
+  /* realm can be as long as 763 bytes */
   if(len > 763)
   {
     return NULL;
@@ -616,7 +616,7 @@ struct turn_attr_hdr* turn_attr_nonce_create(const uint8_t* nonce, size_t len, s
 }
 
 struct turn_attr_hdr* turn_attr_xor_mapped_address_create(const struct sockaddr* address, uint32_t cookie,
-                                                          const uint8_t* id, struct iovec* iov)
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_attr_xor_address_create(STUN_ATTR_XOR_MAPPED_ADDRESS, address, cookie, id, iov);
 }
@@ -720,7 +720,7 @@ struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime, struct iovec*
 }
 
 struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* address, uint32_t cookie,
-                                                        const uint8_t* id, struct iovec* iov)
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_attr_xor_address_create(TURN_ATTR_XOR_PEER_ADDRESS, address, cookie, id, iov);
 }
@@ -753,7 +753,7 @@ struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, st
 }
 
 struct turn_attr_hdr* turn_attr_xor_relayed_address_create(const struct sockaddr* address, uint32_t cookie,
-                                                           const uint8_t* id, struct iovec* iov)
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_attr_xor_address_create(TURN_ATTR_XOR_RELAYED_ADDRESS, address, cookie, id, iov);
 }
@@ -899,7 +899,7 @@ struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, stru
 }
 
 struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, const char* realm, const uint8_t* nonce,
-                                            size_t nonce_len, struct iovec* iov, size_t* index)
+    size_t nonce_len, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -942,7 +942,7 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, cons
 }
 
 struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, const uint16_t* unknown, size_t unknown_size,
-                                             struct iovec* iov, size_t* index)
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -974,7 +974,7 @@ struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, cons
 }
 
 struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, const char* realm, const uint8_t* nonce,
-                                             size_t nonce_len, struct iovec* iov, size_t* index)
+    size_t nonce_len, struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1317,7 +1317,7 @@ int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen)
 }
 
 int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t addr_size, size_t total_len,
-                  const struct iovec* iov, size_t iovlen)
+    const struct iovec* iov, size_t iovlen)
 {
   char* buf = NULL;
   char* p = NULL;
@@ -1332,7 +1332,7 @@ int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t 
 
   p = buf;
 
-  /* convert the iovec into raw buffer 
+  /* convert the iovec into raw buffer
    * cannot send iovec with libssl.
    */
   for(i = 0 ; i < iovlen ; i++)
@@ -1348,8 +1348,8 @@ int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t 
   return nb;
 }
 
-int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr, 
-                      socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen)
+int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
+    socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen)
 {
   if(speer) /* TLS */
   {
@@ -1371,8 +1371,8 @@ int turn_generate_transaction_id(uint8_t* id)
   return random_bytes_generate(id, 12);
 }
 
-int turn_calculate_authentication_key(const char* username, const char* realm, const char* password, unsigned char* key,
-                                      size_t key_len)
+int turn_calculate_authentication_key(const char* username, const char* realm, const char* password,
+    unsigned char* key, size_t key_len)
 {
   MD5_CTX ctx;
 
@@ -1393,7 +1393,7 @@ int turn_calculate_authentication_key(const char* username, const char* realm, c
 }
 
 int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const unsigned char* key, size_t key_len,
-                                  unsigned char* integrity)
+    unsigned char* integrity)
 {
   HMAC_CTX ctx;
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -1410,7 +1410,7 @@ int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const un
 }
 
 int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, const unsigned char* key,
-                                      size_t key_len, unsigned char* integrity)
+    size_t key_len, unsigned char* integrity)
 {
   HMAC_CTX ctx;
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -1507,7 +1507,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
   if(memcmp(md_txt, nonce + 16, (MD5_DIGEST_LENGTH * 2)) != 0)
   {
     /* MD5 hash mismatch */
-    return 1; 
+    return 1;
   }
 
   if(time(NULL) > t)
@@ -1532,7 +1532,8 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen)
   return crc;
 }
 
-int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len, int add_fingerprint)
+int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len,
+    int add_fingerprint)
 {
   struct turn_attr_hdr* attr = NULL;
   struct turn_msg_hdr* hdr = iov[0].iov_base;
@@ -1601,7 +1602,8 @@ int turn_add_fingerprint(struct iovec* iov, size_t* index)
   return 0;
 }
 
-int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie, const uint8_t* msg_id)
+int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie,
+    const uint8_t* msg_id)
 {
   size_t i = 0;
   size_t len = 0;
@@ -1637,7 +1639,7 @@ int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
 }
 
 int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown,
-                       size_t* unknown_size)
+    size_t* unknown_size)
 {
   struct turn_msg_hdr* hdr = NULL;
   ssize_t len = 0; /* attributes length */
@@ -1674,7 +1676,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
     return -1;
   }
 
-  while(len > 4) 
+  while(len > 4)
   {
     struct turn_attr_hdr* attr = (struct turn_attr_hdr*)ptr;
 
@@ -1686,7 +1688,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
       return 0;
     }
 
-    /* MESSAGE-INTEGRITY is the last attribute except if FINGERPRINT follow it */ 
+    /* MESSAGE-INTEGRITY is the last attribute except if FINGERPRINT follow it */
     if(message->message_integrity && ntohs(attr->turn_attr_type) != STUN_ATTR_FINGERPRINT)
     {
       /* with the exception of the FINGERPRINT attribute [...]
@@ -1744,11 +1746,11 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         }
         else
         {
-          /* too many XOR-PEER-ADDRESS attribute, 
-           * this will inform process_createpermission() to reject the 
+          /* too many XOR-PEER-ADDRESS attribute,
+           * this will inform process_createpermission() to reject the
            * request with a 508 error
            */
-          message->xor_peer_addr_overflow = 1; 
+          message->xor_peer_addr_overflow = 1;
         }
         break;
       case TURN_ATTR_DATA:
@@ -1805,9 +1807,9 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
     }
   }
 
-  *unknown_size = unknown_index; 
+  *unknown_size = unknown_index;
 
-  return 0; 
+  return 0;
 }
 
 #ifdef __cplusplus

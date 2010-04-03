@@ -33,7 +33,7 @@
  * \file allocation.c
  * \brief Allocation between TURN client and external(s) client(s).
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifdef HAVE_CONFIG_H
@@ -51,9 +51,8 @@
 #include "turnserver.h"
 
 struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username,
-                                            const unsigned char* key, const char* realm, const unsigned char* nonce,
-                                            const struct sockaddr* relayed_addr, const struct sockaddr* server_addr,
-                                            const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
+    const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr,
+    const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
 {
   struct allocation_desc* ret = NULL;
   size_t len_username = 0;
@@ -61,7 +60,8 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   len_username = strlen(username);
 
-  if(!username || !relayed_addr || !server_addr || !client_addr || len_username == 0 ||  !addr_size || !id || !realm || !key || !nonce)
+  if(!username || !relayed_addr || !server_addr || !client_addr || len_username == 0 ||
+     !addr_size || !id || !realm || !key || !nonce)
   {
     return NULL;
   }
@@ -225,7 +225,8 @@ void allocation_desc_set_timer(struct allocation_desc* desc, uint32_t lifetime)
   }
 }
 
-struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const uint8_t* peer_addr)
+struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family,
+    const uint8_t* peer_addr)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -249,7 +250,8 @@ struct allocation_permission* allocation_desc_find_permission(struct allocation_
   return NULL;
 }
 
-struct allocation_permission* allocation_desc_find_permission_sockaddr(struct allocation_desc* desc, const struct sockaddr* addr)
+struct allocation_permission* allocation_desc_find_permission_sockaddr(struct allocation_desc* desc,
+    const struct sockaddr* addr)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -296,7 +298,8 @@ struct allocation_permission* allocation_desc_find_permission_sockaddr(struct al
   return NULL;
 }
 
-int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family, const uint8_t* peer_addr)
+int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family,
+    const uint8_t* peer_addr)
 {
   struct allocation_permission* ret = NULL;
   struct sigevent event;
@@ -330,7 +333,8 @@ int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifeti
   return 0;
 }
 
-uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port)
+uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const uint8_t* peer_addr,
+    uint16_t peer_port)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -339,7 +343,8 @@ uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, 
   {
     struct allocation_channel* tmp = list_get(get, struct allocation_channel, list);
 
-    if(tmp->family == family && !memcmp(&tmp->peer_addr, peer_addr, family == AF_INET ? 4 : 16) && tmp->peer_port == peer_port)
+    if(tmp->family == family && !memcmp(&tmp->peer_addr, peer_addr, family == AF_INET ? 4 : 16) &&
+       tmp->peer_port == peer_port)
     {
       return tmp->channel_number;
     }
@@ -368,7 +373,8 @@ struct allocation_channel* allocation_desc_find_channel_number(struct allocation
   return 0;
 }
 
-int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const uint8_t* peer_addr, uint16_t peer_port)
+int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family,
+    const uint8_t* peer_addr, uint16_t peer_port)
 {
   struct allocation_channel* ret = NULL;
   struct sigevent event;
@@ -505,8 +511,8 @@ struct allocation_desc* allocation_list_find_id(struct list_head* list, const ui
   return NULL;
 }
 
-struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int transport_protocol, const struct sockaddr* server_addr,
-                                                   const struct sockaddr* client_addr, socklen_t addr_size)
+struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int transport_protocol,
+    const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -527,7 +533,8 @@ struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int t
   return NULL;
 }
 
-struct allocation_desc* allocation_list_find_relayed(struct list_head* list, const struct sockaddr* relayed_addr, socklen_t addr_size)
+struct allocation_desc* allocation_list_find_relayed(struct list_head* list, const struct sockaddr* relayed_addr,
+    socklen_t addr_size)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -546,7 +553,8 @@ struct allocation_desc* allocation_list_find_relayed(struct list_head* list, con
   return NULL;
 }
 
-int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size)
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family,
+    const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id)
 {
   struct allocation_tcp_relay* ret = NULL;
   struct sigevent event;
@@ -557,6 +565,24 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
   }
 
   ret->buf = NULL;
+  ret->new = 0;
+
+  /* connect_msg_id present, it means that client contact another peer
+   * and due to asynchronous connect(), server keep request ID.
+   * it also means that the current remote socket is not ready
+   * (i.e. connected) to send data
+   */
+  if(connect_msg_id)
+  {
+    ret->ready = 0;
+    memcpy(ret->connect_msg_id, connect_msg_id, 12);
+  }
+  else
+  {
+    ret->ready = 1;
+  }
+
+  ret->created = time(NULL); 
 
   if(buffer_size)
   {
@@ -575,8 +601,8 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
   memcpy(&ret->peer_addr, peer_addr, family == AF_INET6 ? 16 : 4);
   ret->peer_port = peer_port;
 
-  /* client_sock will be initialized when client will send 
-   * a ConnectionBind request 
+  /* client_sock will be initialized when client will send
+   * a ConnectionBind request
    */
   ret->client_sock = -1;
 
@@ -596,7 +622,7 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
   allocation_tcp_relay_set_timer(ret, timeout);
 
   /* add to the list */
-  LIST_ADD(&ret->list, &desc->tcp_relays); 
+  LIST_ADD(&ret->list, &desc->tcp_relays);
   INIT_LIST(ret->list2);
   return 0;
 }
@@ -649,7 +675,8 @@ struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation
   return NULL;
 }
 
-struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port)
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocation_desc* desc, int family,
+    const uint8_t* peer_addr, uint16_t peer_port)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;

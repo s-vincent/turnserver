@@ -84,7 +84,7 @@ void dbg_print(const char* f, int line, const char* format, ...);
 
 /**
  * \brief Print nothing!
- * \param f filename 
+ * \param f filename
  * \param line line number
  * \param format format of the output (similary to printf param)
  * \param ... list of arguments
@@ -128,7 +128,7 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
 #define debug_hexa dbg_print_hexa
 
 /**
- * If you want to have debug message on stderr when some 
+ * If you want to have debug message on stderr when some
  * pthread functions are used, define DBG_THREAD_LOCK.
  * It could be useful when debugging deadlocks or other
  * thread synchronization stuff.

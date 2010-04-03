@@ -65,7 +65,7 @@
 #ifndef _MSC_VER
 #include <stdint.h>
 #else
-/* Microsoft compiler does not define several 
+/* Microsoft compiler does not define several
  * type of int (in a standard way)
  */
 typedef __int8 int8_t;
@@ -110,7 +110,7 @@ extern "C"
  * \def LIBSSL_CLEANUP
  * \brief Cleanup libssl.
  * \note You have to call it when your program exit.
- * \note It is normal if your program still leaks 48 bytes on x86 
+ * \note It is normal if your program still leaks 48 bytes on x86
  * or 88 bytes on x86_64 due to libssl.
  */
 #define LIBSSL_CLEANUP {EVP_cleanup(); ERR_remove_state(0); ERR_free_strings(); CRYPTO_cleanup_all_ex_data(); }while(0)

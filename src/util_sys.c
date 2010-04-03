@@ -244,11 +244,11 @@ char* encode_http_string(const char* str)
   {
     unsigned int t = (unsigned int)str[i];
 
-    if(t < 42 || t == ',' || (t >= 58  && t < 64) || 
-       (t >= 91 && t < 95) || t == '`' || 
-       t > 122 || t == '+' || t == '&' || 
-       t == ',' || t == ';' || t == '/' || 
-       t == '?' || t == '@' || t == '$' || 
+    if(t < 42 || t == ',' || (t >= 58  && t < 64) ||
+       (t >= 91 && t < 95) || t == '`' ||
+       t > 122 || t == '+' || t == '&' ||
+       t == ',' || t == ';' || t == '/' ||
+       t == '?' || t == '@' || t == '$' ||
        t == '=' || t == ':' )
     {
       /* replace */
@@ -285,9 +285,9 @@ char* strdup(const char* str)
 #if defined(_WIN32) || defined(_WIN64)
 ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t* addr_size)
 {
-  /* it should be sufficient, 
+  /* it should be sufficient,
    * the dynamically allocation is timecost.
-   * We could use a static WSABUF* winiov but 
+   * We could use a static WSABUF* winiov but
    * the function would be non reentrant.
    */
   WSABUF winiov[50];
@@ -387,7 +387,7 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid
   /* Unix */
   gid_eff = 0; /* not used for the moment */
 
-  if(uid_real == 0 || uid_eff == 0) 
+  if(uid_real == 0 || uid_eff == 0)
   {
     /* program runs as root or sudoers */
     struct passwd user;
@@ -455,7 +455,7 @@ void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex, s
   size_t i = 0;
   unsigned char j = 0;
 
-  for(i = 0 ; i < bin_len && (i * 2) < hex_len ; i++) 
+  for(i = 0 ; i < bin_len && (i * 2) < hex_len ; i++)
   {
     j = (bin[i] >> 4) & 0x0f;
 
@@ -484,7 +484,7 @@ void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex, s
 void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t)
 {
   unsigned int i = 0;
-  *t = 0; 
+  *t = 0;
 
   for(i = 0 ; i < data_len ; i++)
   {
@@ -504,7 +504,7 @@ void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t)
 void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t)
 {
   unsigned int i = 0;
-  *t = 0; 
+  *t = 0;
 
   for(i = 0 ; i < data_len ; i++)
   {

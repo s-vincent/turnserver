@@ -87,7 +87,7 @@
 
 #include "tls_peer.h"
 
-/* macro should be declared in netinet/in.h even in POSIX compilation 
+/* macro should be declared in netinet/in.h even in POSIX compilation
  * but it appeared that it is not defined on some BSD system
  */
 #ifndef IPPROTO_IPV6
@@ -165,7 +165,8 @@ static struct ssl_peer* ssl_peer_new(struct sockaddr* addr, socklen_t addrlen, S
  * \param addrlen sizeof addr
  * \return a valid ssl_peer pointer or NULL if not found
  */
-static struct ssl_peer* tls_peer_find_connection(struct tls_peer* peer, const struct sockaddr* addr, socklen_t addrlen)
+static struct ssl_peer* tls_peer_find_connection(struct tls_peer* peer, const struct sockaddr* addr,
+    socklen_t addrlen)
 {
   struct list_head* n = NULL;
   struct list_head* get = NULL;
@@ -277,7 +278,8 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl, i
  * \param key_file private key file
  * \return 0 if success, -1 otherwise
  */
-static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file, const char* cert_file, const char* key_file)
+static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file, const char* cert_file,
+    const char* key_file)
 {
   if(SSL_CTX_set_cipher_list(ctx, "DEFAULT") != 1)
   {
@@ -289,7 +291,7 @@ static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file, const c
   /* SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU); */
 
   if(SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) != 1)
-  { 
+  {
     return -1;
   }
 
@@ -319,7 +321,7 @@ static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file, const c
  * \note If returns -1, the caller must call tls_peer_free() as some memory could be allocated
  */
 static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const char* addr, uint16_t port,
-                          const char* ca_file, const char* cert_file, const char* key_file)
+    const char* ca_file, const char* cert_file, const char* key_file)
 {
   STACK_OF(X509_NAME)* calist = NULL;
   SSL_METHOD* method_server = NULL;
@@ -372,7 +374,7 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
     if(calist == NULL)
     {
       return -1;
-    } 
+    }
 
     SSL_CTX_set_client_CA_list(peer->ctx_server, calist);
   }
@@ -393,8 +395,8 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type, const 
  * \param speer SSL peer
  * \return number of bytes read or -1 if error or handshake not finalized
  */
-static ssize_t tls_peer_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen,
-                             struct ssl_peer* speer)
+static ssize_t tls_peer_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout,
+    ssize_t bufoutlen, struct ssl_peer* speer)
 {
   BIO* bio_read = NULL;
   ssize_t len = -1;
@@ -438,7 +440,8 @@ void tls_peer_print_connection(struct tls_peer* peer)
   {
     struct ssl_peer* tmp = list_get(get, struct ssl_peer, list);
 
-    if(getnameinfo((struct sockaddr*)&tmp->addr, sizeof(tmp->addr), buf, INET6_ADDRSTRLEN, NULL, 0, NI_NUMERICHOST) != 0)
+    if(getnameinfo((struct sockaddr*)&tmp->addr, sizeof(tmp->addr), buf, INET6_ADDRSTRLEN, NULL, 0,
+          NI_NUMERICHOST) != 0)
     {
       continue;
     }
@@ -526,8 +529,8 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, s
   return (ret > 0) ? 0 : -1;
 }
 
-ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen,
-                          const struct sockaddr* addr, socklen_t addrlen, int sock)
+ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout,
+    ssize_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen, int sock)
 {
   struct ssl_peer* speer = NULL;
 
@@ -567,8 +570,8 @@ ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char
   return tls_peer_read(peer, buf, buflen, bufout, bufoutlen, speer);
 }
 
-ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen,
-                          const struct sockaddr* addr, socklen_t addrlen)
+ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout,
+    ssize_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen)
 {
   struct ssl_peer* speer = NULL;
 
@@ -612,7 +615,8 @@ ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char
   return tls_peer_read(peer, buf, buflen, bufout, bufoutlen, speer);
 }
 
-ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen, const struct sockaddr* addr, socklen_t addrlen)
+ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen,
+    const struct sockaddr* addr, socklen_t addrlen)
 {
   BIO* bio_write = NULL;
   ssize_t len = -1;
@@ -672,7 +676,7 @@ ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen, c
 
 int tls_peer_is_encrypted(const char* buf, size_t len)
 {
-  uint8_t c = 0; 
+  uint8_t c = 0;
   uint8_t v = 0;
   uint8_t v2 = 0;
 
@@ -688,7 +692,7 @@ int tls_peer_is_encrypted(const char* buf, size_t len)
   /* test the 3 first bytes */
   if(c == 0x14 || c == 0x15 || c == 0x16 || c == 0x17)
   {
-    /* ok first byte indicates that it is possibly a TLS frame, 
+    /* ok first byte indicates that it is possibly a TLS frame,
      * check the next two bytes to see if it is TLSv1 or DTLSv1
      */
 
@@ -745,7 +749,7 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port, int 
       setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
     }
 
-    /* accept IPv6 and IPv4 on the same socket */ 
+    /* accept IPv6 and IPv4 on the same socket */
     on = 0;
     setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
 
@@ -771,7 +775,7 @@ void tls_peer_free(struct tls_peer** peer)
   struct tls_peer* ret = *peer;
 
   /* remote peer(s) */
-  tls_peer_clear_connection(ret); 
+  tls_peer_clear_connection(ret);
 
   /* CTXs */
   if(ret->ctx_client)
@@ -803,8 +807,8 @@ void tls_peer_free(struct tls_peer** peer)
   *peer = NULL;
 }
 
-struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr, uint16_t port, const char* ca_file,
-                              const char* cert_file, const char* key_file)
+struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr, uint16_t port,
+    const char* ca_file, const char* cert_file, const char* key_file)
 {
   struct tls_peer* ret = NULL;
 

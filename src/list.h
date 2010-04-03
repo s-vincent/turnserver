@@ -71,7 +71,7 @@
 /**
  * \struct list_head
  * \brief Doubly linked list implementation.
- * 
+ *
  * Simple doubly linked list implementation inspired by include/linux/list.h.
  * \note To use it: LIST_HEAD(name_variable) to declare the variable
  * then always do INIT_LIST(name_variable).

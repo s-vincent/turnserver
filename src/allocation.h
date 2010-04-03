@@ -118,9 +118,12 @@ struct allocation_tcp_relay
   int client_sock; /**< Client data connection (client <-> server) */
   timer_t expire_timer; /**< Expire timer */
   int new; /**< If the connection is newly initiated */
+  int ready; /**< If remote peer is connected (i.e. connect() has succeed before timeout) */
+  time_t created; /**< Time when this relay has been created (this is used to calculted timeout) */
   char* buf; /**< Internal buffer for peer data (before receiving ConnectionBind) */
   size_t buf_len; /**< Length of current data in internal buffer */
   size_t buf_size; /**< Capacity of internal buffer */
+  uint8_t connect_msg_id[12]; /**< TURN message ID of the connection request (if any) */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };
@@ -142,8 +145,7 @@ struct allocation_desc
   struct list_head peers_permissions; /**< List of peers permissions */
   struct list_head tcp_relays; /**< TCP relays information */
   int relayed_sock; /**< Socket for the allocated transport address */
-  int relayed_sock_tcp; /**< Socket for the allocated transport address to contact TCP peer (draft-ietf-behave-turn-tcp-05).
-                             It is set to -1 if Connect request succeed */
+  int relayed_sock_tcp; /**< Socket for the allocated transport address to contact TCP peer (draft-ietf-behave-turn-tcp-06). It is set to -1 if Connect request succeed */
   int relayed_tls; /**< If allocation has been set in TLS */
   int relayed_dtls; /**< If allocation has been set in DTLS */
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
@@ -255,9 +257,10 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, 
  * \param peer_port peer port
  * \param timeout TCP relay timeout (if no ConnectionBind is received)
  * \param buffer_size internal buffer size (for peer data)
+ * \param connect_msg_id Connect request message ID if client contact another peer otherwise put NULL 
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size);
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id);
 
 /**
  * \brief Remove a TCP relay.
@@ -286,7 +289,7 @@ struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocati
 
 /**
  * \brief Set timer of an TCP relay.
- * 
+ *
  * If timeout is 0, the timer is stopped.
  * \param relay TCP relay
  * \param timeout timeout to set

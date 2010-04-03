@@ -47,6 +47,8 @@
 #include <signal.h>
 #include <errno.h>
 #include <syslog.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -72,13 +74,13 @@
 
 #ifndef HAVE_SIGACTION
 /* expiration stuff use real-time signals
- * that can only be handled by sigaction 
+ * that can only be handled by sigaction
  * so stop compilation with error
  */
 #error "Must have sigaction."
 #endif
 
-/* for operating systems that support setting 
+/* for operating systems that support setting
  * DF flag from userspace, give them a
  * #define OS_SET_DF_SUPPORT
  */
@@ -87,7 +89,7 @@
  * \def OS_SET_DF_SUPPORT
  * \brief Current operating system can set the DF flag.
  */
-#define OS_SET_DF_SUPPORT 1 
+#define OS_SET_DF_SUPPORT 1
 #endif
 
 /**
@@ -208,7 +210,7 @@ struct listen_sockets
  */
 static inline socklen_t sockaddr_get_size(struct sockaddr_storage* ss)
 {
-  /* assume address type is IPv4 or IPv6 as TURN specification 
+  /* assume address type is IPv4 or IPv6 as TURN specification
    * supports only these two types of address
    */
   return (ss->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
@@ -243,8 +245,8 @@ static void signal_handler(int code)
  * \brief Realtime signal management.
  *
  * This is mainly used when a object timer expired. As usage of
- * functions like free() in a signal handler are not permitted 
- * and to avoid race conditions, this function put the desired 
+ * functions like free() in a signal handler are not permitted
+ * and to avoid race conditions, this function put the desired
  * expired object in an expired list and the main loop will purge it.
  * \param signo signal number
  * \param info additionnal info
@@ -335,7 +337,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 /**
  * \brief Block realtime signal used in TurnServer.
  *
- * This is used to prevent race conditions when adding 
+ * This is used to prevent race conditions when adding
  * or removing objects in expired list (which is mainly
  * done in signal handler and in purge loop).
  */
@@ -354,7 +356,7 @@ static inline void turnserver_block_realtime_signal(void)
 /**
  * \brief Unblock realtime signal used in TurnServer.
  *
- * This is used to prevent race conditions when adding 
+ * This is used to prevent race conditions when adding
  * or removing objects in expired list (which is mainly
  * done in signal handler and in purge loop).
  */
@@ -441,9 +443,9 @@ static void turnserver_disable_core_dump(void)
 /**
  * \brief Check bandwidth limitation on uplink OR downlink.
  * \param desc allocation descriptor
- * \param byteup byte received on uplink connection. 0 means 
+ * \param byteup byte received on uplink connection. 0 means
  * bandwidth check will be made on downlink (if different than 0)
- * \param bytedown byte received on downlink connection. 0 means 
+ * \param bytedown byte received on downlink connection. 0 means
  * bandwidth check will be made on uplink (if different than 0)
  * \return 1 if bandwidth threshold is exceeded, 0 otherwise
  */
@@ -476,7 +478,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
     debug(DBG_ATTR, "Tokenup bucket available: %u, tokens requested: %u\n", desc->bucket_tokenup, byteup);
 
     if(byteup <= desc->bucket_tokenup)
-    { 
+    {
       desc->bucket_tokenup -= byteup;
     }
     else
@@ -490,7 +492,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
     if(desc->bucket_tokendown < desc->bucket_capacity)
     {
       /* count in milliseconds */
-      diff = (now.tv_sec - desc->last_timedown.tv_sec) * 1000 + (now.tv_usec - desc->last_timedown.tv_usec) / 1000;
+      diff = (now.tv_sec - desc->last_timedown.tv_sec) * 1000 +(now.tv_usec - desc->last_timedown.tv_usec) / 1000;
       d *= diff;
       desc->bucket_tokendown = MIN(desc->bucket_capacity, desc->bucket_tokendown + d);
       gettimeofday(&desc->last_timedown, NULL);
@@ -499,7 +501,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
     debug(DBG_ATTR, "Tokendown bucket available: %u, tokens requested: %u\n", desc->bucket_tokendown, bytedown);
 
     if(bytedown <= desc->bucket_tokendown)
-    { 
+    {
       desc->bucket_tokendown -= bytedown;
     }
     else
@@ -522,7 +524,7 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
  */
 static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uint16_t port)
 {
-  struct list_head* get = NULL; 
+  struct list_head* get = NULL;
   struct list_head* n = NULL;
   uint8_t nb = 0;
   uint8_t mod = 0;
@@ -563,7 +565,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
       continue;
     }
 
-    /* OK so now the full bytes from the address are the same, 
+    /* OK so now the full bytes from the address are the same,
      * check for last bit if any
      */
     mod = (tmp->mask % 8);
@@ -612,8 +614,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_send_error(int transport_protocol, int sock, int method, const uint8_t* id, int error,
-                                 const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer,
-                                 unsigned char* key)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer, unsigned char* key)
 {
   struct iovec iov[16]; /* should be sufficient */
   struct turn_msg_hdr* hdr = NULL;
@@ -643,10 +644,10 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 443: /* Peer address family mismatch */
       hdr = turn_error_response_443(method, id, &iov[index], &index);
       break;
-    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-05) */
+    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-06) */
       hdr = turn_error_response_446(method, id, &iov[index], &index);
       break;
-    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-05) */
+    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-06) */
       hdr = turn_error_response_447(method, id, &iov[index], &index);
       break;
     case 486: /* Allocation quota reached */
@@ -678,7 +679,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   {
     if(turn_add_message_integrity(iov, &index, key, 16, 1) == -1)
     {
-      /* MESSAGE-INTEGRITY option has to be in message, so 
+      /* MESSAGE-INTEGRITY option has to be in message, so
        * deallocate ressources and return
        */
       iovec_free_data(iov, index);
@@ -695,7 +696,8 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
   }
 
   /* finally send the response */
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
@@ -705,7 +707,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
 }
 
 /**
- * \brief Process a TURN Connect request (draft-ietf-behave-turn-tcp-05).
+ * \brief Process a TURN Connect request (draft-ietf-behave-turn-tcp-06).
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -716,8 +718,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_connect_request(int transport_protocol, int sock, const struct turn_message* message,
-                                              const struct sockaddr* saddr, socklen_t saddr_size, 
-                                              struct allocation_desc* desc, struct tls_peer* speer)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -727,24 +728,23 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   struct sockaddr_storage storage;
   int peer_sock = -1;
   int family = 0;
-  struct iovec iov[8];
-  size_t index = 0;
-  struct turn_msg_hdr* hdr = NULL;
-  struct turn_attr_hdr* attr = NULL;
-  uint32_t id = 0;
   uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
   uint8_t* p = (uint8_t*)&cookie;
+  uint32_t id = 0;
+  long flags = 0;
+  int ret = 0;
 
   debug(DBG_ATTR, "Connect request received!\n");
 
-  /* check also that allocation has a maximum of one 
+  /* check also that allocation has a maximum of one
    * outgoing connection
-   * (if relayed_sock_tcp equals -1 it means that it exists 
+   * (if relayed_sock_tcp equals -1 it means that it exists
    * already an outgoing connection for this allocation)
    */
   if(!message->peer_addr[0] || desc->relayed_sock_tcp == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -775,7 +775,8 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   if(desc->relayed_addr.ss_family != family)
   {
     debug(DBG_ATTR, "Could not relayed from a different family\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -784,13 +785,15 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
    */
   if(allocation_desc_find_tcp_relay_addr(desc, family, peer_addr, peer_port))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 446, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 446,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
   if(turnserver_is_address_denied(peer_addr, len, peer_port))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -821,65 +824,50 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
   peer_sock = desc->relayed_sock_tcp;
   desc->relayed_sock_tcp = -1;
 
-  if(connect(peer_sock, (struct sockaddr*)&storage, sockaddr_get_size(&storage)) == -1)
+  /* set non-blocking mode */
+  if((flags = fcntl(peer_sock, F_GETFL, NULL)) == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 447, saddr, saddr_size, speer, NULL);
     return -1;
   }
 
-  /* generate unique ID */
-  random_bytes_generate((uint8_t*)&id, 4);
- 
-  /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, 0) == -1)
+  flags |= O_NONBLOCK;
+
+  if(fcntl(peer_sock, F_SETFL, flags) == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
   }
 
-  /* send Connect success response */
-  if(!(hdr = turn_msg_connect_response_create(0, message->msg->turn_msg_id, &iov[index])))
-  {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
-    return -1;
-  }
-  index++;
+  ret = connect(peer_sock, (struct sockaddr*)&storage, sockaddr_get_size(&storage));
 
-  /* software (not fatal if it cannot be allocated) */
-  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+  if(errno == EINPROGRESS)
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
-  }
+    /* connection ongoing */
+    /* generate unique ID */
+    random_bytes_generate((uint8_t*)&id, 4);
 
-  if(!(attr = turn_attr_connection_id_create(id, &iov[index])))
-  {
-    iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
-    return -1;
+    /* add it to allocation */
+    if(allocation_desc_add_tcp_relay(desc, id, peer_sock, family, peer_addr, peer_port,
+         TURN_DEFAULT_TCP_RELAY_TIMEOUT, 0, message->msg->turn_msg_id) == -1)
+    {
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, desc->key);
+      return -1;
+    }
+    return 0;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
-
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
+  else if(ret < 0)
   {
-    iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    /* error */
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 447,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
-  /* send message */
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
-  {
-    debug(DBG_ATTR, "turn_send_message failed\n");
-  }
-
-  iovec_free_data(iov, index);
-  return 0;
+  return -1;
 }
 
 /**
- * \brief Process a TURN ConnectionBind request (draft-ietf-behave-turn-tcp-05).
+ * \brief Process a TURN ConnectionBind request (draft-ietf-behave-turn-tcp-06).
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -891,9 +879,8 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_connectionbind_request(int transport_protocol, int sock, const struct turn_message* message,
-                                                     const struct sockaddr* saddr, socklen_t saddr_size,
-                                                     struct tls_peer* speer, struct account_desc* account,
-                                                     struct list_head* allocation_list)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer, struct account_desc* account,
+    struct list_head* allocation_list)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -907,7 +894,8 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
   if(!message->connection_id)
   {
     debug(DBG_ATTR, "No CONNECTION-ID attribute!\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, account->key);
     return -1;
   }
 
@@ -941,14 +929,15 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
     }
   }
 
-  /* check if allocation exists and if its ID exists 
+  /* check if allocation exists and if its ID exists
    * for this allocation
    * otherwise => error 400
    */
   if(!desc || !(tcp_relay = allocation_desc_find_tcp_relay_id(desc, message->connection_id->turn_attr_id)))
   {
     debug(DBG_ATTR, "No allocation or no allocation for CONNECTION-ID\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, account->key);
     return -1;
   }
 
@@ -995,7 +984,7 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
 
     debug(DBG_ATTR, "Send buffered data to client (TURN-TCP)\n");
 
-    /* server has buffered data available, 
+    /* server has buffered data available,
      * send them to client
      */
     while(tcp_relay->buf_len)
@@ -1026,7 +1015,7 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
   return 0;
 }
 
-/** 
+/**
  * \brief Process a STUN Binding request.
  * \param transport_protocol transport protocol used
  * \param sock socket
@@ -1037,7 +1026,7 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_binding_request(int transport_protocol, int sock, const struct turn_message* message,
-                                              const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct tls_peer* speer)
 {
   struct iovec iov[4]; /* header, software, xor-address, fingerprint */
   size_t index = 0;
@@ -1055,7 +1044,8 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_xor_mapped_address_create(saddr, STUN_MAGIC_COOKIE, message->msg->turn_msg_id, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, NULL);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -1073,7 +1063,8 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_fingerprint_create(0, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+    turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, NULL);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -1088,7 +1079,8 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
 
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
@@ -1110,8 +1102,7 @@ static int turnserver_process_binding_request(int transport_protocol, int sock, 
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_channeldata(int transport_protocol, uint16_t channel_number, const char* buf, ssize_t buflen,
-                                          const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
-                                          struct list_head* allocation_list)
+    const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list)
 {
   struct allocation_desc* desc = NULL;
   struct turn_channel_data* channel_data = NULL;
@@ -1217,15 +1208,15 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
       break;
   }
 
-  /* draft-ietf-behave-turn-ipv6-08:  If present, the
-   * DONT-FRAGMENT attribute MUST be ignored by the server for 
+  /* draft-ietf-behave-turn-ipv6-09:  If present, the
+   * DONT-FRAGMENT attribute MUST be ignored by the server for
    * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
    */
   if(desc->relayed_addr.ss_family == AF_INET &&
      (desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 &&
      IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
   {
-#ifdef OS_SET_DF_SUPPORT 
+#ifdef OS_SET_DF_SUPPORT
     /* alternate behavior */
     optval = IP_PMTUDISC_DONT;
 
@@ -1251,7 +1242,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
   debug(DBG_ATTR, "Send ChannelData to peer\n");
   nb = sendto(desc->relayed_sock, msg, len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
-#ifdef OS_SET_DF_SUPPORT 
+#ifdef OS_SET_DF_SUPPORT
   /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
   if(optlen)
   {
@@ -1386,8 +1377,8 @@ static int turnserver_process_send_indication(const struct turn_message* message
         break;
     }
 
-    /* draft-ietf-behave-turn-ipv6-08:  If present, the
-     * DONT-FRAGMENT attribute MUST be ignored by the server for 
+    /* draft-ietf-behave-turn-ipv6-09:  If present, the
+     * DONT-FRAGMENT attribute MUST be ignored by the server for
      * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
     if(desc->relayed_addr.ss_family == AF_INET &&
@@ -1395,7 +1386,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
        IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&desc->tuple.client_addr)->sin6_addr))))
     {
       /* following is for IPv4-IPv4 relay only */
-#ifdef OS_SET_DF_SUPPORT 
+#ifdef OS_SET_DF_SUPPORT
       if(message->dont_fragment)
       {
         optval = IP_PMTUDISC_DO;
@@ -1438,7 +1429,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
     nb = sendto(desc->relayed_sock, msg, msg_len, 0, (struct sockaddr*)&storage, sockaddr_get_size(&desc->relayed_addr));
 
     /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
-#ifdef OS_SET_DF_SUPPORT 
+#ifdef OS_SET_DF_SUPPORT
     if(optlen)
     {
       /* restore original value */
@@ -1467,8 +1458,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_createpermission_request(int transport_protocol, int sock, const struct turn_message* message,
-                                                       const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc,
-                                                       struct tls_peer* speer)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1497,7 +1487,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   {
     /* too many XOR-PEER-ADDRESS attributes => error 508 */
     debug(DBG_ATTR, "Too many XOR-PEER-ADDRESS attributes\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1505,7 +1496,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   {
     /* no XOR-PEER-ADDRESS => error 400 */
     debug(DBG_ATTR, "Missing address attribute\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1553,7 +1545,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     {
       /* peer family mismatch => error 443 */
       debug(DBG_ATTR, "Peer family mismatch\n");
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443,
+          saddr, saddr_size, speer, desc->key);
       return -1;
     }
 
@@ -1561,7 +1554,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     memcpy(peer_addr, message->peer_addr[i]->turn_attr_address, len);
     peer_port = ntohs(message->peer_addr[i]->turn_attr_port);
 
-    if(turn_xor_address_cookie(message->peer_addr[i]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
+    if(turn_xor_address_cookie(message->peer_addr[i]->turn_attr_family, peer_addr, &peer_port, p,
+          message->msg->turn_msg_id) == -1)
     {
       return -1;
     }
@@ -1574,7 +1568,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     if(turnserver_is_address_denied(peer_addr, len, peer_port))
     {
       debug(DBG_ATTR, "TurnServer does not permit to install permission to %s\n", str);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403,
+          saddr, saddr_size, speer, desc->key);
       return -1;
     }
   }
@@ -1599,7 +1594,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
     memcpy(peer_addr, message->peer_addr[j]->turn_attr_address, len);
     peer_port = ntohs(message->peer_addr[j]->turn_attr_port);
 
-    if(turn_xor_address_cookie(message->peer_addr[j]->turn_attr_family, peer_addr, &peer_port, p, message->msg->turn_msg_id) == -1)
+    if(turn_xor_address_cookie(message->peer_addr[j]->turn_attr_family, peer_addr, &peer_port, p,
+          message->msg->turn_msg_id) == -1)
     {
       return -1;
     }
@@ -1628,7 +1624,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   /* send a CreatePermission success response */
   if(!(hdr = turn_msg_createpermission_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
   index++;
@@ -1643,7 +1640,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
   if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1651,7 +1649,8 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
 
   /* finally send the response */
 
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
@@ -1672,8 +1671,7 @@ static int turnserver_process_createpermission_request(int transport_protocol, i
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_channelbind_request(int transport_protocol, int sock, const struct turn_message* message,
-                                                  const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc,
-                                                  struct tls_peer* speer)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct allocation_desc* desc, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1703,7 +1701,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     /* attributes missing => error 400 */
     debug(DBG_ATTR, "Channel number or peer address attributes missing\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, desc->key);
     return 0;
   }
 
@@ -1713,7 +1712,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     /* bad channel => error 400 */
     debug(DBG_ATTR, "Channel number is invalid\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, desc->key);
     return 0;
   }
 
@@ -1736,7 +1736,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   if(desc->relayed_addr.ss_family != family)
   {
     debug(DBG_ATTR, "Do not allow requesting a Channel when allocated address family mismatch peer address family\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1755,7 +1756,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     /* permission denied => error 403 */
     debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", str);
 
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
@@ -1767,7 +1769,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   {
     /* transport address already bound to another channel */
     debug(DBG_ATTR, "Transport address already bound to another channel\n");
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, desc->key);
     return 0;
   }
 
@@ -1780,7 +1783,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
     {
       /* different transport address => error 400 */
       debug(DBG_ATTR, "Channel already bound to another transport address\n");
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+          saddr, saddr_size, speer, desc->key);
       return 0;
     }
 
@@ -1820,7 +1824,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   }
 
   syslog(LOG_INFO, "ChannelBind transport=%u (d)tls=%u source=%s:%u account=%s relayed=%s:%u channel=%s:%u",
-         transport_protocol, desc->relayed_tls || desc->relayed_dtls, str2, port2, desc->username, str3, port, str, peer_port);
+         transport_protocol, desc->relayed_tls || desc->relayed_dtls, str2, port2, desc->username, str3, port,
+         str, peer_port);
 
   /* find a permission */
   alloc_permission = allocation_desc_find_permission(desc, family, peer_addr);
@@ -1838,7 +1843,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   /* finally send the response */
   if(!(hdr = turn_msg_channelbind_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
   index++;
@@ -1853,14 +1859,16 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
   if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
   debug(DBG_ATTR, "ChannelBind successful, send success ChannelBind response\n");
 
   /* finally send the response */
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
@@ -1883,9 +1891,8 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_refresh_request(int transport_protocol, int sock, const struct turn_message* message,
-                                              const struct sockaddr* saddr, socklen_t saddr_size, 
-                                              struct list_head* allocation_list, struct allocation_desc* desc, 
-                                              struct account_desc* account, struct tls_peer* speer)
+    const struct sockaddr* saddr, socklen_t saddr_size, struct list_head* allocation_list, struct allocation_desc* desc,
+    struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
@@ -1901,8 +1908,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   /* save key from allocation as it could be freed if lifetime equals 0 */
   memcpy(key, desc->key, sizeof(desc->key));
 
-  /* draft-ietf-behave-turn-ipv6-08: at this stage server knows the 5-tuple and the allocation associated.
-   * No matter to know if the relayed address has a different address family than 5-tuple, so 
+  /* draft-ietf-behave-turn-ipv6-09: at this stage server knows the 5-tuple and the allocation associated.
+   * No matter to know if the relayed address has a different address family than 5-tuple, so
    * no need to have REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
 
@@ -1929,7 +1936,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     {
       /* peer family mismatch => error 443 */
       debug(DBG_ATTR, "Peer family mismatch\n");
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443, saddr, saddr_size, speer, key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 443,
+          saddr, saddr_size, speer, key);
       return -1;
     }
   }
@@ -1961,7 +1969,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
     debug(DBG_ATTR, "Refresh allocation\n");
     allocation_desc_set_timer(desc, lifetime);
   }
-  else 
+  else
   {
     /* lifetime = 0 delete the allocation */
     /* protect the removing of the expired list if any */
@@ -1980,7 +1988,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
 
   if(!(hdr = turn_msg_refresh_response_create(0, message->msg->turn_msg_id, &iov[index])))
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, key);
     return -1;
   }
   index++;
@@ -1988,7 +1997,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, key);
     return -1;
   }
   hdr->turn_msg_len += iov[index].iov_len;
@@ -2004,14 +2014,16 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   if(turn_add_message_integrity(iov, &index, key, sizeof(key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, key);
     return -1;
   }
 
   debug(DBG_ATTR, "Refresh successful, send success refresh response\n");
 
   /* finally send the response */
-  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
@@ -2034,8 +2046,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_allocate_request(int transport_protocol, int sock, const struct turn_message* message,
-                                               const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
-                                               struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+    const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list,
+    struct account_desc* account, struct tls_peer* speer)
 {
   struct allocation_desc* desc = NULL;
   struct itimerspec t; /* time before expire */
@@ -2047,7 +2059,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t port = 0;
   uint16_t reservation_port = 0;
   int relayed_sock = -1;
-  int relayed_sock_tcp = -1; /* draft-ietf-behave-turn-tcp-05 */
+  int relayed_sock_tcp = -1; /* draft-ietf-behave-turn-tcp-06 */
   int reservation_sock = -1;
   socklen_t relayed_size = sizeof(struct sockaddr_storage);
   size_t quit_loop = 0;
@@ -2082,7 +2094,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     else
     {
       /* allocation mismatch => error 437 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437,
+          saddr, saddr_size, speer, desc->key);
     }
 
     return 0;
@@ -2106,7 +2119,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     /* quota exceeded => error 486 */
     syslog(LOG_INFO, "Allocation transport=%u (d)tls=%u source=%s:%u account=%s quota exceeded",
            transport_protocol, speer ? 1 : 0, str2, port2, account->username);
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 486,
+        saddr, saddr_size, speer, account->key);
     return -1;
   }
 
@@ -2114,12 +2128,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(!message->requested_transport)
   {
     /* bad request => error 400 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, account->key);
     return 0;
   }
 
   /* check if DONT-FRAGMENT attribute is supported */
-#ifndef OS_SET_DF_SUPPORT 
+#ifndef OS_SET_DF_SUPPORT
   if(message->dont_fragment)
   {
     struct iovec iov[6]; /* header, error-code, unknown-attributes, software, message-integrity, fingerprint */
@@ -2133,7 +2148,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     if(!(error = turn_error_response_420(method, message->msg->turn_msg_id, unknown, 1, iov, &index)))
     {
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -2147,11 +2163,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, account->key);
       return -1;
     }
 
-    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+          ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
     {
       debug(DBG_ATTR, "turn_send_message failed\n");
     }
@@ -2164,16 +2182,17 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   /* check if server supports requested transport */
   if(message->requested_transport->turn_attr_protocol != IPPROTO_UDP &&
-     (message->requested_transport->turn_attr_protocol != IPPROTO_TCP || !turnserver_cfg_turn_tcp())) 
+     (message->requested_transport->turn_attr_protocol != IPPROTO_TCP || !turnserver_cfg_turn_tcp()))
   {
     /* unsupported transport protocol => error 442 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 442,
+        saddr, saddr_size, speer, account->key);
     return 0;
   }
 
   if(message->requested_transport->turn_attr_protocol == IPPROTO_TCP)
   {
-    /* draft-ietf-behave-turn-tcp-05:
+    /* draft-ietf-behave-turn-tcp-06:
      * - do not permit to allocate TCP relay with an
      * UDP-based connection
      * - requests do not contains DONT-FRAGMENT,
@@ -2182,7 +2201,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
      */
     if(transport_protocol == IPPROTO_UDP || message->dont_fragment || message->reservation_token || message->even_port)
     {
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+          saddr, saddr_size, speer, account->key);
       return 0;
     }
   }
@@ -2190,16 +2210,18 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(message->even_port && message->reservation_token)
   {
     /* cannot have both EVEN-PORT and RESERVATION-TOKEN => error 400 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, account->key);
     return 0;
   }
 
   if(message->requested_addr_family && message->reservation_token)
   {
-    /* draft-ietf-behave-turn-ipv6-08: cannot have both 
+    /* draft-ietf-behave-turn-ipv6-09: cannot have both
      * REQUESTED-ADDRESS-FAMILY and RESERVATION-TOKEN => error 400
      */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+        saddr, saddr_size, speer, account->key);
     return 0;
   }
 
@@ -2226,7 +2248,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     else
     {
       /* token does not exists so token not valid => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508,
+          saddr, saddr_size, speer, account->key);
       return 0;
     }
   }
@@ -2236,10 +2259,11 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     r_flag = message->even_port->turn_attr_flags & 0x80;
 
     /* check if there are unknown other flags */
-    if(message->even_port->turn_attr_flags & (~g_supported_even_port_flags)) 
+    if(message->even_port->turn_attr_flags & (~g_supported_even_port_flags))
     {
       /* unsupported flags => error 508 */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 508,
+          saddr, saddr_size, speer, account->key);
       return 0;
     }
   }
@@ -2262,7 +2286,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     lifetime = MIN(turnserver_cfg_allocation_lifetime(), TURN_MAX_ALLOCATION_LIFETIME);
   }
 
-  /* draft-ietf-behave-turn-ipv6-08 */
+  /* draft-ietf-behave-turn-ipv6-09 */
   if(message->requested_addr_family)
   {
     switch(message->requested_addr_family->turn_attr_family)
@@ -2282,7 +2306,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(!family_address)
     {
       /* family not supported */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440,
+          saddr, saddr_size, speer, account->key);
       return -1;
     }
   }
@@ -2297,7 +2322,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
        * without adding REQUESTED-ADDRESS-FAMILY attribute.
        */
       /* family not supported */
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 440,
+          saddr, saddr_size, speer, account->key);
       return -1;
     }
   }
@@ -2322,10 +2348,11 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     }
 
     /* TCP or UDP */
-    /* in case of TCP, allow socket to reuse transport address since we create 
+    /* in case of TCP, allow socket to reuse transport address since we create
      * another socket that will be bound to the same address
      */
-    relayed_sock = socket_create(message->requested_transport->turn_attr_protocol, str, port, message->requested_transport->turn_attr_protocol == IPPROTO_TCP);
+    relayed_sock = socket_create(message->requested_transport->turn_attr_protocol, str, port,
+        message->requested_transport->turn_attr_protocol == IPPROTO_TCP);
 
     if(relayed_sock == -1)
     {
@@ -2346,7 +2373,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       {
         /* system error */
         close(relayed_sock);
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+            saddr, saddr_size, speer, account->key);
         return -1;
       }
 
@@ -2355,11 +2383,12 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
         /* system error */
         close(relayed_sock);
         close(relayed_sock_tcp);
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+            saddr, saddr_size, speer, account->key);
         return -1;
       }
     }
- 
+
     if(r_flag)
     {
       reservation_port = port + 1;
@@ -2387,7 +2416,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(relayed_sock == -1)
   {
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, account->key);
     return -1;
   }
 
@@ -2412,7 +2442,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(!desc)
   {
     /* send error response with code 500 */
-    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, account->key);
     close(relayed_sock);
     return -1;
   }
@@ -2462,14 +2493,15 @@ send_success_response:
     /* header, relayed-address, lifetime, reservation-token (if any),
      * xor-mapped-address, username, software, message-integrity, fingerprint
      */
-    struct iovec iov[12]; 
+    struct iovec iov[12];
     struct turn_msg_hdr* hdr = NULL;
     struct turn_attr_hdr* attr = NULL;
     size_t index = 0;
 
     if(!(hdr = turn_msg_allocate_response_create(0, message->msg->turn_msg_id, &iov[index])))
     {
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, desc->key);
       return -1;
     }
     index++;
@@ -2478,7 +2510,8 @@ send_success_response:
     if(!(attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&relayed_addr, STUN_MAGIC_COOKIE, message->msg->turn_msg_id, &iov[index])))
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, desc->key);
       return -1;
     }
     hdr->turn_msg_len += iov[index].iov_len;
@@ -2487,7 +2520,7 @@ send_success_response:
     if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,saddr, saddr_size, speer, desc->key);
       return -1;
     }
     hdr->turn_msg_len += iov[index].iov_len;
@@ -2510,20 +2543,22 @@ send_success_response:
     if(!(attr = turn_attr_xor_mapped_address_create(saddr, STUN_MAGIC_COOKIE, message->msg->turn_msg_id, &iov[index])))
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, desc->key);
       return -1;
     }
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
-    if(reservation_port) 
+    if(reservation_port)
     {
       /* server has stored a socket/port */
       debug(DBG_ATTR, "Send a reservation-token attribute\n");
       if(!(attr = turn_attr_reservation_token_create(reservation_token, &iov[index])))
       {
         iovec_free_data(iov, index);
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+            saddr, saddr_size, speer, desc->key);
         return -1;
       }
       hdr->turn_msg_len += iov[index].iov_len;
@@ -2540,13 +2575,15 @@ send_success_response:
     if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
     {
       iovec_free_data(iov, index);
-      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, desc->key);
       return -1;
     }
 
     debug(DBG_ATTR, "Allocation successful, send success allocate response\n");
 
-    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+          ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
     {
       debug(DBG_ATTR, "turn_send_message failed\n");
     }
@@ -2571,8 +2608,8 @@ send_success_response:
  * \return 0 if success, -1 otherwise
  */
 static int turnserver_process_turn(int transport_protocol, int sock, const struct turn_message* message,
-                                   const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
-                                   struct list_head* allocation_list, struct account_desc* account, struct tls_peer* speer)
+    const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list,
+    struct account_desc* account, struct tls_peer* speer)
 {
   uint16_t hdr_msg_type = 0;
   uint16_t method = 0;
@@ -2589,18 +2626,20 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     return turnserver_process_binding_request(transport_protocol, sock, message, saddr, saddr_size, speer);
   }
 
-  /* draft-ietf-behave-turn-tcp-05 */
+  /* draft-ietf-behave-turn-tcp-06 */
   /* find right tuple for a TCP allocation (ConnectionBind case) */
   if(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_CONNECTIONBIND)
   {
     /* ConnectionBind is only for TCP or TLS over TCP <-> TCP */
     if(transport_protocol == IPPROTO_TCP)
     {
-      return turnserver_process_connectionbind_request(transport_protocol, sock, message, saddr, saddr_size, speer, account, allocation_list);
+      return turnserver_process_connectionbind_request(transport_protocol, sock, message, saddr,
+          saddr_size, speer, account, allocation_list);
     }
     else
     {
-      return turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
+      return turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+          saddr, saddr_size, speer, account->key);
     }
   }
 
@@ -2614,8 +2653,9 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
       /* reject with error 437 if it a request, ignored otherwise */
       if(STUN_IS_REQUEST(hdr_msg_type)) /* the refresh function will handle this case */
       {
-        /* allocation mismatch => error 437 */ 
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437, saddr, saddr_size, speer, account->key);
+        /* allocation mismatch => error 437 */
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 437,
+            saddr, saddr_size, speer, account->key);
         return 0;
       }
 
@@ -2641,7 +2681,8 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
       {
         /* credentials do not match with those used for allocation => error 441 */
         debug(DBG_ATTR, "Wrong credentials!\n");
-        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 441, saddr, saddr_size, speer, account->key);
+        turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 441,
+            saddr, saddr_size, speer, account->key);
         return 0;
       }
     }
@@ -2665,10 +2706,11 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
         }
         else
         {
-          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+              saddr, saddr_size, speer, desc->key);
         }
         break;
-      case TURN_METHOD_CONNECT: /* draft-ietf-behave-turn-tcp-05 */
+      case TURN_METHOD_CONNECT: /* draft-ietf-behave-turn-tcp-06 */
         /* Connect is only for TCP or TLS over TCP <-> TCP */
         if(transport_protocol == IPPROTO_TCP && desc->relayed_transport_protocol == IPPROTO_TCP)
         {
@@ -2676,7 +2718,8 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
         }
         else
         {
-          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400, saddr, saddr_size, speer, desc->key);
+          turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
+              saddr, saddr_size, speer, desc->key);
         }
         break;
       default:
@@ -2723,8 +2766,8 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
  * \return 0 if message processed correctly, -1 otherwise
  */
 static int turnserver_listen_recv(int transport_protocol, int sock, const char* buf, ssize_t buflen,
-                                  const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
-                                  struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
+    const struct sockaddr* saddr, const struct sockaddr* daddr, socklen_t saddr_size,
+    struct list_head* allocation_list, struct list_head* account_list, struct tls_peer* speer)
 {
   struct turn_message message;
   uint16_t unknown[32];
@@ -2836,7 +2879,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
   }
 
   /* all this cases above discard silently the packets,
-   * so now process the packet more in details 
+   * so now process the packet more in details
    */
 
   if(STUN_IS_REQUEST(hdr_msg_type) && method != STUN_METHOD_BINDING)
@@ -2859,7 +2902,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
       {
-        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500,
+            saddr, saddr_size, speer, NULL);
         return -1;
       }
 
@@ -2875,7 +2919,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
-      if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+      if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+            ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
       {
         debug(DBG_ATTR, "turn_send_message failed\n");
       }
@@ -2888,7 +2933,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     if(!message.username || !message.realm || !message.nonce)
     {
       /* missing username, realm or nonce => error 400 */
-      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
+      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400,
+          saddr, saddr_size, speer, NULL);
       return 0;
     }
 
@@ -2909,7 +2955,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
       if(!(error = turn_error_response_438(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
       {
-        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500,
+            saddr, saddr_size, speer, NULL);
         return -1;
       }
 
@@ -2923,7 +2970,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
-      if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+      if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+            ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
       {
         debug(DBG_ATTR, "turn_send_message failed\n");
       }
@@ -2943,7 +2991,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
       if(username_len > 513 || realm_len > 256)
       {
         /* some attributes are too long */
-        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400, saddr, saddr_size, speer, NULL);
+        turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 400,
+            saddr, saddr_size, speer, NULL);
         return -1;
       }
 
@@ -2973,7 +3022,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, realm, nonce, sizeof(nonce), iov, &index)))
         {
-          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500,
+              saddr, saddr_size, speer, NULL);
           return -1;
         }
 
@@ -2989,7 +3039,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
-        if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+        if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+              ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
         {
           debug(DBG_ATTR, "turn_send_message failed\n");
         }
@@ -3045,7 +3096,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id, turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
         {
-          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
+          turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500,
+              saddr, saddr_size, speer, NULL);
           return -1;
         }
 
@@ -3061,7 +3113,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
-        if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+        if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+              ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
         {
           debug(DBG_ATTR, "turn_send_message failed\n");
         }
@@ -3091,7 +3144,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     /* unknown attributes found => error 420 */
     if(!(error = turn_error_response_420(method, message.msg->turn_msg_id, unknown, unknown_size, iov, &index)))
     {
-      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
+      turnserver_send_error(transport_protocol, sock, method, message.msg->turn_msg_id, 500,
+          saddr, saddr_size, speer, account->key);
       return -1;
     }
 
@@ -3105,7 +3159,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     /* convert to big endian */
     error->turn_msg_len = htons(error->turn_msg_len);
 
-    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size, ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+    if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+          ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
     {
       debug(DBG_ATTR, "turn_send_message failed\n");
     }
@@ -3115,7 +3170,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
     return 0;
   }
 
-  /* the basic checks are done, 
+  /* the basic checks are done,
    * now check that specific method requirement are OK
    */
   debug(DBG_ATTR, "OK basic validation are done, process the TURN message\n");
@@ -3135,7 +3190,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock, const char* 
  * \return 0 if message processed correctly, -1 otherwise
  */
 static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct sockaddr* saddr, struct sockaddr* daddr,
-                                   socklen_t saddr_size, struct list_head* allocation_list, struct tls_peer* speer)
+    socklen_t saddr_size, struct list_head* allocation_list, struct tls_peer* speer)
 {
   struct allocation_desc* desc = NULL;
   uint8_t peer_addr[16];
@@ -3268,8 +3323,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     socklen_t optlen = sizeof(int);
 
 #ifdef OS_SET_DF_SUPPORT
-    /* draft-ietf-behave-turn-ipv6-08:  If present, the
-     * DONT-FRAGMENT attribute MUST be ignored by the server for 
+    /* draft-ietf-behave-turn-ipv6-09:  If present, the
+     * DONT-FRAGMENT attribute MUST be ignored by the server for
      * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
     if((desc->tuple.client_addr.ss_family == AF_INET || (desc->tuple.client_addr.ss_family == AF_INET6 &&
@@ -3321,7 +3376,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
   }
 
   /* if use a channel, do not used dynamic allocation */
-  if(!channel) 
+  if(!channel)
   {
     iovec_free_data(iov, index);
   }
@@ -3342,8 +3397,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
  * \param speer TLS peer if not NULL, the server accept TLS connection
  */
 static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct socket_desc* sock, struct sockaddr* saddr,
-                                          struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list,
-                                          struct list_head* account_list, struct tls_peer* speer)
+    struct sockaddr* daddr, socklen_t saddr_size, struct list_head* allocation_list, struct list_head* account_list,
+    struct tls_peer* speer)
 {
   char* tmp_buf = NULL;
   size_t tmp_len = 0;
@@ -3381,7 +3436,7 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
   {
     if(tmp_nb < 4)
     {
-      /* message too small, maybe 
+      /* message too small, maybe
        * incomplete ones
        */
       sock->buf_pos = tmp_nb;
@@ -3473,14 +3528,14 @@ static void turnserver_process_tcp_stream(const char* buf, ssize_t nb, struct so
 /**
  * \brief Check if server can relay specific address with
  * its current configuration.
- * 
+ *
  * For example if IPv6 is disabled, the server will
  * drop immediately packets coming from an IPv6-only client.
  * \param listen_address IPv4 listen address
  * \param listen_addressv6 IPv6 listen_address (could be NULL
  * if IPv6 is disabled)
  * \param saddr source address of client
- * \return 1 if the server can relay data for this client, 
+ * \return 1 if the server can relay data for this client,
  * 0 otherwise
  */
 static int turnserver_check_relay_address(char* listen_address, char* listen_addressv6, struct sockaddr_storage* saddr)
@@ -3496,7 +3551,113 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
 }
 
 /**
- * \brief Handle incoming TCP connection (draft-ietf-behave-turn-tcp-05).
+ * \brief Handle state of remote peer asynchronous TCP connect() (draft-ietf-behave-turn-tcp-06).
+ * \param sock TCP socket
+ * \param relay TCP relay descriptor
+ * \param desc allocation descriptor
+ * \param speer TLS peer, if not NULL send data in TLS
+ * \return -1 if timeout or error which means that this relay must be removed,
+ * 0 otherwise
+ */
+static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* relay,
+    struct allocation_desc* desc, struct tls_peer* speer)
+{
+  int err = 0;
+  socklen_t err_size = sizeof(int);
+  struct iovec iov[8];
+  size_t index = 0;
+  struct turn_msg_hdr* hdr = NULL;
+  struct turn_attr_hdr* attr = NULL;
+  struct sockaddr* saddr = (struct sockaddr*)&desc->tuple.client_addr;
+  socklen_t saddr_size = sockaddr_get_size(&desc->tuple.client_addr);
+  long flags = 0;
+
+  if(getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &err_size) == -1)
+  {
+    return -1;
+  }
+
+  /* send response (either success or error if timeout) */
+  if(err != 0)
+  {
+    /* send Connect error response */
+    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 447,
+        saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  /* send Connect success response */
+  if(!(hdr = turn_msg_connect_response_create(0, relay->connect_msg_id, &iov[index])))
+  {
+    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+  index++;
+
+  /* software (not fatal if it cannot be allocated) */
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+  {
+    hdr->turn_msg_len += iov[index].iov_len;
+    index++;
+  }
+
+  if(!(attr = turn_attr_connection_id_create(relay->connection_id, &iov[index])))
+  {
+    iovec_free_data(iov, index);
+    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
+  {
+    iovec_free_data(iov, index);
+    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 500,
+        saddr, saddr_size, speer, desc->key);
+    return -1;
+  }
+
+  /* send message */
+  if(turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  {
+    debug(DBG_ATTR, "turn_send_message failed\n");
+    iovec_free_data(iov, index);
+    return -1;
+  }
+  else
+  {
+    /* back to blocking mode */
+    if((flags = fcntl(sock, F_GETFL, NULL)) == -1)
+    {
+      turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 447,
+          saddr, saddr_size, speer, NULL);
+      return -1;
+    }
+    
+    flags &= (~O_NONBLOCK);
+
+    if(fcntl(sock, F_SETFL, flags) == -1)
+    {
+      perror("fcntl");
+      turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 447,
+          saddr, saddr_size, speer, NULL);
+      return -1;
+    }
+
+    /* connect() succeed, mark as ready */
+    relay->ready = 1;
+  }
+
+  iovec_free_data(iov, index);
+  return 0;
+}
+
+/**
+ * \brief Handle incoming TCP connection (draft-ietf-behave-turn-tcp-06).
  * \param sock TCP listen socket
  * \param desc allocation descriptor
  * \param speer TLS peer, if not NULL send data in TLS
@@ -3555,7 +3716,8 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
   }
 
   /* add it to allocation */
-  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port, TURN_DEFAULT_TCP_RELAY_TIMEOUT, buffer_size) == -1)
+  if(allocation_desc_add_tcp_relay(desc, id, rsock, family, peer_addr, peer_port,
+        TURN_DEFAULT_TCP_RELAY_TIMEOUT, buffer_size, NULL) == -1)
   {
     close(rsock);
     return;
@@ -3594,7 +3756,9 @@ static void turnserver_handle_tcp_incoming_connection(int sock, struct allocatio
   }
 
   /* send message */
-  if(turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer, (struct sockaddr*)&desc->tuple.client_addr, sockaddr_get_size(&desc->tuple.client_addr), ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer, (struct sockaddr*)&desc->tuple.client_addr,
+        sockaddr_get_size(&desc->tuple.client_addr), ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr),
+        iov, index) == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
@@ -3641,7 +3805,7 @@ static void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_socket_
         sdesc->msg_len = 0;
         sdesc->tls = tls;
         sdesc->sock = rsock;
- 
+
         /* add it to the list */
         LIST_ADD(&sdesc->list, tcp_socket_list);
       }
@@ -3657,7 +3821,7 @@ static void turnserver_handle_tcp_accept(int sock, struct list_head* tcp_socket_
  * \param account_list list of accounts
  */
 static void turnserver_main(struct listen_sockets* sockets, struct list_head* tcp_socket_list,
-                            struct list_head* allocation_list, struct list_head* account_list)
+    struct list_head* allocation_list, struct list_head* account_list)
 {
   struct list_head* n = NULL;
   struct list_head* get = NULL;
@@ -3665,6 +3829,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   int nsock = -1;
   int ret = -1;
   sfd_set fdsr;
+  sfd_set fdsw;
   long max_fd = 0;
   char error_str[1024];
   sigset_t mask;
@@ -3689,9 +3854,10 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   }
 
   SFD_ZERO(&fdsr);
+  SFD_ZERO(&fdsw);
 
   /* ensure that FD_SET will not overflow */
-  if(sockets->sock_udp >= max_fd || sockets->sock_tcp >= max_fd || 
+  if(sockets->sock_udp >= max_fd || sockets->sock_tcp >= max_fd ||
      (sockets->sock_tls && (sockets->sock_tls->sock >= max_fd)))
   {
     g_run = 0;
@@ -3732,7 +3898,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       nsock = MAX(nsock, tmp->relayed_sock);
     }
 
-    /* draft-ietf-behave-turn-tcp-05 */
+    /* draft-ietf-behave-turn-tcp-06 */
     /* add peer and client data connection sockets */
     list_iterate_safe(get2, n2, &tmp->tcp_relays)
     {
@@ -3740,7 +3906,37 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
       if(tmp2->peer_sock > 0 && tmp2->peer_sock < max_fd)
       {
-        /* if client has not send its ConnectionBind yet, and if 
+        /* if asynchronous connect() has not succeed yet,
+         * check again and send a Connect success
+         * response if socket is connected
+         */
+        if(tmp2->peer_sock != -1 && tmp2->ready != 1)
+        {
+          /* check if connect() timeout (with value define in turn-tcp) */
+          if((tmp2->created + TURN_DEFAULT_TCP_CONNECT_TIMEOUT) <= time(NULL))
+          {
+            /* send error and remove relay */
+            turnserver_send_error(IPPROTO_TCP, tmp->tuple_sock, TURN_METHOD_CONNECT, tmp2->connect_msg_id,
+                447, (struct sockaddr*)&tmp->tuple.client_addr, sockaddr_get_size(&tmp->tuple.client_addr),
+                sockets->sock_tls, NULL);
+
+            /* protect the removing of the expired list if any */
+            turnserver_block_realtime_signal();
+            allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
+            LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
+            turnserver_unblock_realtime_signal();
+            allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
+            continue;
+          }
+          else
+          {
+            /* add to select for write operations */
+            SFD_SET(tmp2->peer_sock, &fdsw);
+            nsock = MAX(nsock, tmp2->peer_sock);
+          }
+        }
+
+        /* if client has not send its ConnectionBind yet, or if
          * userspace buffering is not enable, OS will perform
          * buffering
          */
@@ -3752,17 +3948,16 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         else
         {
           /* here, buffering is done in OS
-           * but see if TCP receive buffer size does 
+           * but see if TCP receive buffer size does
            * not exceed the limit.
            */
           uint32_t val = 0;
 
-          /* use FIONREAD (same as SIOCINQ) to see how much 
+          /* use FIONREAD (same as SIOCINQ) to see how much
            * ready-to-read bytes are in TCP receive queue
            */
           if(ioctl(tmp2->peer_sock, FIONREAD, &val) >= 0)
           {
-            printf("val=%u\n", val);
             if(val > turnserver_cfg_tcp_buffer_size())
             {
               /* limit exceeded, remove TCP relay */
@@ -3826,7 +4021,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
   sigaddset(&mask, SIGRT_EXPIRE_CHANNEL);
   sigaddset(&mask, SIGRT_EXPIRE_TOKEN);
 
-  ret = pselect(nsock, (fd_set*)(void*)&fdsr, NULL, NULL, &tv, &mask);
+  ret = pselect(nsock, (fd_set*)(void*)&fdsr, (void*)&fdsw, NULL, &tv, &mask);
 
   if(ret > 0)
   {
@@ -3847,7 +4042,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           proto = (saddr.ss_family == AF_INET6 && !IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)&saddr)->sin6_addr)) ? "IPv6" : "IPv4";
           debug(DBG_ATTR, "Do not relay family: %s\n", proto);
         }
-        else if(turnserver_listen_recv(IPPROTO_UDP, sockets->sock_udp, buf, nb, 
+        else if(turnserver_listen_recv(IPPROTO_UDP, sockets->sock_udp, buf, nb,
                 (struct sockaddr*)&saddr, (struct sockaddr*)&daddr,
                 saddr_size, allocation_list, account_list, NULL) == -1)
         {
@@ -3935,7 +4130,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
               get_error(errno, error_str, sizeof(error_str));
               debug(DBG_ATTR, "Error: %s\n", error_str);
             }
-          } 
+          }
           else /* non-encrypted TCP data */
           {
             /* TCP stream may contain multiple STUN/TURN messages */
@@ -3945,7 +4140,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         else
         {
           /* 0: disconnection case
-           * -1: error 
+           * -1: error
            */
           get_error(errno, error_str, sizeof(error_str));
           debug(DBG_ATTR, "Error: %s\n", error_str);
@@ -3981,8 +4176,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       /* relayed address */
       if(sfd_has_data(tmp->relayed_sock, max_fd, &fdsr))
       {
-        /* UDP relay is described in draft-ietf-behave-turn-16 
-         * and TCP relay is described in draft-ietf-behave-turn-tcp-05
+        /* UDP relay is described in draft-ietf-behave-turn-16
+         * and TCP relay is described in draft-ietf-behave-turn-tcp-06
          */
         if(tmp->relayed_transport_protocol == IPPROTO_UDP)
         {
@@ -4015,18 +4210,37 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         }
         else if(tmp->relayed_transport_protocol == IPPROTO_TCP)
         {
-          /* draft-ietf-behave-turn-tcp-05 */
+          /* draft-ietf-behave-turn-tcp-06 */
           /* handle incoming TCP connection on relayed address */
           debug(DBG_ATTR, "Received incoming connection on a listening TCP relayed address\n");
           turnserver_handle_tcp_incoming_connection(tmp->relayed_sock, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL);
         }
       }
 
-      /* draft-ietf-behave-turn-tcp-05 */
+      /* draft-ietf-behave-turn-tcp-06 */
       /* relayed TCP-based addresses */
       list_iterate_safe(get2, n2, &tmp->tcp_relays)
       {
         struct allocation_tcp_relay* tmp2 = list_get(get2, struct allocation_tcp_relay, list);
+
+        if(!tmp2->ready && sfd_has_data(tmp2->peer_sock, max_fd, &fdsw))
+        {
+          if(turnserver_handle_tcp_connect(tmp2->peer_sock, tmp2, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL) == -1)
+          {
+            /* send error and remove relay */
+            turnserver_send_error(IPPROTO_TCP, tmp->tuple_sock, TURN_METHOD_CONNECT, tmp2->connect_msg_id,
+                447, (struct sockaddr*)&tmp->tuple.client_addr, sockaddr_get_size(&tmp->tuple.client_addr),
+                sockets->sock_tls, NULL);
+
+            /* protect the removing of the expired list if any */
+            turnserver_block_realtime_signal();
+            allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
+            LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
+            turnserver_unblock_realtime_signal();
+            allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
+            continue;
+          }
+        }
 
         if(sfd_has_data(tmp2->peer_sock, max_fd, &fdsr))
         {
@@ -4034,11 +4248,11 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
           /* relay data from peer to client */
           nb = recv(tmp2->peer_sock, buf, sizeof(buf), 0);
- 
+
           if(nb > 0)
           {
             /* client has not send ConnectionBind yet,
-             * buffer data 
+             * buffer data
              */
             if(tmp2->client_sock == -1)
             {
@@ -4083,13 +4297,13 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
             turnserver_unblock_realtime_signal();
             allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
 
-            /* if relay is removed no need to test client_sock 
+            /* if relay is removed no need to test client_sock
              * since it is removed!
              */
             continue;
           }
         }
- 
+
         if(sfd_has_data(tmp2->client_sock, max_fd, &fdsr))
         {
           /* case when peer connect first */
@@ -4100,7 +4314,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           }
 
           debug(DBG_ATTR, "Receive data from TCP client to TCP peer\n");
- 
+
           /* relay data from client to peer */
           nb = recv(tmp2->client_sock, buf, sizeof(buf), 0);
 
@@ -4237,7 +4451,7 @@ int main(int argc, char** argv)
     debug(DBG_ATTR, "SIGHUP will not be catched\n");
   }
 
-  /* catch SIGUSR1 and SIGUSR2 to avoid being killed 
+  /* catch SIGUSR1 and SIGUSR2 to avoid being killed
    * if someone send these signals
    */
   if(sigaction(SIGUSR1, &sa, NULL) == -1)
@@ -4333,10 +4547,10 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-  /* check if certificates and key stuff are in configuration file 
+  /* check if certificates and key stuff are in configuration file
    * if TLS is used
    */
-  if((turnserver_cfg_tls() || turnserver_cfg_dtls()) && (!turnserver_cfg_ca_file() || 
+  if((turnserver_cfg_tls() || turnserver_cfg_dtls()) && (!turnserver_cfg_ca_file() ||
      !turnserver_cfg_cert_file() || !turnserver_cfg_private_key_file()))
   {
     fprintf(stderr, "Configuration error: TLS and/or DTLS enabled but some elements are missing (cert file, ...).\n");
@@ -4370,7 +4584,7 @@ int main(int argc, char** argv)
 
   if(turnserver_cfg_daemon())
   {
-    /* run as daemon, we take care to cleanup existing 
+    /* run as daemon, we take care to cleanup existing
      * allocated memory such as account and denied address list
      * of the father process before _exit()
      */
@@ -4390,7 +4604,7 @@ int main(int argc, char** argv)
 
   /* Some versions of getaddrinfo do not prefer IPv6+IPv4 addresses over
    * IPv4 only when passing NULL as "node" parameter.
-   * 
+   *
    * Here is a work around this problem. If TurnServer is configured to use IPv6
    * relaying, force listen to IPv6+IPv4 by passing "::" address,
    * otherwise force IPv4 only by passing "0.0.0.0" address.
@@ -4477,7 +4691,7 @@ int main(int argc, char** argv)
     }
   }
 
-  if(sockets.sock_tcp == -1 || sockets.sock_udp == -1 || 
+  if(sockets.sock_tcp == -1 || sockets.sock_udp == -1 ||
      (turnserver_cfg_tls() && !sockets.sock_tls) ||
      (turnserver_cfg_dtls() && !sockets.sock_dtls))
   {
@@ -4615,7 +4829,7 @@ int main(int argc, char** argv)
         struct allocation_permission* tmp = list_get(get, struct allocation_permission, list2);
 
         /* remove it from the list of valid permissions */
-        LIST_DEL(&tmp->list); 
+        LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_permission\n");
         timer_delete(tmp->expire_timer);
@@ -4630,7 +4844,7 @@ int main(int argc, char** argv)
         struct allocation_channel* tmp = list_get(get, struct allocation_channel, list2);
 
         /* remove it from the list of valid channels */
-        LIST_DEL(&tmp->list); 
+        LIST_DEL(&tmp->list);
         LIST_DEL(&tmp->list2);
         debug(DBG_ATTR, "Free an allocation_channel\n");
         timer_delete(tmp->expire_timer);

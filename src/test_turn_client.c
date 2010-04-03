@@ -61,7 +61,7 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
-/* Windows needs Winsock2 include 
+/* Windows needs Winsock2 include
  * to have access to network functions
  */
 #define WIN32_LEAN_AND_MEAN
@@ -234,7 +234,7 @@ static void client_parse_cmdline(int argc, char** argv, struct client_configurat
  * \param speer TLS peer
  * \param buf receive buffer
  * \param buflen buf length
- * \return number of bytes received if success, -1 if error 
+ * \return number of bytes received if success, -1 if error
  */
 static int client_recv_message(int transport_protocol, int sock, struct tls_peer* speer, char* buf, size_t buflen)
 {
@@ -264,7 +264,9 @@ static int client_recv_message(int transport_protocol, int sock, struct tls_peer
 
   if(speer)
   {
-    nb = (transport_protocol == IPPROTO_TCP) ? tls_peer_tcp_read(speer, buffer, nb, buf, buflen, (struct sockaddr*)&saddr, saddr_size, speer->sock) : tls_peer_udp_read(speer, buffer, nb, buf, buflen, (struct sockaddr*)&saddr, saddr_size);
+    nb = (transport_protocol == IPPROTO_TCP) ? tls_peer_tcp_read(speer, buffer, nb, buf, buflen,
+        (struct sockaddr*)&saddr, saddr_size, speer->sock) : tls_peer_udp_read(speer, buffer, nb,
+        buf, buflen, (struct sockaddr*)&saddr, saddr_size);
 
     if(nb == -1)
     {
@@ -297,8 +299,8 @@ static int client_recv_message(int transport_protocol, int sock, struct tls_peer
  * \param key_file SSL private key file
  * \return 0 if success, -1 if error
  */
-static int client_setup_socket(int transport_protocol, const char* addr, uint16_t port, int* sock, struct tls_peer** speer,
-                               const char* ca_file, const char* certificate_file, const char* key_file)
+static int client_setup_socket(int transport_protocol, const char* addr, uint16_t port, int* sock,
+    struct tls_peer** speer, const char* ca_file, const char* certificate_file, const char* key_file)
 {
   if(speer)
   {
@@ -330,7 +332,8 @@ static int client_setup_socket(int transport_protocol, const char* addr, uint16_
  * \param speer connect with TLS if not NULL
  * \return 0 if success, -1 if error
  */
-static int client_connect_server(int transport_protocol, const struct sockaddr* addr, socklen_t addr_size, int sock, struct tls_peer* speer)
+static int client_connect_server(int transport_protocol, const struct sockaddr* addr, socklen_t addr_size,
+    int sock, struct tls_peer* speer)
 {
   if(speer)
   {
@@ -392,11 +395,9 @@ static int client_connect_server(int transport_protocol, const struct sockaddr* 
  * \param nonce_len nonce length, for first request server nonce length will be filled into this variable
  * \return 0 if success or -1 if error. Note that the first request will returns -1 (need nonce)
  */
-static int client_allocate_address(int transport_protocol, int relay_protocol, int sock, 
-                                   struct tls_peer* speer, const struct sockaddr* addr, 
-                                   socklen_t addr_size, uint8_t family, const char* user,
-                                   const unsigned char* md_buf, const char* domain, uint8_t* nonce,
-                                   size_t* nonce_len)
+static int client_allocate_address(int transport_protocol, int relay_protocol, int sock,
+    struct tls_peer* speer, const struct sockaddr* addr, socklen_t addr_size, uint8_t family,
+    const char* user, const unsigned char* md_buf, const char* domain, uint8_t* nonce, size_t* nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -469,7 +470,8 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
 
   fprintf(stdout, "Send Allocate request.\n");
 
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -512,15 +514,15 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
  * \param addr_size sizeof addr
  * \param lifetime lifetime (0 to release allocation)
  * \param user username
- * \param md_buf MD5 of user:domain:password 
+ * \param md_buf MD5 of user:domain:password
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
-static int client_refresh_allocation(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                                     socklen_t addr_size, uint32_t lifetime, const char* user, 
-                                     const unsigned char* md_buf, const char* domain, uint8_t* nonce, size_t nonce_len)
+static int client_refresh_allocation(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, uint32_t lifetime, const char* user,
+    const unsigned char* md_buf, const char* domain, uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -574,7 +576,8 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
   }
 
   fprintf(stdout, "Send Refresh request.\n");
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -610,16 +613,15 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
  * \param addr_size sizeof addr
  * \param peer_addr peer address
  * \param user username
- * \param md_buf MD5 of user:domain:password 
+ * \param md_buf MD5 of user:domain:password
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
-static int client_create_permission(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                                    socklen_t addr_size, const struct sockaddr* peer_addr,
-                                    const char* user, const unsigned char* md_buf, const char* domain,
-                                    uint8_t* nonce, size_t nonce_len)
+static int client_create_permission(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, const struct sockaddr* peer_addr,
+    const char* user, const unsigned char* md_buf, const char* domain, uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -673,7 +675,8 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
   }
 
   fprintf(stdout, "Send CreatePermission request.\n");
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -691,7 +694,7 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
     return -1;
   }
 
-  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1) 
+  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1)
   {
     fprintf(stderr, "Parsing failed!\n");
     return -1;
@@ -711,16 +714,16 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
  * \param data data to send
  * \param data_len data length
  * \param user username
- * \param md_buf MD5 of user:domain:password 
+ * \param md_buf MD5 of user:domain:password
  * \param domain domain
  * \param nonce nonce
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
-static int client_send_data(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                            socklen_t addr_size, const struct sockaddr* peer_addr, const char* data, size_t data_len,
-                            const char* user, const unsigned char* md_buf, const char* domain,
-                            uint8_t* nonce, size_t nonce_len)
+static int client_send_data(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, const struct sockaddr* peer_addr,
+    const char* data, size_t data_len, const char* user, const unsigned char* md_buf,
+    const char* domain, uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -779,7 +782,8 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
   }
 
   fprintf(stdout, "Send Send indication.\n");
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -827,10 +831,10 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
-static int client_channelbind(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                              socklen_t addr_size, const struct sockaddr* peer_addr, uint16_t channel,
-                              const char* user, const unsigned char* md_buf, const char* domain,
-                              uint8_t* nonce, size_t nonce_len)
+static int client_channelbind(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, const struct sockaddr* peer_addr,
+    uint16_t channel, const char* user, const unsigned char* md_buf, const char* domain,
+    uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -889,7 +893,8 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
   }
 
   fprintf(stdout, "Send CreatePermission request.\n");
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -907,7 +912,7 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
     return -1;
   }
 
-  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1) 
+  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1)
   {
     fprintf(stderr, "Parsing failed!\n");
     return -1;
@@ -928,8 +933,8 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
  * \param data_len data length
  * \return 0 if success or -1 if error.
  */
-static int client_send_channeldata(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                                     socklen_t addr_size, uint16_t channel, const char* data, size_t data_len)
+static int client_send_channeldata(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, uint16_t channel, const char* data, size_t data_len)
 {
   struct iovec iov[2];
   size_t index = 0;
@@ -949,7 +954,8 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
   index++;
 
   fprintf(stdout, "Send ChannelData.\n");
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, sizeof(struct turn_channel_data) + data_len, iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        sizeof(struct turn_channel_data) + data_len, iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -984,10 +990,10 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
-static int client_send_connect(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                               socklen_t addr_size, const struct sockaddr* peer_addr, int* sock_tcp,
-                               const char* user, const unsigned char* md_buf, const char* domain,
-                               uint8_t* nonce, size_t nonce_len)
+static int client_send_connect(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, const struct sockaddr* peer_addr,
+    int* sock_tcp, const char* user, const unsigned char* md_buf, const char* domain,
+    uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -1041,7 +1047,8 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   }
 
   fprintf(stdout, "Send Connect request.\n");
-  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, sock, speer, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -1127,7 +1134,8 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   }
 
   fprintf(stdout, "Send ConnectionBind request.\n");
-  if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -1155,10 +1163,10 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
  * \param nonce_len nonce length
  * \return 0 if success or -1 if error.
  */
-static int client_wait_connection(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-                                  socklen_t addr_size, const struct sockaddr* peer_addr, int* sock_tcp,
-                                  const char* user, const unsigned char* md_buf, const char* domain,
-                                  uint8_t* nonce, size_t nonce_len)
+static int client_wait_connection(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, const struct sockaddr* peer_addr,
+    int* sock_tcp, const char* user, const unsigned char* md_buf, const char* domain,
+    uint8_t* nonce, size_t nonce_len)
 {
   struct turn_message message;
   struct turn_msg_hdr* hdr = NULL;
@@ -1267,7 +1275,8 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   }
 
   fprintf(stdout, "Send ConnectionBind request.\n");
-  if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  if(turn_send_message(transport_protocol, *sock_tcp, NULL, addr, addr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
@@ -1314,7 +1323,7 @@ int main(int argc, char** argv)
   int ret = EXIT_SUCCESS;
 
 #if defined(_WIN32) || defined(_WIN64)
-  /* Windows need to initialize and startup 
+  /* Windows need to initialize and startup
    * WSAData object otherwise network-related
    * functions will fail
    */
@@ -1424,7 +1433,7 @@ int main(int argc, char** argv)
   /* get address for server_address */
 
   /* convert uint16_t to string */
-  snprintf(port_str, sizeof(port_str), "%u", use_tls ? 5349 : 3478); 
+  snprintf(port_str, sizeof(port_str), "%u", use_tls ? 5349 : 3478);
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
@@ -1461,7 +1470,7 @@ int main(int argc, char** argv)
   family = (res->ai_addrlen == sizeof(struct sockaddr_in6)) ? STUN_ATTR_FAMILY_IPV6 : STUN_ATTR_FAMILY_IPV4;
   freeaddrinfo(res);
 
-  /* make sure that if TLS is used, all mandatory related 
+  /* make sure that if TLS is used, all mandatory related
    * parameters are present
    */
   if(use_tls && (!conf.certificate_file || !conf.private_key_file || !conf.ca_file))
@@ -1512,7 +1521,7 @@ int main(int argc, char** argv)
   fprintf(stdout, "sock: %d speer: %p connected!\n", sock, (void*)speer);
 
   /* first request always failed but response contains the nonce */
-  client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len); 
+  client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len);
   if(nonce_len == 0)
   {
     fprintf(stderr, "Allocation: bad message received (no nonce).\n");
@@ -1520,7 +1529,7 @@ int main(int argc, char** argv)
     goto quit;
   }
 
-  /* second request should succeed otherwise credentials are wrong or 
+  /* second request should succeed otherwise credentials are wrong or
    * requested family is not supported by TURN server
    */
   if(client_allocate_address(transport_protocol, relay_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, family, user, md_buf, domain, nonce, &nonce_len) == -1)
@@ -1600,8 +1609,8 @@ int main(int argc, char** argv)
       }
     }
 
-    /* to test this code part, you have to connect to 
-     * the TCP allocated port on the server (use 
+    /* to test this code part, you have to connect to
+     * the TCP allocated port on the server (use
      * netstat -aptn | grep turnserver)
      */
 

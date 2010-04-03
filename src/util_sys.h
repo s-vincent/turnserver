@@ -102,7 +102,7 @@ typedef struct iovec
   size_t iov_len; /**< Size of data */
 }iovec;
 
-/* some unix types are not defined for Windows 
+/* some unix types are not defined for Windows
  * (even with MinGW) so declare it here
  */
 typedef int socklen_t;
@@ -155,10 +155,10 @@ typedef struct sfd_set
    * \def __fds_bits
    * \brief Definition of __fds_bits for *BSD.
    */
-#define __fds_bits fds_bits 
+#define __fds_bits fds_bits
 #else
   SOCKET fd_array[SFD_SETSIZE]; /**< Bitmask */
-#define fd_mask 
+#define fd_mask
 #endif
 }sfd_set;
 
@@ -188,7 +188,7 @@ typedef struct sfd_set
 
 /**
  * \brief Test if socket has data to read.
- * 
+ *
  * It is a convenient function to test if socket
  * is valid, can be tested in select and if it has
  * data to read.
@@ -423,7 +423,7 @@ ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct 
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
 #endif /* UTIL_SYS_H */
 

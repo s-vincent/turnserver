@@ -56,7 +56,7 @@
 
 #include "turn.h"
 #include "tls_peer.h"
- 
+
 #ifdef __cplusplus
 extern "C"
 { /* } */
@@ -97,8 +97,8 @@ struct turn_message
   struct turn_attr_requested_transport* requested_transport; /**< REQUESTED-TRANSPORT attribute */
   struct turn_attr_dont_fragment* dont_fragment; /**< DONT-FRAGMENT attribute */
   struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
-  struct turn_attr_requested_address_family* requested_addr_family; /**< REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-08) */
-  struct turn_attr_connection_id* connection_id; /**< CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-05) */
+  struct turn_attr_requested_address_family* requested_addr_family; /**< REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-09) */
+  struct turn_attr_connection_id* connection_id; /**< CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-06) */
   size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
 
@@ -682,7 +682,7 @@ struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, 
 
 /**
  * \brief Create a CONNECTION-ID attribute.
- * \param id 32 bits ID 
+ * \param id 32 bits ID
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
@@ -705,7 +705,7 @@ int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size, co
  * \param iov vector which contains messages and attributes
  * \param iovlen number of element in iov
  * \return number of bytes sent or -1 if error
- */ 
+ */
 int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen);
 
 /**
@@ -732,8 +732,8 @@ int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t 
  * \param iovlen number of element in iov
  * \return number of bytes sent or -1 if error
  */
-int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr, 
-                      socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen);
+int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
+    socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen);
 
 /**
  * \brief Generate a 96 bit transaction ID.
@@ -759,7 +759,7 @@ int turn_generate_transaction_id(uint8_t* id);
 int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key, size_t key_len);
 
 /**
- * \brief Check if nonce is stale. 
+ * \brief Check if nonce is stale.
  * \param nonce nonce
  * \param len length of nonce
  * \param key nonce key
@@ -773,7 +773,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
  *
  * Key is compute as follow MD5(login ":" realm ":" password).
  * \param username username
- * \param realm realm 
+ * \param realm realm
  * \param password password
  * \param key key (MUST be at least 16 bytes)
  * \param key_len length of the key (minimum 16 bytes)
@@ -782,7 +782,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
 int turn_calculate_authentication_key(const char* username, const char* realm, const char* password, unsigned char* key, size_t key_len);
 
 /**
- * \brief Calculate the HMAC-SHA1 hash. 
+ * \brief Calculate the HMAC-SHA1 hash.
  * \param buf buffer entry buffer to calculate HMAC
  * \param len length of the buffer
  * \param key key used to hash
@@ -793,7 +793,7 @@ int turn_calculate_authentication_key(const char* username, const char* realm, c
 int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const unsigned char* key, size_t key_len, unsigned char* integrity);
 
 /**
- * \brief Calculate the HMAC-SHA1 hash. 
+ * \brief Calculate the HMAC-SHA1 hash.
  * \param iov vector which contains a message and attributes (without MESSAGE-INTEGRITY)
  * \param iovlen number of element in iov
  * \param key key used to hash
@@ -807,7 +807,7 @@ int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, co
  * \brief Calculate the fingerprint using CRC-32 from ITU V.42.
  * \param iov vector which contains a message and attributes (without FINGERPRINT)
  * \param iovlen number of element in iov
- * \return 32 bit fingerprint 
+ * \return 32 bit fingerprint
  */
 uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen);
 

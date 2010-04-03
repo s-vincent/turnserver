@@ -55,7 +55,7 @@
  * \date 2008-2009
  */
 
-#ifndef UTIL_CRYPTO_H 
+#ifndef UTIL_CRYPTO_H
 #define UTIL_CRYPTO_H
 
 #ifdef HAVE_CONFIG_H
@@ -144,7 +144,7 @@ int hmac_md5_generate(unsigned char* hash, const unsigned char* text, size_t tex
 
 /**
  * \brief Generate a CRC-32 (ISO 3309, ITU-T V.42 8.1.1.6.2, RFC 1952).
- * \param data data 
+ * \param data data
  * \param len length of data
  * \param prev previous value
  * \return CRC-32 of data

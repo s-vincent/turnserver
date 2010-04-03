@@ -37,7 +37,7 @@
  */
 
 #ifndef CONF_H
-#define CONF_H 
+#define CONF_H
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -101,7 +101,7 @@ void turnserver_cfg_free(void);
 
 /**
  * \brief Get IPv4 listening address.
- * 
+ *
  * In case of many IPv4 addresses are set in configuration
  * file (for load sharing), this function choose one of
  * them and return it.
@@ -112,11 +112,11 @@ char* turnserver_cfg_listen_address(void);
 
 /**
  * \brief Get IPv6 listening address.
- * 
- * In case of many IPv6 addresses are set in configuration 
+ *
+ * In case of many IPv6 addresses are set in configuration
  * file (for load sharing), this function choose one of
  * them and return it.
- * \return listening address 
+ * \return listening address
  * \note If NULL, the server will not allow IPv6 relaying.
  */
 char* turnserver_cfg_listen_addressv6(void);
@@ -149,7 +149,7 @@ int turnserver_cfg_tls(void);
 /**
  * \brief Run with DTLS socket.
  *
- * Please note that DTLS (TLS over UDP) is not in TURN standard 
+ * Please note that DTLS (TLS over UDP) is not in TURN standard
  * and so is an experimental feature of TurnServer.
  * \return 1 if server has to start with DTLS, 0 otherwise
  */
@@ -161,9 +161,9 @@ int turnserver_cfg_dtls(void);
  * It is strongly discouraged to have ports under
  * 49152 only if server knows there are not other
  * services running on one on these ports.
- * 
- * It is more than discouraged to have ports for 
- * range 1 - 1024. TURN client should not use 
+ *
+ * It is more than discouraged to have ports for
+ * range 1 - 1024. TURN client should not use
  * TURN server to run standard services.
  */
 uint16_t turnserver_cfg_max_port(void);
@@ -174,9 +174,9 @@ uint16_t turnserver_cfg_max_port(void);
  * It is strongly discouraged to have ports under
  * 49152 only if server knows there are not other
  * services running on one on these ports.
- * 
- * It is more than discouraged to have ports for 
- * range 1 - 1024. TURN client should not use 
+ *
+ * It is more than discouraged to have ports for
+ * range 1 - 1024. TURN client should not use
  * TURN server to run standard services.
  */
 uint16_t turnserver_cfg_min_port(void);
@@ -219,7 +219,7 @@ uint16_t turnserver_cfg_max_client(void);
 
 /**
  * \brief Get the maximum number of relay per username.
- * \return max number of allocation per username 
+ * \return max number of allocation per username
  */
 uint16_t turnserver_cfg_max_relay_per_username(void);
 

@@ -94,7 +94,7 @@ void account_desc_free(struct account_desc** desc);
 void account_desc_set_state(struct account_desc* desc, enum account_state state);
 
 /**
- * \brief Find a account with specified username and realm from a list. 
+ * \brief Find a account with specified username and realm from a list.
  * \param list list of accounts
  * \param username
  * \param realm realm

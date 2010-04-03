@@ -56,14 +56,14 @@
 /**
  * \brief Free the resources used by the lex parser.
  *
- * This function comes from libconfuse and is not called 
+ * This function comes from libconfuse and is not called
  * in cfg_free(), that's why call it here.
  * \note Require libconfuse >= 2.6.
  * \return 0
  */
 extern int cfg_yylex_destroy(void);
 
-/** 
+/**
  * \var denied_address_opts
  * \brief Denied address option.
  */
