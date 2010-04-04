@@ -982,7 +982,7 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
     index++;
   }
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1) 
+  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
@@ -1000,6 +1000,9 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
     iovec_free_data(iov, index);
     return -1;
   }
+
+  /* free message */
+  iovec_free_data(iov, index);
 
   /* initialized client socket */
   tcp_relay->client_sock = sock;
