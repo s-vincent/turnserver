@@ -888,6 +888,11 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
   struct list_head* get = NULL;
   struct list_head* n = NULL;
   struct allocation_desc* desc = NULL;
+  struct turn_msg_hdr* hdr = NULL;
+  struct turn_attr_hdr* attr = NULL;
+  struct iovec iov[8];
+  size_t index = 0;
+  uint8_t id[12];
 
   debug(DBG_ATTR, "ConnectionBind request received!\n");
 
@@ -945,6 +950,55 @@ static int turnserver_process_connectionbind_request(int transport_protocol, int
   if(tcp_relay->client_sock != -1)
   {
     return 0;
+  }
+
+  /* send response */
+  turn_generate_transaction_id(id);
+
+  /* ConnectionBind response */
+  if((hdr = turn_msg_connectionbind_response_create(0, id, &iov[index])) == NULL)
+  {
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, account->key);
+    return -1;
+  }
+  index++;
+
+  /* connection-id */
+  if(!(attr = turn_attr_connection_id_create(message->connection_id->turn_attr_id, &iov[index])))
+  {
+    iovec_free_data(iov, index);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, account->key);
+    return -1;
+  }
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
+  /* software (not fatal if it cannot be allocated) */
+  if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION, strlen(SOFTWARE_DESCRIPTION), &iov[index])))
+  {
+    hdr->turn_msg_len += iov[index].iov_len;
+    index++;
+  }
+
+  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1) 
+  {
+    /* MESSAGE-INTEGRITY option has to be in message, so
+     * deallocate ressources and return
+     */
+    iovec_free_data(iov, index);
+    turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 500,
+        saddr, saddr_size, speer, account->key);
+    return -1;
+  }
+
+  if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  {
+    debug(DBG_ATTR, "turn_send_message failed\n");
+    iovec_free_data(iov, index);
+    return -1;
   }
 
   /* initialized client socket */
@@ -3556,8 +3610,8 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
  * \param relay TCP relay descriptor
  * \param desc allocation descriptor
  * \param speer TLS peer, if not NULL send data in TLS
- * \return -1 if timeout or error which means that this relay must be removed,
- * 0 otherwise
+ * \return -1 if timeout or error which means that server have to send
+ * a 447 error, -2 if system error happens and 0 if connect() succeed
  */
 static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* relay,
     struct allocation_desc* desc, struct tls_peer* speer)
@@ -3571,27 +3625,21 @@ static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* 
   struct sockaddr* saddr = (struct sockaddr*)&desc->tuple.client_addr;
   socklen_t saddr_size = sockaddr_get_size(&desc->tuple.client_addr);
   long flags = 0;
+  int ret = 0;
 
   if(getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &err_size) == -1)
   {
-    return -1;
+    return -2;
   }
 
-  /* send response (either success or error if timeout) */
   if(err != 0)
   {
-    /* send Connect error response */
-    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 447,
-        saddr, saddr_size, speer, desc->key);
     return -1;
   }
 
-  /* send Connect success response */
   if(!(hdr = turn_msg_connect_response_create(0, relay->connect_msg_id, &iov[index])))
   {
-    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 500,
-        saddr, saddr_size, speer, desc->key);
-    return -1;
+    return -2;
   }
   index++;
 
@@ -3605,9 +3653,7 @@ static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* 
   if(!(attr = turn_attr_connection_id_create(relay->connection_id, &iov[index])))
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 500,
-        saddr, saddr_size, speer, desc->key);
-    return -1;
+    return -2;
   }
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -3615,44 +3661,39 @@ static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* 
   if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1) == -1)
   {
     iovec_free_data(iov, index);
-    turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 500,
-        saddr, saddr_size, speer, desc->key);
-    return -1;
+    return -2;
   }
 
   /* send message */
-  if(turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index) == -1)
+  ret = turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer, saddr, saddr_size,
+      ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index);
+
+  iovec_free_data(iov, index);
+
+  if(ret == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
-    iovec_free_data(iov, index);
-    return -1;
+    return -2;
   }
   else
   {
     /* back to blocking mode */
     if((flags = fcntl(sock, F_GETFL, NULL)) == -1)
     {
-      turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 447,
-          saddr, saddr_size, speer, NULL);
-      return -1;
+      return -2;
     }
-    
+
     flags &= (~O_NONBLOCK);
 
     if(fcntl(sock, F_SETFL, flags) == -1)
     {
-      perror("fcntl");
-      turnserver_send_error(IPPROTO_TCP, desc->tuple_sock, TURN_METHOD_CONNECT, relay->connect_msg_id, 447,
-          saddr, saddr_size, speer, NULL);
-      return -1;
+      return -2;
     }
 
     /* connect() succeed, mark as ready */
     relay->ready = 1;
   }
 
-  iovec_free_data(iov, index);
   return 0;
 }
 
@@ -3915,6 +3956,8 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
           /* check if connect() timeout (with value define in turn-tcp) */
           if((tmp2->created + TURN_DEFAULT_TCP_CONNECT_TIMEOUT) <= time(NULL))
           {
+            debug(DBG_ATTR, "TCP connect() timeout\n");
+
             /* send error and remove relay */
             turnserver_send_error(IPPROTO_TCP, tmp->tuple_sock, TURN_METHOD_CONNECT, tmp2->connect_msg_id,
                 447, (struct sockaddr*)&tmp->tuple.client_addr, sockaddr_get_size(&tmp->tuple.client_addr),
@@ -4225,24 +4268,36 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
 
         if(!tmp2->ready && sfd_has_data(tmp2->peer_sock, max_fd, &fdsw))
         {
-          if(turnserver_handle_tcp_connect(tmp2->peer_sock, tmp2, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL) == -1)
+          int ret_connect = turnserver_handle_tcp_connect(tmp2->peer_sock, tmp2, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL);
+
+          if(ret_connect == -1)
           {
-            /* send error and remove relay */
+            /* connect() failed */
+            debug(DBG_ATTR, "connect() failed!\n");
+
             turnserver_send_error(IPPROTO_TCP, tmp->tuple_sock, TURN_METHOD_CONNECT, tmp2->connect_msg_id,
                 447, (struct sockaddr*)&tmp->tuple.client_addr, sockaddr_get_size(&tmp->tuple.client_addr),
-                sockets->sock_tls, NULL);
+                tmp->relayed_tls ? sockets->sock_tls : NULL, tmp->key);
 
-            /* protect the removing of the expired list if any */
-            turnserver_block_realtime_signal();
-            allocation_tcp_relay_set_timer(tmp2, 0); /* stop timeout */
-            LIST_DEL(&tmp2->list2); /* in case TCP relay has expired during this statement */
-            turnserver_unblock_realtime_signal();
-            allocation_tcp_relay_list_remove(&tmp->tcp_relays, tmp2);
-            continue;
+            /* bring back relayed_tcp_sock to permit again TCP connect request */
+            tmp->relayed_sock_tcp = tmp2->peer_sock;
+            tmp2->peer_sock = -1;
+          }
+          else if(ret_connect == -2)
+          {
+            /* a system error happens */
+            debug(DBG_ATTR, "connect() success but system error!\n");
+
+            turnserver_send_error(IPPROTO_TCP, tmp->tuple_sock, TURN_METHOD_CONNECT, tmp2->connect_msg_id,
+                500, (struct sockaddr*)&tmp->tuple.client_addr, sockaddr_get_size(&tmp->tuple.client_addr),
+                tmp->relayed_tls ? sockets->sock_tls : NULL, tmp->key);
+
+            /* bring back relayed_tcp_sock to permit again TCP connect request */
+            tmp->relayed_sock_tcp = tmp2->peer_sock;
+            tmp2->peer_sock = -1;
           }
         }
-
-        if(sfd_has_data(tmp2->peer_sock, max_fd, &fdsr))
+        else if(sfd_has_data(tmp2->peer_sock, max_fd, &fdsr))
         {
           debug(DBG_ATTR, "Receive data from TCP peer\n");
 

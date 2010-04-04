@@ -1142,9 +1142,24 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
     iovec_free_data(iov, index);
     return -1;
   }
-
   iovec_free_data(iov, index);
-  return 0;
+
+  nb = client_recv_message(transport_protocol, *sock_tcp, NULL, buf, sizeof(buf));
+
+  if(nb == -1)
+  {
+    fprintf(stderr, "Receive failed!\n");
+    return -1;
+  }
+
+  if(turn_parse_message(buf, nb, &message, tabu, &tabu_size) == -1)
+  {
+    fprintf(stderr, "Parsing failed!\n");
+    return -1;
+  }
+  fprintf(stdout, "Receive ConnectionBind response OK\n");
+
+  return STUN_IS_ERROR_RESP(ntohs(message.msg->turn_msg_type)) ? -1 : 0;
 }
 
 /**
@@ -1621,7 +1636,15 @@ int main(int argc, char** argv)
     }
     else
     {
-      /* ok now send data on dedicated TCP socket */
+      /* first receive is connection response */
+      if(recv(sock_tcp2, buf, sizeof(buf), 0) == -1)
+      {
+        fprintf(stderr, "Error, recv()\n");
+        ret = EXIT_FAILURE;
+        goto quit;
+      }
+
+      /* ok now receive data on dedicated TCP socket */
       if((nb = recv(sock_tcp2, buf, sizeof(buf), 0)) != -1)
       {
         fprintf(stdout, "Receive %d bytes (TURN-TCP incoming connection).\n", (int)nb);

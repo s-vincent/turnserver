@@ -113,9 +113,6 @@ typedef unsigned __int64 uint64_t;
 /* ConnectionBind method (draft-ietf-behave-turn-tcp-06) */
 #define TURN_METHOD_CONNECTIONBIND      0x000B
 
-/* ConnectionAttempt method (draft-ietf-behave-turn-tcp-06) */
-#define TURN_METHOD_CONNECTIONATTEMPT   0x000C
-
 /* Indications */
 
 /* Send method */
@@ -123,6 +120,9 @@ typedef unsigned __int64 uint64_t;
 
 /* Data method */
 #define TURN_METHOD_DATA                0x0007
+
+/* ConnectionAttempt method (draft-ietf-behave-turn-tcp-06) */
+#define TURN_METHOD_CONNECTIONATTEMPT   0x000C
 
 /* standard STUN attributes */
 
