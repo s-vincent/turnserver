@@ -2,7 +2,7 @@ TurnServer
 ==========
 
 TurnServer is an OpenSource implementation of Traversal Using Relays around NAT (TURN). 
-It aims to be compliant with RFC5389 (STUN) and latest TURN draft.
+It aims to be compliant with RFC5766 (TURN) and RFC5389 (STUN).
 
 The TURN protocol allows a client to obtain IP addresses and ports from such a relay. 
 It is most useful for elements behind symmetric NATs or firewalls that wish to be on the 
