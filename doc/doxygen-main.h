@@ -10,7 +10,7 @@
  *
  * \section section-intro Introduction
  *
- * This is the API documentation of TurnServer, an OpenSource implementation of RFC5766 "Traversal Using Relay NAT (TURN) protocol".
+ * This is the API documentation of TurnServer, an open-source implementation of RFC5766 "Traversal Using Relay NAT (TURN)".
  *
  * The TURN protocol allows a client to obtain IP addresses and ports from such a relay. It is most useful for elements 
  * behind symmetric NATs or firewalls that wish to be on the receiving end of a connection to a single peer.

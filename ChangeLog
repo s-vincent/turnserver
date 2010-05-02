@@ -1,11 +1,11 @@
-2010-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
+2010-05-02  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.4			-	Add RFC5766 (TURN) document;
-										- Add turn-ipv6-09 and turn-tcp-06 drafts support;
-										- Add multiprotocol client example (UDP/TCP/TLS/DTLS);
-										- Add allocation port number range configuration;
-										- Some files can compiled with MS Windows as well as
-										  multiprotocol client example.
+  * Version 0.4     - Add RFC5766 (TURN) document;
+                    - Add turn-ipv6-09 and turn-tcp-06 drafts support;
+                    - Add multiprotocol client example (UDP/TCP/TLS/DTLS);
+                    - Add allocation port number range configuration;
+                    - Some files can compiled with MS Windows as well as
+                      multiprotocol client example.
 
 2010-01-03  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

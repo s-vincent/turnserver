@@ -105,7 +105,7 @@ extern "C"
 { /* } */
 #endif
 
-/* this file has been inspired by the OpenSource's vpmn  and resiprocate projects */
+/* this file has been inspired by the open-source's vpmn  and resiprocate projects */
 
 /**
  * \struct ssl_peer
