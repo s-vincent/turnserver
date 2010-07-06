@@ -1586,15 +1586,11 @@ int main(int argc, char** argv)
     }
 
     fprintf(stderr, "Channel bound to %u.\n", channel);
-    for(int i = 0 ; i < 10 ; i++)
-    {
-      printf("%d\n", i);
+
     /* send data with ChannelData */
     if(client_send_channeldata(transport_protocol, sock, speer, (struct sockaddr*)&server_addr, server_addr_size, channel, data, sizeof(data)) == -1)
     {
       fprintf(stderr, "ChannelData failed.\n");
-    }
-    usleep(1000);
     }
   }
   else
