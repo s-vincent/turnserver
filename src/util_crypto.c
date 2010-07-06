@@ -93,7 +93,7 @@ int seed_prng_init(void)
   }
 #else
   /* RAND_screen() or RAND_event() are not good for servers applications (run without
-   * user interaction). However it seems that OpenSSL already initialize something 
+   * user interaction). However it seems that OpenSSL already initialize something
    * internally for Windows.
    */
 #endif

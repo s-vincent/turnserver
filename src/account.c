@@ -47,7 +47,8 @@
 #include "account.h"
 #include "protocol.h"
 
-struct account_desc* account_desc_new(const char* username, const char* password, const char* realm)
+struct account_desc* account_desc_new(const char* username, const char* password, const char* realm,
+    enum account_state state)
 {
   struct account_desc* ret = NULL;
 
@@ -68,7 +69,7 @@ struct account_desc* account_desc_new(const char* username, const char* password
   ret->realm[sizeof(ret->realm)-1] = 0x00;
 
   /* set state */
-  ret->state = AUTHORIZED;
+  ret->state = state;
 
   ret->allocations = 0;
 
@@ -158,19 +159,21 @@ int account_parse_file(struct list_head* list, const char* file)
 
   while(!feof(account_file))
   {
+    enum account_state state = AUTHORIZED;
+
     if(!fgets(line, sizeof(line) - 1, account_file))
     {
       continue;
     }
 
-    token  = strtok_r(line, delim, &save_ptr);
+    token = strtok_r(line, delim, &save_ptr);
     if(!token)
     {
       continue;
     }
     login = strdup(token);
 
-    token  = strtok_r(NULL, delim, &save_ptr);
+    token = strtok_r(NULL, delim, &save_ptr);
     if(!token)
     {
       free(login);
@@ -178,13 +181,16 @@ int account_parse_file(struct list_head* list, const char* file)
     }
     password = strdup(token);
 
-    token  = strtok_r(NULL, delim, &save_ptr);
+    token = strtok_r(NULL, delim, &save_ptr);
     if(!token)
     {
       free(login);
       free(password);
       continue;
     }
+    realm = strdup(token);
+
+    token = strtok_r(NULL, delim, &save_ptr);
 
     /* replace end of line by NULL character */
     save_ptr = strchr(token, '\n');
@@ -193,11 +199,25 @@ int account_parse_file(struct list_head* list, const char* file)
       *save_ptr = 0x00;
     }
 
-    realm = strdup(token);
+    if(!strcmp(token, "authorized"))
+    {
+      state = AUTHORIZED;
+    }
+    else if(!strcmp(token, "restricted"))
+    {
+      state = RESTRICTED;
+    }
+    else if(!strcmp(token, "refused"))
+    {
+      state = REFUSED;
+    }
 
-    /* add it to the list */
-    desc = account_desc_new(login, password, realm);
-    account_list_add(list, desc);
+    /* add it to the list (only for non-refused account) */
+    if(state != REFUSED)
+    {
+      desc = account_desc_new(login, password, realm, state);
+      account_list_add(list, desc);
+    }
 
     /* cleanup */
     desc = NULL;

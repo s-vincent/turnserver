@@ -1,9 +1,9 @@
-## 
+##
 # TurnServer configuration file.
 #
 
 ## Public IPv4 address of any relayed address (if not set, no relay for IPv4).
-## To have multiple address, separate addresses with a comma 
+## To have multiple address, separate addresses with a comma
 ## (i.e. listen_address = { "172.16.0.1", "172.17.0.1" }).
 listen_address = { "192.168.0.1" }
 
@@ -42,7 +42,7 @@ turn_tcp = false
 tcp_buffer_userspace = true
 
 ## TURN-TCP maximum buffer size.
-tcp_buffer_size = 32768 
+tcp_buffer_size = 32768
 
 ## Daemon mode.
 daemon = false
@@ -59,7 +59,7 @@ realm = "domain.org"
 nonce_key = "hieKedq"
 
 ## Max relay per username.
-max_relay_per_username = 5 
+max_relay_per_username = 5
 
 ## Allocation lifetime.
 allocation_lifetime = 1800
@@ -67,6 +67,10 @@ allocation_lifetime = 1800
 ## Allocation bandwidth limitation (in KBytes/s).
 # 0 value means bandwidth quota disabled.
 bandwidth_per_allocation = 150
+
+## Restricted user bandwidth (in KBytes/s).
+# 0 value means bandwidth limitation disabled.
+restricted_bandwidth = 10
 
 ## Denied addresses.
 

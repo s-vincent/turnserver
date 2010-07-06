@@ -93,6 +93,7 @@ static cfg_opt_t opts[]=
   CFG_BOOL("turn_tcp", cfg_false, CFGF_NONE),
   CFG_BOOL("tcp_buffer_userspace", cfg_true, CFGF_NONE),
   CFG_INT("tcp_buffer_size", 1500, CFGF_NONE),
+  CFG_INT("restricted_bandwidth", 10, CFGF_NONE),
   CFG_BOOL("daemon", cfg_false, CFGF_NONE),
   CFG_STR("unpriv_user", NULL, CFGF_NONE),
   CFG_INT("max_client", 50, CFGF_NONE),
@@ -317,6 +318,11 @@ int turnserver_cfg_tcp_buffer_userspace(void)
 uint32_t turnserver_cfg_tcp_buffer_size(void)
 {
   return cfg_getint(g_cfg, "tcp_buffer_size");
+}
+
+uint32_t turnserver_cfg_restricted_bandwidth(void)
+{
+  return cfg_getint(g_cfg, "restricted_bandwidth");
 }
 
 int turnserver_cfg_daemon(void)

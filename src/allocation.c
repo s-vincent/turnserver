@@ -582,7 +582,7 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
     ret->ready = 1;
   }
 
-  ret->created = time(NULL); 
+  ret->created = time(NULL);
 
   if(buffer_size)
   {

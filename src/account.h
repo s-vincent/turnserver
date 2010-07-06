@@ -52,6 +52,7 @@
 enum account_state
 {
   AUTHORIZED, /**< Client is authorized to access service */
+  RESTRICTED, /**< Client has limited access to service (bandwidth, ...) */
   REFUSED, /**< Client is always refused to access service (i.e. blacklist) */
 };
 
@@ -76,9 +77,10 @@ struct account_desc
  * \param username NULL-terminated username
  * \param password NULL-terminated password
  * \param realm NULL-terminated realm
+ * \param state account state
  * \return pointer on account_desc or NULL if problem
  */
-struct account_desc* account_desc_new(const char* username, const char* password, const char* realm);
+struct account_desc* account_desc_new(const char* username, const char* password, const char* realm, enum account_state state);
 
 /**
  * \brief Free an account.
@@ -125,7 +127,7 @@ void account_list_remove(struct list_head* list, struct account_desc* desc);
 /**
  * \brief Parse account file and fill up a list.
  *
- * Each lines of file MUST be: login:password:domain.org
+ * Each lines of file MUST be: login:password:domain.org:state
  * In other words, the value is separated with a ':'
  * \param list list of accounts
  * \param file account file

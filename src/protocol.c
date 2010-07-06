@@ -1475,7 +1475,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t k
   uint32_t ct = 0;
   uint64_t ct64 = 0;
   time_t t = 0;
-  unsigned char c  = ':';
+  unsigned char c = ':';
   MD5_CTX ctx;
   unsigned char md_buf[MD5_DIGEST_LENGTH];
   unsigned char md_txt[MD5_DIGEST_LENGTH * 2];

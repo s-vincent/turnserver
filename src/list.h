@@ -78,7 +78,7 @@
  */
 typedef struct list_head
 {
-  struct list_head *next; /**< Next element in the list    */
+  struct list_head *next; /**< Next element in the list */
   struct list_head *prev; /**< Previous element in the list */
 }list_head;
 

@@ -187,7 +187,7 @@ int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg), void* ar
   }
 
   max = sysconf(_SC_OPEN_MAX);
-  for(i = STDIN_FILENO + 1 ; i  < max ; i++)
+  for(i = STDIN_FILENO + 1 ; i < max ; i++)
   {
     close(i);
   }
@@ -244,7 +244,7 @@ char* encode_http_string(const char* str)
   {
     unsigned int t = (unsigned int)str[i];
 
-    if(t < 42 || t == ',' || (t >= 58  && t < 64) ||
+    if(t < 42 || t == ',' || (t >= 58 && t < 64) ||
        (t >= 91 && t < 95) || t == '`' ||
        t > 122 || t == '+' || t == '&' ||
        t == ',' || t == ';' || t == '/' ||

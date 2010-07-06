@@ -257,7 +257,7 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, 
  * \param peer_port peer port
  * \param timeout TCP relay timeout (if no ConnectionBind is received)
  * \param buffer_size internal buffer size (for peer data)
- * \param connect_msg_id Connect request message ID if client contact another peer otherwise put NULL 
+ * \param connect_msg_id Connect request message ID if client contact another peer otherwise put NULL
  * \return 0 if success, -1 otherwise
  */
 int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id);

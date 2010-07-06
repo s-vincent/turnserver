@@ -1,4 +1,4 @@
-.TH turnserver.conf 5 "February 7, 2010" "TurnServer Configuration"
+.TH turnserver.conf 5 "July 5, 2010" "TurnServer Configuration"
 
 .SH NAME
 turnserver.conf \- TurnServer configuration file
@@ -110,6 +110,11 @@ Bandwidth limit for an allocation in KBytes/s.
 0 value means disable bandwidth quota.
 
 .TP
+.BR "restricted_bandwidth " "= number"
+Bandwidth limit for restricted userse in KBytes/s.
+0 value means disable bandwidth limitation.
+
+.TP
 .nf
 .BR "denied_address {"
 .BR " address " "= IPv4 | IPv6 address"
@@ -192,6 +197,8 @@ max_relay_per_username = 10
 allocation_lifetime = 1800
 
 bandwidth_per_allocation = 150
+
+restricted_bandwidth = 10
 
 denied_address {
   address = "172.1.0.3"

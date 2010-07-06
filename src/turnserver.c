@@ -96,7 +96,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.4"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.5"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
@@ -539,7 +539,7 @@ static int turnserver_is_address_denied(const uint8_t* addr, size_t addrlen, uin
   list_iterate_safe(get, n, &g_denied_address_list)
   {
     struct denied_address* tmp = list_get(get, struct denied_address, list);
-    int  diff = 0;
+    int diff = 0;
 
     /* compare addresses from same family */
     if((tmp->family == AF_INET6 && addrlen != 16) ||
@@ -2506,7 +2506,15 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   }
 
   /* init token bucket */
-  desc->bucket_capacity = turnserver_cfg_bandwidth_per_allocation() * 1000; /* store it in bytes */
+  if(account->state == AUTHORIZED)
+  {
+    desc->bucket_capacity = turnserver_cfg_bandwidth_per_allocation() * 1000; /* store it in bytes */
+  }
+  else
+  {
+    desc->bucket_capacity = turnserver_cfg_restricted_bandwidth() * 1000; /* store it in bytes */
+  }
+
   desc->bucket_tokenup = desc->bucket_capacity;
   desc->bucket_tokendown = desc->bucket_capacity;
 
@@ -4222,7 +4230,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       /* relayed address */
       if(sfd_has_data(tmp->relayed_sock, max_fd, &fdsr))
       {
-        /* UDP relay is described in draft-ietf-behave-turn-16
+        /* UDP relay is described in RFC 5766
          * and TCP relay is described in draft-ietf-behave-turn-tcp-06
          */
         if(tmp->relayed_transport_protocol == IPPROTO_UDP)
