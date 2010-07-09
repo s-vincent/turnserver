@@ -107,10 +107,10 @@ typedef unsigned __int64 uint64_t;
 /* ChannelBind method */
 #define TURN_METHOD_CHANNELBIND         0x0009
 
-/* Connect method (draft-ietf-behave-turn-tcp-06) */
+/* Connect method (draft-ietf-behave-turn-tcp-07) */
 #define TURN_METHOD_CONNECT             0x000A
 
-/* ConnectionBind method (draft-ietf-behave-turn-tcp-06) */
+/* ConnectionBind method (draft-ietf-behave-turn-tcp-07) */
 #define TURN_METHOD_CONNECTIONBIND      0x000B
 
 /* Indications */
@@ -121,7 +121,7 @@ typedef unsigned __int64 uint64_t;
 /* Data method */
 #define TURN_METHOD_DATA                0x0007
 
-/* ConnectionAttempt method (draft-ietf-behave-turn-tcp-06) */
+/* ConnectionAttempt method (draft-ietf-behave-turn-tcp-07) */
 #define TURN_METHOD_CONNECTIONATTEMPT   0x000C
 
 /* standard STUN attributes */
@@ -188,10 +188,10 @@ typedef unsigned __int64 uint64_t;
 /* RESERVATION-TOKEN */
 #define TURN_ATTR_RESERVATION_TOKEN     0x0022
 
-/* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-09) */
+/* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-11) */
 #define TURN_ATTR_REQUESTED_ADDRESS_FAMILY  0x0017
 
-/* CONNECTION-ID (draft-ietf-behave-turn-tcp-06) */
+/* CONNECTION-ID (draft-ietf-behave-turn-tcp-07) */
 #define TURN_ATTR_CONNECTION_ID         0x002A
 
 /* STUN error codes */
@@ -210,11 +210,11 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_ALLOCATION_QUOTA_REACHED       486
 #define TURN_ERROR_INSUFFICIENT_CAPACITY          508
 
-/* draft-ietf-behave-turn-ipv6-09 */
+/* draft-ietf-behave-turn-ipv6-11 */
 #define TURN_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED   440
 #define TURN_ERROR_PEER_ADDRESS_FAMILY_MISMATCH   443
 
-/* draft-ietf-behave-turn-tcp-06 */
+/* draft-ietf-behave-turn-tcp-07 */
 #define TURN_ERROR_CONNECTON_ALREADY_EXIST        446
 #define TURN_ERROR_CONNECTON_TIMEOUT              447
 
@@ -234,11 +234,11 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_486            "Allocation quota reached"
 #define TURN_ERROR_508            "Insufficient capacity"
 
-/* draft-ietf-behave-turn-ipv6-09 */
+/* draft-ietf-behave-turn-ipv6-11 */
 #define TURN_ERROR_440            "Address family not supported"
 #define TURN_ERROR_443            "Peer address family mismatch"
 
-/* draft-ietf-behave-turn-tcp-06 */
+/* draft-ietf-behave-turn-tcp-07 */
 #define TURN_ERROR_446            "Connection Already Exists"
 #define TURN_ERROR_447            "Connection Timeout or Failure"
 
@@ -270,11 +270,11 @@ typedef unsigned __int64 uint64_t;
 /* lifetime of a token (in seconds) */
 #define TURN_DEFAULT_TOKEN_LIFETIME           60
 
-/* draft-ietf-behave-turn-tcp-06 */
+/* draft-ietf-behave-turn-tcp-07 */
 /* Timeout of TCP relay when no ConnectionBind is received (in seconds) */
 #define TURN_DEFAULT_TCP_RELAY_TIMEOUT        30
 
-/* draft-ietf-behave-turn-tcp-06 */
+/* draft-ietf-behave-turn-tcp-07 */
 /* Timeout of TCP connect (in seconds) */
 #define TURN_DEFAULT_TCP_CONNECT_TIMEOUT      30
 
@@ -559,7 +559,7 @@ struct turn_channel_data
 
 /**
  * \struct turn_attr_requested_address_family.
- * \brief REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-09).
+ * \brief REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-11).
  */
 struct turn_attr_requested_address_family
 {
@@ -571,7 +571,7 @@ struct turn_attr_requested_address_family
 
 /**
  * \struct turn_attr_connection_id
- * \brief CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-06).
+ * \brief CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-07).
  */
 struct turn_attr_connection_id
 {

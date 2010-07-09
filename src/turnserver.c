@@ -516,6 +516,28 @@ static int turnserver_check_bandwidth_limit(struct allocation_desc* desc, size_t
 }
 
 /**
+ * \brief Verify if the address is an IPv6 tunneled ones.
+ * \param addr address to check
+ * \param addrlen sizeof address
+ * \return 1 if address is an IPv6 tunneled ones, 0 otherwise
+ */
+static int turnserver_is_ipv6_tunneled_address(const uint8_t* addr, size_t addrlen)
+{
+  if(addrlen == 16)
+  {
+    static const uint8_t addr_6to4[2] = {0x20, 0x02};
+    static const uint8_t addr_teredo[4] = {0x20, 0x01, 0x00, 0x00};
+
+    /* 6to4 or teredo address ? */
+    if(!memcmp(addr, addr_6to4, 2) || !memcmp(addr, addr_teredo, 4))
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/**
  * \brief Verify if address/port is in denied list.
  * \param addr IPv4/IPv6 address to check
  * \param addrlen sizeof the address (IPv4 = 4, IPv6 = 16)
@@ -644,10 +666,10 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 443: /* Peer address family mismatch */
       hdr = turn_error_response_443(method, id, &iov[index], &index);
       break;
-    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-06) */
+    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-07) */
       hdr = turn_error_response_446(method, id, &iov[index], &index);
       break;
-    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-06) */
+    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-07) */
       hdr = turn_error_response_447(method, id, &iov[index], &index);
       break;
     case 486: /* Allocation quota reached */
@@ -707,7 +729,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
 }
 
 /**
- * \brief Process a TURN Connect request (draft-ietf-behave-turn-tcp-06).
+ * \brief Process a TURN Connect request (draft-ietf-behave-turn-tcp-07).
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -790,7 +812,11 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
     return -1;
   }
 
-  if(turnserver_is_address_denied(peer_addr, len, peer_port))
+  /* check if the address is not blacklisted,
+   * also check for an IPv6 tunneled address that can lead to a tunnel
+   * amplification attack (see section 9.1 of draft-ietf-behave-turn-ipv6-11)
+   */
+  if(turnserver_is_address_denied(peer_addr, len, peer_port) || turnserver_is_ipv6_tunneled_address(peer_addr, len))
   {
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403,
         saddr, saddr_size, speer, desc->key);
@@ -867,7 +893,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
 }
 
 /**
- * \brief Process a TURN ConnectionBind request (draft-ietf-behave-turn-tcp-06).
+ * \brief Process a TURN ConnectionBind request (draft-ietf-behave-turn-tcp-07).
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -1265,7 +1291,7 @@ static int turnserver_process_channeldata(int transport_protocol, uint16_t chann
       break;
   }
 
-  /* draft-ietf-behave-turn-ipv6-09:  If present, the
+  /* draft-ietf-behave-turn-ipv6-11:  If present, the
    * DONT-FRAGMENT attribute MUST be ignored by the server for
    * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
    */
@@ -1380,7 +1406,11 @@ static int turnserver_process_send_indication(const struct turn_message* message
     return -1;
   }
 
-  if(turnserver_is_address_denied(peer_addr, len, peer_port))
+  /* check if the address is not blacklisted,
+   * also check for an IPv6 tunneled address that can lead to a tunnel
+   * amplification attack (see section 9.1 of draft-ietf-behave-turn-ipv6-11)
+   */
+  if(turnserver_is_address_denied(peer_addr, len, peer_port) || turnserver_is_ipv6_tunneled_address(peer_addr, len))
   {
     inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
     debug(DBG_ATTR, "TurnServer does not permit relaying to %s\n", str);
@@ -1434,7 +1464,7 @@ static int turnserver_process_send_indication(const struct turn_message* message
         break;
     }
 
-    /* draft-ietf-behave-turn-ipv6-09:  If present, the
+    /* draft-ietf-behave-turn-ipv6-11:  If present, the
      * DONT-FRAGMENT attribute MUST be ignored by the server for
      * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
@@ -1808,7 +1838,11 @@ static int turnserver_process_channelbind_request(int transport_protocol, int so
 
   inet_ntop(family, peer_addr, str, INET6_ADDRSTRLEN);
 
-  if(turnserver_is_address_denied(peer_addr, len, peer_port))
+  /* check if the address is not blacklisted,
+   * also check for an IPv6 tunneled address that can lead to a tunnel
+   * amplification attack (see section 9.1 of draft-ietf-behave-turn-ipv6-11)
+   */
+  if(turnserver_is_address_denied(peer_addr, len, peer_port) || turnserver_is_ipv6_tunneled_address(peer_addr, len))
   {
     /* permission denied => error 403 */
     debug(DBG_ATTR, "TurnServer does not permit to create a ChannelBind to %s\n", str);
@@ -1965,7 +1999,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock, 
   /* save key from allocation as it could be freed if lifetime equals 0 */
   memcpy(key, desc->key, sizeof(desc->key));
 
-  /* draft-ietf-behave-turn-ipv6-09: at this stage server knows the 5-tuple and the allocation associated.
+  /* draft-ietf-behave-turn-ipv6-11: at this stage server knows the 5-tuple and the allocation associated.
    * No matter to know if the relayed address has a different address family than 5-tuple, so
    * no need to have REQUESTED-ADDRESS-FAMILY attribute in Refresh request.
    */
@@ -2116,7 +2150,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t port = 0;
   uint16_t reservation_port = 0;
   int relayed_sock = -1;
-  int relayed_sock_tcp = -1; /* draft-ietf-behave-turn-tcp-06 */
+  int relayed_sock_tcp = -1; /* draft-ietf-behave-turn-tcp-07 */
   int reservation_sock = -1;
   socklen_t relayed_size = sizeof(struct sockaddr_storage);
   size_t quit_loop = 0;
@@ -2168,6 +2202,15 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   {
     inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str2, INET6_ADDRSTRLEN);
     port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
+
+    /* Do not accept allocation request from IPv6 tunneled address,
+     * see section 9.1 of draft-ietf-behave-turn-ipv6-11
+     */
+    if(turnserver_is_ipv6_tunneled_address(((struct sockaddr_in6*)saddr)->sin6_addr.s6_addr, 16))
+    {
+      turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 403,
+          saddr, saddr_size, speer, account->key);
+    }
   }
 
   /* check for allocation quota */
@@ -2249,7 +2292,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_transport->turn_attr_protocol == IPPROTO_TCP)
   {
-    /* draft-ietf-behave-turn-tcp-06:
+    /* draft-ietf-behave-turn-tcp-07:
      * - do not permit to allocate TCP relay with an
      * UDP-based connection
      * - requests do not contains DONT-FRAGMENT,
@@ -2274,7 +2317,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_addr_family && message->reservation_token)
   {
-    /* draft-ietf-behave-turn-ipv6-09: cannot have both
+    /* draft-ietf-behave-turn-ipv6-11: cannot have both
      * REQUESTED-ADDRESS-FAMILY and RESERVATION-TOKEN => error 400
      */
     turnserver_send_error(transport_protocol, sock, method, message->msg->turn_msg_id, 400,
@@ -2343,7 +2386,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     lifetime = MIN(turnserver_cfg_allocation_lifetime(), TURN_MAX_ALLOCATION_LIFETIME);
   }
 
-  /* draft-ietf-behave-turn-ipv6-09 */
+  /* draft-ietf-behave-turn-ipv6-11 */
   if(message->requested_addr_family)
   {
     switch(message->requested_addr_family->turn_attr_family)
@@ -2523,6 +2566,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   /* increment number of allocations */
   account->allocations++;
   debug(DBG_ATTR, "Account %s, allocations used: %u\n", account->username, account->allocations);
+  syslog(LOG_INFO, "Account %s, allocations used: %zu", account->username, account->allocations);
 
   if(speer)
   {
@@ -2691,7 +2735,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     return turnserver_process_binding_request(transport_protocol, sock, message, saddr, saddr_size, speer);
   }
 
-  /* draft-ietf-behave-turn-tcp-06 */
+  /* draft-ietf-behave-turn-tcp-07 */
   /* find right tuple for a TCP allocation (ConnectionBind case) */
   if(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_CONNECTIONBIND)
   {
@@ -2775,7 +2819,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
               saddr, saddr_size, speer, desc->key);
         }
         break;
-      case TURN_METHOD_CONNECT: /* draft-ietf-behave-turn-tcp-06 */
+      case TURN_METHOD_CONNECT: /* draft-ietf-behave-turn-tcp-07 */
         /* Connect is only for TCP or TLS over TCP <-> TCP */
         if(transport_protocol == IPPROTO_TCP && desc->relayed_transport_protocol == IPPROTO_TCP)
         {
@@ -3388,7 +3432,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen, const struct
     socklen_t optlen = sizeof(int);
 
 #ifdef OS_SET_DF_SUPPORT
-    /* draft-ietf-behave-turn-ipv6-09:  If present, the
+    /* draft-ietf-behave-turn-ipv6-11:  If present, the
      * DONT-FRAGMENT attribute MUST be ignored by the server for
      * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
@@ -3616,7 +3660,7 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
 }
 
 /**
- * \brief Handle state of remote peer asynchronous TCP connect() (draft-ietf-behave-turn-tcp-06).
+ * \brief Handle state of remote peer asynchronous TCP connect() (draft-ietf-behave-turn-tcp-07).
  * \param sock TCP socket
  * \param relay TCP relay descriptor
  * \param desc allocation descriptor
@@ -3709,7 +3753,7 @@ static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* 
 }
 
 /**
- * \brief Handle incoming TCP connection (draft-ietf-behave-turn-tcp-06).
+ * \brief Handle incoming TCP connection (draft-ietf-behave-turn-tcp-07).
  * \param sock TCP listen socket
  * \param desc allocation descriptor
  * \param speer TLS peer, if not NULL send data in TLS
@@ -3950,7 +3994,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       nsock = MAX(nsock, tmp->relayed_sock);
     }
 
-    /* draft-ietf-behave-turn-tcp-06 */
+    /* draft-ietf-behave-turn-tcp-07 */
     /* add peer and client data connection sockets */
     list_iterate_safe(get2, n2, &tmp->tcp_relays)
     {
@@ -4231,7 +4275,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       if(sfd_has_data(tmp->relayed_sock, max_fd, &fdsr))
       {
         /* UDP relay is described in RFC 5766
-         * and TCP relay is described in draft-ietf-behave-turn-tcp-06
+         * and TCP relay is described in draft-ietf-behave-turn-tcp-07
          */
         if(tmp->relayed_transport_protocol == IPPROTO_UDP)
         {
@@ -4264,14 +4308,14 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         }
         else if(tmp->relayed_transport_protocol == IPPROTO_TCP)
         {
-          /* draft-ietf-behave-turn-tcp-06 */
+          /* draft-ietf-behave-turn-tcp-07 */
           /* handle incoming TCP connection on relayed address */
           debug(DBG_ATTR, "Received incoming connection on a listening TCP relayed address\n");
           turnserver_handle_tcp_incoming_connection(tmp->relayed_sock, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL);
         }
       }
 
-      /* draft-ietf-behave-turn-tcp-06 */
+      /* draft-ietf-behave-turn-tcp-07 */
       /* relayed TCP-based addresses */
       list_iterate_safe(get2, n2, &tmp->tcp_relays)
       {
