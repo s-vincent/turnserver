@@ -89,10 +89,13 @@ $ man turnserver.conf
 TurnServer uses (for the moment) a basic text file which contains accounts information.
 
 The format of each line is:
-login:password:realm
+login:password:realm:state
 
-Note: realm have to match realm parameter defined in TurnServer configuration file. The
-":" character is also forbidden in login, password or realm fields.
+The state can be "authorized", "refused" or "restricted". The "refused" state means 
+the account has bandwidth restrictions.
+
+Note: realm have to match realm parameter defined in TurnServer configuration file.
+The ":" character is also forbidden in login, password or realm fields.
 
 4) Security
 ------------

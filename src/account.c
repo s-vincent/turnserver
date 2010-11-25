@@ -192,24 +192,27 @@ int account_parse_file(struct list_head* list, const char* file)
 
     token = strtok_r(NULL, delim, &save_ptr);
 
-    /* replace end of line by NULL character */
-    save_ptr = strchr(token, '\n');
-    if(save_ptr)
+    if(token)
     {
-      *save_ptr = 0x00;
-    }
+      /* replace end of line by NULL character */
+      save_ptr = strchr(token, '\n');
+      if(save_ptr)
+      {
+        *save_ptr = 0x00;
+      }
 
-    if(!strcmp(token, "authorized"))
-    {
-      state = AUTHORIZED;
-    }
-    else if(!strcmp(token, "restricted"))
-    {
-      state = RESTRICTED;
-    }
-    else if(!strcmp(token, "refused"))
-    {
-      state = REFUSED;
+      if(!strcmp(token, "authorized"))
+      {
+        state = AUTHORIZED;
+      }
+      else if(!strcmp(token, "restricted"))
+      {
+        state = RESTRICTED;
+      }
+      else if(!strcmp(token, "refused"))
+      {
+        state = REFUSED;
+      }
     }
 
     /* add it to the list (only for non-refused account) */

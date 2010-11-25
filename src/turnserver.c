@@ -33,7 +33,7 @@
  * \file turnserver.c
  * \brief TURN Server implementation.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifdef HAVE_CONFIG_H

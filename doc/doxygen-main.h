@@ -2,7 +2,7 @@
  * \file doxygen-main.h
  * \brief Documentation main page.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 /**
