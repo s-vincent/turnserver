@@ -666,10 +666,10 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
     case 443: /* Peer address family mismatch */
       hdr = turn_error_response_443(method, id, &iov[index], &index);
       break;
-    case 446: /* Connection already exists (draft-ietf-behave-turn-tcp-07) */
+    case 446: /* Connection already exists (RFC6062) */
       hdr = turn_error_response_446(method, id, &iov[index], &index);
       break;
-    case 447: /* Connection timeout or failure (draft-ietf-behave-turn-tcp-07) */
+    case 447: /* Connection timeout or failure (RFC6062) */
       hdr = turn_error_response_447(method, id, &iov[index], &index);
       break;
     case 486: /* Allocation quota reached */
@@ -729,7 +729,7 @@ static int turnserver_send_error(int transport_protocol, int sock, int method, c
 }
 
 /**
- * \brief Process a TURN Connect request (draft-ietf-behave-turn-tcp-07).
+ * \brief Process a TURN Connect request (RFC6062).
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -893,7 +893,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock, 
 }
 
 /**
- * \brief Process a TURN ConnectionBind request (draft-ietf-behave-turn-tcp-07).
+ * \brief Process a TURN ConnectionBind request (RFC6062).
  * \param transport_protocol transport protocol used
  * \param sock socket
  * \param message STUN message
@@ -2150,7 +2150,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   uint16_t port = 0;
   uint16_t reservation_port = 0;
   int relayed_sock = -1;
-  int relayed_sock_tcp = -1; /* draft-ietf-behave-turn-tcp-07 */
+  int relayed_sock_tcp = -1; /* RFC6062 (TURN-TCP) */
   int reservation_sock = -1;
   socklen_t relayed_size = sizeof(struct sockaddr_storage);
   size_t quit_loop = 0;
@@ -2292,7 +2292,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_transport->turn_attr_protocol == IPPROTO_TCP)
   {
-    /* draft-ietf-behave-turn-tcp-07:
+    /* RFC6062 (TURN-TCP):
      * - do not permit to allocate TCP relay with an
      * UDP-based connection
      * - requests do not contains DONT-FRAGMENT,
@@ -2735,7 +2735,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
     return turnserver_process_binding_request(transport_protocol, sock, message, saddr, saddr_size, speer);
   }
 
-  /* draft-ietf-behave-turn-tcp-07 */
+  /* RFC6062 (TURN-TCP) */
   /* find right tuple for a TCP allocation (ConnectionBind case) */
   if(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_CONNECTIONBIND)
   {
@@ -2819,7 +2819,7 @@ static int turnserver_process_turn(int transport_protocol, int sock, const struc
               saddr, saddr_size, speer, desc->key);
         }
         break;
-      case TURN_METHOD_CONNECT: /* draft-ietf-behave-turn-tcp-07 */
+      case TURN_METHOD_CONNECT: /* RFC6062 (TURN-TCP) */
         /* Connect is only for TCP or TLS over TCP <-> TCP */
         if(transport_protocol == IPPROTO_TCP && desc->relayed_transport_protocol == IPPROTO_TCP)
         {
@@ -3660,7 +3660,7 @@ static int turnserver_check_relay_address(char* listen_address, char* listen_add
 }
 
 /**
- * \brief Handle state of remote peer asynchronous TCP connect() (draft-ietf-behave-turn-tcp-07).
+ * \brief Handle state of remote peer asynchronous TCP connect() (RFC6062).
  * \param sock TCP socket
  * \param relay TCP relay descriptor
  * \param desc allocation descriptor
@@ -3753,7 +3753,7 @@ static int turnserver_handle_tcp_connect(int sock, struct allocation_tcp_relay* 
 }
 
 /**
- * \brief Handle incoming TCP connection (draft-ietf-behave-turn-tcp-07).
+ * \brief Handle incoming TCP connection (RFC6062).
  * \param sock TCP listen socket
  * \param desc allocation descriptor
  * \param speer TLS peer, if not NULL send data in TLS
@@ -3994,7 +3994,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       nsock = MAX(nsock, tmp->relayed_sock);
     }
 
-    /* draft-ietf-behave-turn-tcp-07 */
+    /* RFC6062 (TURN-TCP) */
     /* add peer and client data connection sockets */
     list_iterate_safe(get2, n2, &tmp->tcp_relays)
     {
@@ -4008,7 +4008,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
          */
         if(tmp2->peer_sock != -1 && tmp2->ready != 1)
         {
-          /* check if connect() timeout (with value define in turn-tcp) */
+          /* check if connect() timeout (with value define in RFC6062) */
           if((tmp2->created + TURN_DEFAULT_TCP_CONNECT_TIMEOUT) <= time(NULL))
           {
             debug(DBG_ATTR, "TCP connect() timeout\n");
@@ -4275,7 +4275,7 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
       if(sfd_has_data(tmp->relayed_sock, max_fd, &fdsr))
       {
         /* UDP relay is described in RFC 5766
-         * and TCP relay is described in draft-ietf-behave-turn-tcp-07
+         * and TCP relay is described in RFC6062
          */
         if(tmp->relayed_transport_protocol == IPPROTO_UDP)
         {
@@ -4308,14 +4308,14 @@ static void turnserver_main(struct listen_sockets* sockets, struct list_head* tc
         }
         else if(tmp->relayed_transport_protocol == IPPROTO_TCP)
         {
-          /* draft-ietf-behave-turn-tcp-07 */
+          /* RFC6062 (TURN-TCP) */
           /* handle incoming TCP connection on relayed address */
           debug(DBG_ATTR, "Received incoming connection on a listening TCP relayed address\n");
           turnserver_handle_tcp_incoming_connection(tmp->relayed_sock, tmp, tmp->relayed_tls ? sockets->sock_tls : NULL);
         }
       }
 
-      /* draft-ietf-behave-turn-tcp-07 */
+      /* RFC6062 (TURN-TCP) */
       /* relayed TCP-based addresses */
       list_iterate_safe(get2, n2, &tmp->tcp_relays)
       {

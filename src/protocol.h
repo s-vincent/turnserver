@@ -98,7 +98,7 @@ struct turn_message
   struct turn_attr_dont_fragment* dont_fragment; /**< DONT-FRAGMENT attribute */
   struct turn_attr_reservation_token* reservation_token; /**< RESERVATION-TOKEN attribute */
   struct turn_attr_requested_address_family* requested_addr_family; /**< REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-11) */
-  struct turn_attr_connection_id* connection_id; /**< CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-07) */
+  struct turn_attr_connection_id* connection_id; /**< CONNECTION-ID attribute (RFC6062) */
   size_t xor_peer_addr_overflow; /**< If set to 1, not all the XOR-PEER-ADDRESS given in request are in this structure */
 };
 

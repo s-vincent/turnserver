@@ -145,7 +145,7 @@ struct allocation_desc
   struct list_head peers_permissions; /**< List of peers permissions */
   struct list_head tcp_relays; /**< TCP relays information */
   int relayed_sock; /**< Socket for the allocated transport address */
-  int relayed_sock_tcp; /**< Socket for the allocated transport address to contact TCP peer (draft-ietf-behave-turn-tcp-07). It is set to -1 if Connect request succeed */
+  int relayed_sock_tcp; /**< Socket for the allocated transport address to contact TCP peer (RFC6062). It is set to -1 if Connect request succeed */
   int relayed_tls; /**< If allocation has been set in TLS */
   int relayed_dtls; /**< If allocation has been set in DTLS */
   int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */

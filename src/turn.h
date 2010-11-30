@@ -107,10 +107,10 @@ typedef unsigned __int64 uint64_t;
 /* ChannelBind method */
 #define TURN_METHOD_CHANNELBIND         0x0009
 
-/* Connect method (draft-ietf-behave-turn-tcp-07) */
+/* Connect method (RFC6062) */
 #define TURN_METHOD_CONNECT             0x000A
 
-/* ConnectionBind method (draft-ietf-behave-turn-tcp-07) */
+/* ConnectionBind method (RFC6062) */
 #define TURN_METHOD_CONNECTIONBIND      0x000B
 
 /* Indications */
@@ -121,7 +121,7 @@ typedef unsigned __int64 uint64_t;
 /* Data method */
 #define TURN_METHOD_DATA                0x0007
 
-/* ConnectionAttempt method (draft-ietf-behave-turn-tcp-07) */
+/* ConnectionAttempt method (RFC6062) */
 #define TURN_METHOD_CONNECTIONATTEMPT   0x000C
 
 /* standard STUN attributes */
@@ -191,7 +191,7 @@ typedef unsigned __int64 uint64_t;
 /* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-11) */
 #define TURN_ATTR_REQUESTED_ADDRESS_FAMILY  0x0017
 
-/* CONNECTION-ID (draft-ietf-behave-turn-tcp-07) */
+/* CONNECTION-ID (RFC6062) */
 #define TURN_ATTR_CONNECTION_ID         0x002A
 
 /* STUN error codes */
@@ -214,7 +214,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED   440
 #define TURN_ERROR_PEER_ADDRESS_FAMILY_MISMATCH   443
 
-/* draft-ietf-behave-turn-tcp-07 */
+/* RFC6062 (TURN-TCP) */
 #define TURN_ERROR_CONNECTON_ALREADY_EXIST        446
 #define TURN_ERROR_CONNECTON_TIMEOUT              447
 
@@ -238,7 +238,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_440            "Address family not supported"
 #define TURN_ERROR_443            "Peer address family mismatch"
 
-/* draft-ietf-behave-turn-tcp-07 */
+/* RFC6062 (TURN-TCP) */
 #define TURN_ERROR_446            "Connection Already Exists"
 #define TURN_ERROR_447            "Connection Timeout or Failure"
 
@@ -270,11 +270,11 @@ typedef unsigned __int64 uint64_t;
 /* lifetime of a token (in seconds) */
 #define TURN_DEFAULT_TOKEN_LIFETIME           60
 
-/* draft-ietf-behave-turn-tcp-07 */
+/* RFC6062 (TURN-TCP) */
 /* Timeout of TCP relay when no ConnectionBind is received (in seconds) */
 #define TURN_DEFAULT_TCP_RELAY_TIMEOUT        30
 
-/* draft-ietf-behave-turn-tcp-07 */
+/* RFC6062 (TURN-TCP) */
 /* Timeout of TCP connect (in seconds) */
 #define TURN_DEFAULT_TCP_CONNECT_TIMEOUT      30
 
@@ -571,7 +571,7 @@ struct turn_attr_requested_address_family
 
 /**
  * \struct turn_attr_connection_id
- * \brief CONNECTION-ID attribute (draft-ietf-behave-turn-tcp-07).
+ * \brief CONNECTION-ID attribute (RFC6062).
  */
 struct turn_attr_connection_id
 {
