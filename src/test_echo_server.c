@@ -143,7 +143,8 @@ int main(int argc, char** argv)
     {
       if(FD_ISSET(sock, &fdsr))
       {
-        nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addr_size);
+        nb = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*)&addr,
+            &addr_size);
       }
     }
     else

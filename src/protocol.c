@@ -65,7 +65,8 @@ extern "C"
  */
 static struct turn_attr_hdr* turn_attr_address_create(uint16_t type, const struct sockaddr* address, struct iovec* iov)
 {
-  struct turn_attr_mapped_address* ret = NULL; /* MAPPED-ADDRESS are the same as ALTERNATE-ADDRESS */
+  /* MAPPED-ADDRESS are the same as ALTERNATE-ADDRESS */
+  struct turn_attr_mapped_address* ret = NULL;
   size_t len = 0;
   uint8_t* ptr = NULL; /* pointer on the address (IPv4 or IPv6) */
   uint8_t family = 0;
@@ -128,10 +129,14 @@ static struct turn_attr_hdr* turn_attr_address_create(uint16_t type, const struc
  * \param iov vector
  * \return pointer on turn_attr_hdr or NULL if problem
  */
-static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const struct sockaddr* address, uint32_t cookie,
-    const uint8_t* id, struct iovec* iov)
+static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type,
+    const struct sockaddr* address, uint32_t cookie, const uint8_t* id,
+    struct iovec* iov)
 {
-  struct turn_attr_xor_mapped_address* ret = NULL; /* XOR-MAPPED-ADDRESS are the same as XOR-PEER-ADDRESS and XOR-RELAYED-ADDRESS */
+  /* XOR-MAPPED-ADDRESS are the same as XOR-PEER-ADDRESS and
+   * XOR-RELAYED-ADDRESS
+   */
+  struct turn_attr_xor_mapped_address* ret = NULL;
   size_t len = 0;
   uint8_t* ptr = NULL; /* pointer on the address (IPv4 or IPv6) */
   uint8_t* p = (uint8_t*)&cookie;
@@ -154,10 +159,13 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
       if(IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6*)address)->sin6_addr))
       {
         ((struct sockaddr_in*)&storage)->sin_family = AF_INET;
-        memcpy(&((struct sockaddr_in*)&storage)->sin_addr, &((struct sockaddr_in6*)address)->sin6_addr.s6_addr[12], 4);
+        memcpy(&((struct sockaddr_in*)&storage)->sin_addr,
+            &((struct sockaddr_in6*)address)->sin6_addr.s6_addr[12], 4);
         ptr = (uint8_t*)&((struct sockaddr_in*)&storage)->sin_addr;
-        ((struct sockaddr_in*)&storage)->sin_port = ((struct sockaddr_in6*)address)->sin6_port;
-        memset(((struct sockaddr_in*)&storage)->sin_zero, 0x00, sizeof(((struct sockaddr_in*)&storage)->sin_zero));
+        ((struct sockaddr_in*)&storage)->sin_port =
+          ((struct sockaddr_in6*)address)->sin6_port;
+        memset(((struct sockaddr_in*)&storage)->sin_zero, 0x00,
+            sizeof(((struct sockaddr_in*)&storage)->sin_zero));
         port = ntohs(((struct sockaddr_in*)&storage)->sin_port);
         family = STUN_ATTR_FAMILY_IPV4;
         len = 4;
@@ -214,7 +222,8 @@ static struct turn_attr_hdr* turn_attr_xor_address_create(uint16_t type, const s
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_msg_hdr* turn_msg_create(uint16_t type, uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_create(uint16_t type, uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   struct turn_msg_hdr* ret = NULL;
 
@@ -234,7 +243,8 @@ struct turn_msg_hdr* turn_msg_create(uint16_t type, uint16_t len, const uint8_t*
   return ret;
 }
 
-struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len, struct iovec* iov, const void* data)
+struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len,
+    struct iovec* iov, const void* data)
 {
   struct turn_attr_hdr* ret = NULL;
 
@@ -255,135 +265,161 @@ struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len, struct iovec
 
 /* STUN messages */
 
-struct turn_msg_hdr* turn_msg_binding_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_binding_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((STUN_METHOD_BINDING | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_binding_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_binding_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((STUN_METHOD_BINDING | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_binding_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_binding_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((STUN_METHOD_BINDING | STUN_ERROR_RESP), len, id, iov);
 }
 
 /* TURN messages */
 
-struct turn_msg_hdr* turn_msg_allocate_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_allocate_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_ALLOCATE | STUN_REQUEST) , len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_allocate_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_allocate_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_ALLOCATE | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_allocate_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_allocate_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_ALLOCATE | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_send_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_send_indication_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_SEND | STUN_INDICATION), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_data_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_data_indication_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_DATA | STUN_INDICATION), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_refresh_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_refresh_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_refresh_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_refresh_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_refresh_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_refresh_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_REFRESH | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_createpermission_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_createpermission_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_createpermission_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_createpermission_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_createpermission_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_createpermission_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CREATEPERMISSION | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_channelbind_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_channelbind_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_channelbind_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_channelbind_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_channelbind_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_channelbind_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CHANNELBIND | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connect_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connect_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CONNECT | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connect_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connect_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CONNECT | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connect_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connect_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CONNECT | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connectionbind_request_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connectionbind_request_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CONNECTIONBIND | STUN_REQUEST), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connectionbind_response_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connectionbind_response_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CONNECTIONBIND | STUN_SUCCESS_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connectionbind_error_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connectionbind_error_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
   return turn_msg_create((TURN_METHOD_CONNECTIONBIND | STUN_ERROR_RESP), len, id, iov);
 }
 
-struct turn_msg_hdr* turn_msg_connectionattempt_indication_create(uint16_t len, const uint8_t* id, struct iovec* iov)
+struct turn_msg_hdr* turn_msg_connectionattempt_indication_create(uint16_t len,
+    const uint8_t* id, struct iovec* iov)
 {
     return turn_msg_create((TURN_METHOD_CONNECTIONATTEMPT | STUN_INDICATION), len, id, iov);
 }
 /* STUN attributes */
 
-struct turn_attr_hdr* turn_attr_mapped_address_create(const struct sockaddr* address, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_mapped_address_create(
+    const struct sockaddr* address, struct iovec* iov)
 {
   return turn_attr_address_create(STUN_ATTR_MAPPED_ADDRESS, address, iov);
 }
 
-struct turn_attr_hdr* turn_attr_username_create(const char* username, size_t len, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_username_create(const char* username,
+    size_t len, struct iovec* iov)
 {
   struct turn_attr_username* ret = NULL;
   size_t real_len = len;
@@ -416,7 +452,8 @@ struct turn_attr_hdr* turn_attr_username_create(const char* username, size_t len
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_message_integrity_create(const uint8_t* hmac, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_message_integrity_create(const uint8_t* hmac,
+    struct iovec* iov)
 {
   struct turn_attr_message_integrity* ret = NULL;
 
@@ -443,7 +480,8 @@ struct turn_attr_hdr* turn_attr_message_integrity_create(const uint8_t* hmac, st
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, size_t len, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason,
+    size_t len, struct iovec* iov)
 {
   struct turn_attr_error_code* ret = NULL;
   uint8_t class = code / 100;
@@ -504,8 +542,8 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason, 
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknown_attributes, size_t attr_size,
-    struct iovec* iov)
+struct turn_attr_hdr* turn_attr_unknown_attributes_create(
+    const uint16_t* unknown_attributes, size_t attr_size, struct iovec* iov)
 {
   size_t len = 0;
   size_t tmp_len = 0;
@@ -549,7 +587,8 @@ struct turn_attr_hdr* turn_attr_unknown_attributes_create(const uint16_t* unknow
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_realm_create(const char* realm, size_t len, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_realm_create(const char* realm, size_t len,
+    struct iovec* iov)
 {
   struct turn_attr_realm* ret = NULL;
   size_t real_len = len;
@@ -582,7 +621,8 @@ struct turn_attr_hdr* turn_attr_realm_create(const char* realm, size_t len, stru
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_nonce_create(const uint8_t* nonce, size_t len, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_nonce_create(const uint8_t* nonce, size_t len,
+    struct iovec* iov)
 {
   struct turn_attr_nonce* ret = NULL;
   size_t real_len = len;
@@ -615,13 +655,15 @@ struct turn_attr_hdr* turn_attr_nonce_create(const uint8_t* nonce, size_t len, s
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_xor_mapped_address_create(const struct sockaddr* address, uint32_t cookie,
-    const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_mapped_address_create(
+    const struct sockaddr* address, uint32_t cookie, const uint8_t* id,
+    struct iovec* iov)
 {
   return turn_attr_xor_address_create(STUN_ATTR_XOR_MAPPED_ADDRESS, address, cookie, id, iov);
 }
 
-struct turn_attr_hdr* turn_attr_software_create(const char* software, size_t len, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_software_create(const char* software,
+    size_t len, struct iovec* iov)
 {
   struct turn_attr_software* ret = NULL;
   size_t real_len = len;
@@ -654,12 +696,14 @@ struct turn_attr_hdr* turn_attr_software_create(const char* software, size_t len
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_alternate_server_create(const struct sockaddr* address, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_alternate_server_create(
+    const struct sockaddr* address, struct iovec* iov)
 {
   return turn_attr_address_create(STUN_ATTR_ALTERNATE_SERVER, address, iov);
 }
 
-struct turn_attr_hdr* turn_attr_fingerprint_create(uint32_t fingerprint, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_fingerprint_create(uint32_t fingerprint,
+    struct iovec* iov)
 {
   struct turn_attr_fingerprint* ret = NULL;
 
@@ -680,7 +724,8 @@ struct turn_attr_hdr* turn_attr_fingerprint_create(uint32_t fingerprint, struct 
 
 /* TURN attributes */
 
-struct turn_attr_hdr* turn_attr_channel_number_create(uint16_t number, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_channel_number_create(uint16_t number,
+    struct iovec* iov)
 {
   struct turn_attr_channel_number* ret = NULL;
 
@@ -700,7 +745,8 @@ struct turn_attr_hdr* turn_attr_channel_number_create(uint16_t number, struct io
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime,
+    struct iovec* iov)
 {
   struct turn_attr_lifetime* ret = NULL;
 
@@ -719,13 +765,15 @@ struct turn_attr_hdr* turn_attr_lifetime_create(uint32_t lifetime, struct iovec*
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_xor_peer_address_create(const struct sockaddr* address, uint32_t cookie,
-    const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_peer_address_create(
+    const struct sockaddr* address, uint32_t cookie, const uint8_t* id,
+    struct iovec* iov)
 {
   return turn_attr_xor_address_create(TURN_ATTR_XOR_PEER_ADDRESS, address, cookie, id, iov);
 }
 
-struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen,
+    struct iovec* iov)
 {
   struct turn_attr_data* ret = NULL;
   size_t real_len = datalen;
@@ -752,13 +800,16 @@ struct turn_attr_hdr* turn_attr_data_create(const void* data, size_t datalen, st
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_xor_relayed_address_create(const struct sockaddr* address, uint32_t cookie,
-    const uint8_t* id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_xor_relayed_address_create(
+    const struct sockaddr* address, uint32_t cookie, const uint8_t* id,
+    struct iovec* iov)
 {
-  return turn_attr_xor_address_create(TURN_ATTR_XOR_RELAYED_ADDRESS, address, cookie, id, iov);
+  return turn_attr_xor_address_create(TURN_ATTR_XOR_RELAYED_ADDRESS, address,
+      cookie, id, iov);
 }
 
-struct turn_attr_hdr* turn_attr_even_port_create(uint8_t flags, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_even_port_create(uint8_t flags,
+    struct iovec* iov)
 {
   struct turn_attr_even_port* ret = NULL;
 
@@ -778,7 +829,8 @@ struct turn_attr_hdr* turn_attr_even_port_create(uint8_t flags, struct iovec* io
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_requested_transport_create(uint8_t protocol, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_requested_transport_create(uint8_t protocol,
+    struct iovec* iov)
 {
   struct turn_attr_requested_transport* ret = NULL;
 
@@ -816,7 +868,8 @@ struct turn_attr_hdr* turn_attr_dont_fragment_create(struct iovec* iov)
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token,
+    struct iovec* iov)
 {
   struct turn_attr_reservation_token* ret = NULL;
 
@@ -835,7 +888,8 @@ struct turn_attr_hdr* turn_attr_reservation_token_create(const uint8_t* token, s
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family,
+    struct iovec* iov)
 {
   struct turn_attr_requested_address_family* ret = NULL;
 
@@ -855,7 +909,8 @@ struct turn_attr_hdr* turn_attr_requested_address_family_create(uint8_t family, 
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_attr_hdr* turn_attr_connection_id_create(uint32_t id, struct iovec* iov)
+struct turn_attr_hdr* turn_attr_connection_id_create(uint32_t id,
+    struct iovec* iov)
 {
   struct turn_attr_connection_id* ret = NULL;
 
@@ -874,7 +929,8 @@ struct turn_attr_hdr* turn_attr_connection_id_create(uint32_t id, struct iovec* 
   return (struct turn_attr_hdr*)ret;
 }
 
-struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -898,50 +954,8 @@ struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id, const char* realm, const uint8_t* nonce,
-    size_t nonce_len, struct iovec* iov, size_t* index)
-{
-  struct turn_msg_hdr* error = NULL;
-  struct turn_attr_hdr* attr = NULL;
-
-  /* header */
-  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
-  {
-    return NULL;
-  }
-  (*index)++;
-
-  /* error-code */
-  if(!(attr = turn_attr_error_create(401, STUN_ERROR_401, sizeof(STUN_ERROR_401), &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  /* realm */
-  if(!(attr = turn_attr_realm_create(realm, strlen(realm), &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  /* nonce */
-  if(!(attr = turn_attr_nonce_create(nonce, nonce_len, &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  return error;
-}
-
-struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, const uint16_t* unknown, size_t unknown_size,
+struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id,
+    const char* realm, const uint8_t* nonce, size_t nonce_len,
     struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
@@ -955,39 +969,8 @@ struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id, cons
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(420, STUN_ERROR_420, sizeof(STUN_ERROR_420), &iov[*index])))
-  {
-    iovec_free_data(iov, *index);
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  if(!(attr = turn_attr_unknown_attributes_create(unknown, unknown_size, &iov[*index])))
-  {
-    return NULL;
-  }
-  error->turn_msg_len += iov[*index].iov_len;
-  (*index)++;
-
-  return error;
-}
-
-struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, const char* realm, const uint8_t* nonce,
-    size_t nonce_len, struct iovec* iov, size_t* index)
-{
-  struct turn_msg_hdr* error = NULL;
-  struct turn_attr_hdr* attr = NULL;
-
-  /* header */
-  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
-  {
-    return NULL;
-  }
-  (*index)++;
-
-  /* error-code */
-  if(!(attr = turn_attr_error_create(438, STUN_ERROR_438, sizeof(STUN_ERROR_438), &iov[*index])))
+  if(!(attr = turn_attr_error_create(401, STUN_ERROR_401,
+          sizeof(STUN_ERROR_401), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1016,7 +999,9 @@ struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id, cons
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id,
+    const uint16_t* unknown, size_t unknown_size, struct iovec* iov,
+    size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1029,9 +1014,18 @@ struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(500, STUN_ERROR_500, sizeof(STUN_ERROR_500), &iov[*index])))
+  if(!(attr = turn_attr_error_create(420, STUN_ERROR_420,
+          sizeof(STUN_ERROR_420), &iov[*index])))
   {
     iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  if(!(attr = turn_attr_unknown_attributes_create(unknown, unknown_size,
+          &iov[*index])))
+  {
     return NULL;
   }
   error->turn_msg_len += iov[*index].iov_len;
@@ -1040,7 +1034,9 @@ struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id,
+    const char* realm, const uint8_t* nonce, size_t nonce_len,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1053,7 +1049,26 @@ struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(403, TURN_ERROR_403, sizeof(TURN_ERROR_403), &iov[*index])))
+  if(!(attr = turn_attr_error_create(438, STUN_ERROR_438,
+          sizeof(STUN_ERROR_438), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  /* realm */
+  if(!(attr = turn_attr_realm_create(realm, strlen(realm), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  /* nonce */
+  if(!(attr = turn_attr_nonce_create(nonce, nonce_len, &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1064,7 +1079,8 @@ struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1077,7 +1093,8 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(437, TURN_ERROR_437, sizeof(TURN_ERROR_437), &iov[*index])))
+  if(!(attr = turn_attr_error_create(500, STUN_ERROR_500,
+          sizeof(STUN_ERROR_500), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1088,7 +1105,8 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1101,7 +1119,8 @@ struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(440, TURN_ERROR_440, sizeof(TURN_ERROR_440), &iov[*index])))
+  if(!(attr = turn_attr_error_create(403, TURN_ERROR_403,
+          sizeof(TURN_ERROR_403), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1112,7 +1131,8 @@ struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1125,7 +1145,8 @@ struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(441, TURN_ERROR_441, sizeof(TURN_ERROR_441), &iov[*index])))
+  if(!(attr = turn_attr_error_create(437, TURN_ERROR_437,
+          sizeof(TURN_ERROR_437), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1136,7 +1157,8 @@ struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1149,7 +1171,8 @@ struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(442, TURN_ERROR_442, sizeof(TURN_ERROR_442), &iov[*index])))
+  if(!(attr = turn_attr_error_create(440, TURN_ERROR_440,
+          sizeof(TURN_ERROR_440), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1160,7 +1183,8 @@ struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1173,7 +1197,8 @@ struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(443, TURN_ERROR_443, sizeof(TURN_ERROR_443), &iov[*index])))
+  if(!(attr = turn_attr_error_create(441, TURN_ERROR_441,
+          sizeof(TURN_ERROR_441), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1184,7 +1209,8 @@ struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1197,7 +1223,8 @@ struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(446, TURN_ERROR_446, sizeof(TURN_ERROR_446), &iov[*index])))
+  if(!(attr = turn_attr_error_create(442, TURN_ERROR_442,
+          sizeof(TURN_ERROR_442), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1208,7 +1235,8 @@ struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1221,7 +1249,8 @@ struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(447, TURN_ERROR_447, sizeof(TURN_ERROR_447), &iov[*index])))
+  if(!(attr = turn_attr_error_create(443, TURN_ERROR_443,
+          sizeof(TURN_ERROR_443), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1232,7 +1261,8 @@ struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1245,7 +1275,8 @@ struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(486, TURN_ERROR_486, sizeof(TURN_ERROR_486), &iov[*index])))
+  if(!(attr = turn_attr_error_create(446, TURN_ERROR_446,
+          sizeof(TURN_ERROR_446), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1256,7 +1287,8 @@ struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id, stru
   return error;
 }
 
-struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, struct iovec* iov, size_t* index)
+struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
 {
   struct turn_msg_hdr* error = NULL;
   struct turn_attr_hdr* attr = NULL;
@@ -1269,7 +1301,8 @@ struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, stru
   (*index)++;
 
   /* error-code */
-  if(!(attr = turn_attr_error_create(508, TURN_ERROR_508, sizeof(TURN_ERROR_508), &iov[*index])))
+  if(!(attr = turn_attr_error_create(447, TURN_ERROR_447,
+          sizeof(TURN_ERROR_447), &iov[*index])))
   {
     iovec_free_data(iov, *index);
     return NULL;
@@ -1280,7 +1313,60 @@ struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id, stru
   return error;
 }
 
-int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size, const struct iovec* iov, size_t iovlen)
+struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(486, TURN_ERROR_486,
+          sizeof(TURN_ERROR_486), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id,
+    struct iovec* iov, size_t* index)
+{
+  struct turn_msg_hdr* error = NULL;
+  struct turn_attr_hdr* attr = NULL;
+
+  /* header */
+  if(!(error = turn_msg_create(method | STUN_ERROR_RESP, 0, id, &iov[*index])))
+  {
+    return NULL;
+  }
+  (*index)++;
+
+  /* error-code */
+  if(!(attr = turn_attr_error_create(508, TURN_ERROR_508,
+          sizeof(TURN_ERROR_508), &iov[*index])))
+  {
+    iovec_free_data(iov, *index);
+    return NULL;
+  }
+  error->turn_msg_len += iov[*index].iov_len;
+  (*index)++;
+
+  return error;
+}
+
+int turn_udp_send(int sock, const struct sockaddr* addr, socklen_t addr_size,
+    const struct iovec* iov, size_t iovlen)
 {
   ssize_t len = -1;
 
@@ -1316,8 +1402,9 @@ int turn_tcp_send(int sock, const struct iovec* iov, size_t iovlen)
   return len;
 }
 
-int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t addr_size, size_t total_len,
-    const struct iovec* iov, size_t iovlen)
+int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr,
+    socklen_t addr_size, size_t total_len, const struct iovec* iov,
+    size_t iovlen)
 {
   char* buf = NULL;
   char* p = NULL;
@@ -1348,8 +1435,9 @@ int turn_tls_send(struct tls_peer* peer, const struct sockaddr* addr, socklen_t 
   return nb;
 }
 
-int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer, const struct sockaddr* addr,
-    socklen_t addr_size, size_t total_len, const struct iovec* iov, size_t iovlen)
+int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer,
+    const struct sockaddr* addr, socklen_t addr_size, size_t total_len,
+    const struct iovec* iov, size_t iovlen)
 {
   if(speer) /* TLS */
   {
@@ -1371,8 +1459,8 @@ int turn_generate_transaction_id(uint8_t* id)
   return random_bytes_generate(id, 12);
 }
 
-int turn_calculate_authentication_key(const char* username, const char* realm, const char* password,
-    unsigned char* key, size_t key_len)
+int turn_calculate_authentication_key(const char* username, const char* realm,
+    const char* password, unsigned char* key, size_t key_len)
 {
   MD5_CTX ctx;
 
@@ -1392,8 +1480,8 @@ int turn_calculate_authentication_key(const char* username, const char* realm, c
   return 0;
 }
 
-int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const unsigned char* key, size_t key_len,
-    unsigned char* integrity)
+int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len,
+    const unsigned char* key, size_t key_len, unsigned char* integrity)
 {
   HMAC_CTX ctx;
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -1409,8 +1497,8 @@ int turn_calculate_integrity_hmac(const unsigned char* buf, size_t len, const un
   return 0;
 }
 
-int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, const unsigned char* key,
-    size_t key_len, unsigned char* integrity)
+int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen,
+    const unsigned char* key, size_t key_len, unsigned char* integrity)
 {
   HMAC_CTX ctx;
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -1431,7 +1519,8 @@ int turn_calculate_integrity_hmac_iov(const struct iovec* iov, size_t iovlen, co
   return 0;
 }
 
-int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key, size_t key_len)
+int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key,
+    size_t key_len)
 {
   time_t t;
   char c = ':';
@@ -1470,7 +1559,8 @@ int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key, size_t key_len
   return 0;
 }
 
-int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key, size_t key_len)
+int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key,
+    size_t key_len)
 {
   uint32_t ct = 0;
   uint64_t ct64 = 0;
@@ -1532,8 +1622,8 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen)
   return crc;
 }
 
-int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned char* key, size_t key_len,
-    int add_fingerprint)
+int turn_add_message_integrity(struct iovec* iov, size_t* index,
+    const unsigned char* key, size_t key_len, int add_fingerprint)
 {
   struct turn_attr_hdr* attr = NULL;
   struct turn_msg_hdr* hdr = iov[0].iov_base;
@@ -1556,7 +1646,8 @@ int turn_add_message_integrity(struct iovec* iov, size_t* index, const unsigned 
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* do not take into account the attribute itself */
-  turn_calculate_integrity_hmac_iov(iov, (*index) - 1, key, key_len, ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
+  turn_calculate_integrity_hmac_iov(iov, (*index) - 1, key, key_len,
+      ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
 
   hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
 
@@ -1594,16 +1685,18 @@ int turn_add_fingerprint(struct iovec* iov, size_t* index)
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* do not take into account the attribute itself */
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, (*index) - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(
+    turn_calculate_fingerprint(iov, (*index) - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(
+    STUN_FINGERPRINT_XOR_VALUE);
 
   hdr->turn_msg_len = ntohs(hdr->turn_msg_len);
 
   return 0;
 }
 
-int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port, const uint8_t* cookie,
-    const uint8_t* msg_id)
+int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
+    const uint8_t* cookie, const uint8_t* msg_id)
 {
   size_t i = 0;
   size_t len = 0;
@@ -1638,14 +1731,16 @@ int turn_xor_address_cookie(int family, uint8_t* peer_addr, uint16_t* peer_port,
   return 0;
 }
 
-int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* message, uint16_t* unknown,
-    size_t* unknown_size)
+int turn_parse_message(const char* msg, ssize_t msg_len,
+    struct turn_message* message, uint16_t* unknown, size_t* unknown_size)
 {
   struct turn_msg_hdr* hdr = NULL;
-  ssize_t len = 0; /* attributes length */
+  /* attributes length */
+  ssize_t len = 0;
   const char* ptr = msg;
   size_t unknown_index = 0;
-  size_t xor_peer_address_nb = 0; /* count of XOR-PEER-ADDRESS attribute */
+  /* count of XOR-PEER-ADDRESS attribute */
+  size_t xor_peer_address_nb = 0;
 
   /* zeroed structure */
   memset(message, 0x00, sizeof(struct turn_message));
@@ -1684,12 +1779,16 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
     if(message->fingerprint)
     {
       /* when present, the FINGERPRINT attribute MUST be the last attribute */
-      /* ignore other message */
+      /* ignore other message
+       */
       return 0;
     }
 
-    /* MESSAGE-INTEGRITY is the last attribute except if FINGERPRINT follow it */
-    if(message->message_integrity && ntohs(attr->turn_attr_type) != STUN_ATTR_FINGERPRINT)
+    /* MESSAGE-INTEGRITY is the last attribute except if FINGERPRINT follow
+     * it
+     */
+    if(message->message_integrity && ntohs(attr->turn_attr_type) !=
+        STUN_ATTR_FINGERPRINT)
     {
       /* with the exception of the FINGERPRINT attribute [...]
        * agents MUST ignore all other attributes that follow MESSAGE-INTEGRITY
@@ -1741,7 +1840,8 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
       case TURN_ATTR_XOR_PEER_ADDRESS:
         if(xor_peer_address_nb < XOR_PEER_ADDRESS_MAX)
         {
-          message->peer_addr[xor_peer_address_nb] = (struct turn_attr_xor_peer_address*)ptr;
+          message->peer_addr[xor_peer_address_nb] =
+            (struct turn_attr_xor_peer_address*)ptr;
           xor_peer_address_nb++;
         }
         else
@@ -1763,7 +1863,8 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         message->even_port = (struct turn_attr_even_port*)ptr;
         break;
       case TURN_ATTR_REQUESTED_TRANSPORT:
-        message->requested_transport = (struct turn_attr_requested_transport*)ptr;
+        message->requested_transport =
+          (struct turn_attr_requested_transport*)ptr;
         break;
       case TURN_ATTR_DONT_FRAGMENT:
         message->dont_fragment = (struct turn_attr_dont_fragment*)ptr;
@@ -1772,7 +1873,8 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
         message->reservation_token = (struct turn_attr_reservation_token*)ptr;
         break;
       case TURN_ATTR_REQUESTED_ADDRESS_FAMILY:
-        message->requested_addr_family = (struct turn_attr_requested_address_family*)ptr;
+        message->requested_addr_family =
+          (struct turn_attr_requested_address_family*)ptr;
         break;
       case TURN_ATTR_CONNECTION_ID:
         message->connection_id = (struct turn_attr_connection_id*)ptr;
@@ -1780,7 +1882,9 @@ int turn_parse_message(const char* msg, ssize_t msg_len, struct turn_message* me
       default:
         if(attr->turn_attr_type <= 0x7fff)
         {
-          /* comprehension-required attribute but server does not understand it */
+          /* comprehension-required attribute but server does not understand
+           * it
+           */
           if(!(*unknown_size))
           {
             break;

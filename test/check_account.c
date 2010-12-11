@@ -48,7 +48,7 @@ START_TEST(test_account_create)
   struct account_desc* ret = NULL;
 
   /* create a valid account descriptor */
-  ret = account_desc_new("login", "password", "domain.org");
+  ret = account_desc_new("login", "password", "domain.org", AUTHORIZED);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* free it */
@@ -56,15 +56,15 @@ START_TEST(test_account_create)
   fail_unless(ret == NULL, "account_desc_free does not set to NULL!");
 
   /* create a invalid account descriptor */
-  ret = account_desc_new("login", NULL, "domain.org");
+  ret = account_desc_new("login", NULL, "domain.org", AUTHORIZED);
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
 
   /* create a invalid account descriptor */
-  ret = account_desc_new(NULL, "password", "domain.org");
+  ret = account_desc_new(NULL, "password", "domain.org", AUTHORIZED);
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
 
   /* create a invalid account descriptor */
-  ret = account_desc_new("login", "password", NULL);
+  ret = account_desc_new("login", "password", NULL, AUTHORIZED);
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
 }
 END_TEST
@@ -79,10 +79,10 @@ START_TEST(test_account_list)
   INIT_LIST(account_list);
 
   /* create a valid account descriptor */
-  ret = account_desc_new("login", "password", "domain.org");
+  ret = account_desc_new("login", "password", "domain.org", AUTHORIZED);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
-  ret2 = account_desc_new("login2", "password2", "domain.org");
+  ret2 = account_desc_new("login2", "password2", "domain.org", AUTHORIZED);
   fail_unless(ret2 != NULL, "Invalid parameter or memory problem");
 
   account_list_add(&account_list, ret);

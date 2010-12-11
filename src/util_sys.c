@@ -153,7 +153,8 @@ char* get_error(int errnum, char* buf, size_t buflen)
   return error;
 }
 
-int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg), void* arg)
+int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg),
+    void* arg)
 {
   pid_t pid = -1;
   long i = 0;
@@ -233,7 +234,8 @@ char* encode_http_string(const char* str)
   unsigned int i = 0;
   unsigned int j = 0;
 
-  p = malloc(sizeof(char) * (3 * len + 1)); /* in the worst case, it take 3x (%20) the size */
+  /* in the worst case, it take 3x (%20) the size */
+  p = malloc(sizeof(char) * (3 * len + 1));
 
   if(!p)
   {
@@ -283,7 +285,8 @@ char* strdup(const char* str)
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
-ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t* addr_size)
+ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt,
+    const struct sockaddr* addr, socklen_t* addr_size)
 {
   /* it should be sufficient,
    * the dynamically allocation is timecost.
@@ -308,7 +311,8 @@ ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct 
 
   if(addr) /* UDP case */
   {
-    if(WSARecvFrom(fd, winiov, winiov_len, &ret, NULL, (struct sockaddr*)addr, addr_size, NULL, NULL) != 0)
+    if(WSARecvFrom(fd, winiov, winiov_len, &ret, NULL, (struct sockaddr*)addr,
+          addr_size, NULL, NULL) != 0)
     {
       return -1;
     }
@@ -324,7 +328,8 @@ ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct 
   return (ssize_t)ret;
 }
 
-ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t addr_size)
+ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt,
+    const struct sockaddr* addr, socklen_t addr_size)
 {
   /* it should be sufficient,
    * the dynamically allocation is timecost.
@@ -350,7 +355,8 @@ ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, const struct
   /* UDP case */
   if(addr)
   {
-    if(WSASendTo(fd, winiov, winiov_len, &ret, 0, (struct sockaddr*)addr, addr_size, NULL, NULL) != 0)
+    if(WSASendTo(fd, winiov, winiov_len, &ret, 0, (struct sockaddr*)addr,
+          addr_size, NULL, NULL) != 0)
     {
       /* error send */
       return -1;
@@ -379,7 +385,8 @@ void iovec_free_data(struct iovec* iov, uint32_t nb)
   }
 }
 
-int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid_eff, const char* user_name)
+int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
+    gid_t gid_eff, const char* user_name)
 {
 #if defined(_WIN32) || defined(_WIN64)
   return -1;
@@ -450,7 +457,8 @@ int uid_gain_privileges(uid_t uid_eff, gid_t gid_eff)
 #endif
 }
 
-void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex, size_t hex_len)
+void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex,
+    size_t hex_len)
 {
   size_t i = 0;
   unsigned char j = 0;

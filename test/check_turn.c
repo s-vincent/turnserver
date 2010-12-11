@@ -88,31 +88,36 @@ START_TEST(test_attr_create)
   index++;
 
   /* MAPPED-ADDRESS */
-  attr = turn_attr_mapped_address_create((struct sockaddr*)&daddr2, &iov[index]);
+  attr = turn_attr_mapped_address_create((struct sockaddr*)&daddr2,
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* XOR-MAPPED-ADDRESS */
-  attr = turn_attr_xor_mapped_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_mapped_address_create((struct sockaddr*)&daddr2,
+      STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* XOR-PEER-ADDRESS */
-  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&daddr2,
+      STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* XOR-RELAYED-ADDRESS */
-  attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2,
+      STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* ALTERNATE-SERVER */
-  attr = turn_attr_alternate_server_create((struct sockaddr*)&daddr2, &iov[index]);
+  attr = turn_attr_alternate_server_create((struct sockaddr*)&daddr2,
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -126,7 +131,8 @@ START_TEST(test_attr_create)
     nb = turn_generate_nonce(nonce_value, sizeof(nonce_value), key, len);
     fail_unless(nb == 0, "generate nonce failed");
 
-    attr = turn_attr_nonce_create(nonce_value, sizeof(nonce_value), &iov[index]);
+    attr = turn_attr_nonce_create(nonce_value, sizeof(nonce_value),
+        &iov[index]);
     fail_unless(attr != NULL, "attribute header creation failed");
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -145,7 +151,8 @@ START_TEST(test_attr_create)
   index++;
 
   /* ERROR-CODE */
-  attr = turn_attr_error_create(400, "Bad request", strlen("Bad request"), &iov[index]);
+  attr = turn_attr_error_create(400, "Bad request", strlen("Bad request"),
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -155,12 +162,14 @@ START_TEST(test_attr_create)
     uint16_t tab[3] = {0x0002, 0x0001, 0x0003};
     uint16_t tab2[4] = {0x0001, 0x0002, 0x0003, 0x0004};
 
-    attr = turn_attr_unknown_attributes_create(tab, sizeof(tab)/sizeof(uint16_t), &iov[index]);
+    attr = turn_attr_unknown_attributes_create(tab,
+        sizeof(tab) / sizeof(uint16_t), &iov[index]);
     fail_unless(attr != NULL, "attribute header creation failed");
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
-    attr = turn_attr_unknown_attributes_create(tab2, sizeof(tab2)/sizeof(uint16_t), &iov[index]);
+    attr = turn_attr_unknown_attributes_create(tab2,
+        sizeof(tab2) / sizeof(uint16_t), &iov[index]);
     fail_unless(attr != NULL, "attribute header creation failed");
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -185,7 +194,8 @@ START_TEST(test_attr_create)
   index++;
 
   /* SOFTWARE */
-  attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
+  attr = turn_attr_software_create("Client TURN 0.1 test",
+      strlen("Client TURN 0.1 test"), &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -219,10 +229,14 @@ START_TEST(test_attr_create)
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-  /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
+  /* after convert STUN/TURN message length to big endian we can calculate
+   * HMAC-SHA1
+   */
   /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, "login:domain.org:password", strlen("login:domain.org:password"));
-  turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
+  md5_generate(md_buf, "login:domain.org:password",
+      strlen("login:domain.org:password"));
+  turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf),
+      ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
   attr2 = attr;
 
   /* test CRC-32 */
@@ -243,15 +257,17 @@ START_TEST(test_attr_create)
   attr = turn_attr_fingerprint_create(0, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len = ntohs(hdr->turn_msg_len) + iov[index].iov_len;
-  index++; 
+  index++;
 
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
   /* calculate fingerprint */
   /* index -1, we do not take into account FINGERPRINT attribute */
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc = htonl(turn_calculate_fingerprint(iov, index - 1));
-  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^= htonl(STUN_FINGERPRINT_XOR_VALUE);
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc =
+    htonl(turn_calculate_fingerprint(iov, index - 1));
+  ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^=
+    htonl(STUN_FINGERPRINT_XOR_VALUE);
 
   nb = turn_udp_send(sock, (struct sockaddr*)&daddr, sizeof(daddr), iov, index);
   fail_unless(nb > 0, "turn_udp_send failed");
@@ -262,21 +278,28 @@ START_TEST(test_attr_create)
     uint16_t len_save = hdr->turn_msg_len; /* store in big endian */
 
     /* verify integrity with valid login/realm/password */
-    md5_generate(md_buf, "login:domain.org:password", strlen("login:domain.org:password"));
+    md5_generate(md_buf, "login:domain.org:password",
+        strlen("login:domain.org:password"));
 
     /* change length up to message integrity */
-    hdr->turn_msg_len = ntohs(hdr->turn_msg_len) - sizeof(struct turn_attr_fingerprint);
+    hdr->turn_msg_len = ntohs(hdr->turn_msg_len) - sizeof(
+        struct turn_attr_fingerprint);
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-    turn_calculate_integrity_hmac_iov(iov, index - 2, md_buf, sizeof(md_buf), hashmac);
-    nb = memcmp(hashmac, ((struct turn_attr_message_integrity*)attr2)->turn_attr_hmac, 20);
+    turn_calculate_integrity_hmac_iov(iov, index - 2, md_buf, sizeof(md_buf),
+        hashmac);
+    nb = memcmp(hashmac,
+        ((struct turn_attr_message_integrity*)attr2)->turn_attr_hmac, 20);
     fail_unless(nb == 0, "hmac integrity failed");
 
     /* verify integrity with invalid login/realm/password */
     memset(hashmac, 0x00, 20);
-    md5_generate(md_buf, "login2:domain.org:password", strlen("login2:domain.org:password"));
-    turn_calculate_integrity_hmac_iov(iov, index - 2, md_buf, sizeof(md_buf), hashmac);
-    nb = memcmp(hashmac, ((struct turn_attr_message_integrity*)attr2)->turn_attr_hmac, 20);
+    md5_generate(md_buf, "login2:domain.org:password",
+        strlen("login2:domain.org:password"));
+    turn_calculate_integrity_hmac_iov(iov, index - 2, md_buf, sizeof(md_buf),
+        hashmac);
+    nb = memcmp(hashmac,
+        ((struct turn_attr_message_integrity*)attr2)->turn_attr_hmac, 20);
     fail_unless(nb != 0, "hmac integrity succeed");
 
     /* restore length value */
@@ -286,7 +309,9 @@ START_TEST(test_attr_create)
   /* check fingerprint */
   {
     uint32_t crc = turn_calculate_fingerprint(iov, index - 1);
-    fail_unless(htonl(crc) ^ htonl(STUN_FINGERPRINT_XOR_VALUE) == ((struct turn_attr_fingerprint*)attr)->turn_attr_crc, "Fingerprint check");
+    fail_unless(htonl(crc) ^ htonl(STUN_FINGERPRINT_XOR_VALUE) ==
+        ((struct turn_attr_fingerprint*)attr)->turn_attr_crc,
+        "Fingerprint check");
   }
 
   iovec_free_data(iov, index);
@@ -306,7 +331,7 @@ START_TEST(test_msg_create)
   struct msghdr msg;
   int sock = -1;
   size_t i = 0;
- 
+
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
   daddr.sin_family = AF_INET;
@@ -420,7 +445,8 @@ START_TEST(test_msg_create)
 
   for(i = 0 ; i < index ; i++)
   {
-    nb = turn_udp_send(sock, (struct sockaddr*)&daddr, sizeof(daddr), &iov[i], 1);
+    nb = turn_udp_send(sock, (struct sockaddr*)&daddr, sizeof(daddr), &iov[i],
+        1);
     fail_unless(nb > 0, "sendmsg failed");
   }
 
@@ -464,37 +490,43 @@ START_TEST(test_message_parse)
   index++;
 
   /* MAPPED-ADDRESS */
-  attr = turn_attr_mapped_address_create((struct sockaddr*)&daddr2, &iov[index]);
+  attr = turn_attr_mapped_address_create((struct sockaddr*)&daddr2,
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* XOR-MAPPED-ADDRESS */
-  attr = turn_attr_xor_mapped_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_mapped_address_create((struct sockaddr*)&daddr2,
+      STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* XOR-PEER-ADDRESS */
-  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_peer_address_create((struct sockaddr*)&daddr2,
+      STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* XOR-RELAYED-ADDRESS */
-  attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2, STUN_MAGIC_COOKIE, id, &iov[index]);
+  attr = turn_attr_xor_relayed_address_create((struct sockaddr*)&daddr2,
+      STUN_MAGIC_COOKIE, id, &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* ALTERNATE-SERVER */
-  attr = turn_attr_alternate_server_create((struct sockaddr*)&daddr2, &iov[index]);
+  attr = turn_attr_alternate_server_create((struct sockaddr*)&daddr2,
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
   /* NONCE */
-  attr = turn_attr_nonce_create("\"heynonce\"", strlen("\"heynonce\""), &iov[index]);
+  attr = turn_attr_nonce_create("\"heynonce\"", strlen("\"heynonce\""),
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -512,7 +544,8 @@ START_TEST(test_message_parse)
   index++;
 
   /* ERROR-CODE */
-  attr = turn_attr_error_create(420, "Bad request", strlen("Bad request"), &iov[index]);
+  attr = turn_attr_error_create(420, "Bad request", strlen("Bad request"),
+      &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -522,12 +555,14 @@ START_TEST(test_message_parse)
     uint16_t tab[3] = {0x0002, 0x0001, 0x0003};
     uint16_t tab2[4] = {0x0001, 0x0002, 0x0003, 0x0004};
 
-    attr = turn_attr_unknown_attributes_create(tab, sizeof(tab)/sizeof(uint16_t), &iov[index]);
+    attr = turn_attr_unknown_attributes_create(tab,
+        sizeof(tab) / sizeof(uint16_t), &iov[index]);
     fail_unless(attr != NULL, "attribute header creation failed");
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
-    attr = turn_attr_unknown_attributes_create(tab2, sizeof(tab2)/sizeof(uint16_t), &iov[index]);
+    attr = turn_attr_unknown_attributes_create(tab2,
+        sizeof(tab2) / sizeof(uint16_t), &iov[index]);
     fail_unless(attr != NULL, "attribute header creation failed");
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
@@ -552,7 +587,8 @@ START_TEST(test_message_parse)
   index++;
 
   /* SOFTWARE */
-  attr = turn_attr_software_create("Client TURN 0.1 test", strlen("Client TURN 0.1 test"), &iov[index]);
+  attr = turn_attr_software_create("Client TURN 0.1 test",
+      strlen("Client TURN 0.1 test"), &iov[index]);
   fail_unless(attr != NULL, "attribute header creation failed");
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
@@ -599,10 +635,14 @@ START_TEST(test_message_parse)
   /* convert to big endian */
   hdr->turn_msg_len = htons(hdr->turn_msg_len);
 
-  /* after convert STUN/TURN message length to big endian we can calculate HMAC-SHA1 */
+  /* after convert STUN/TURN message length to big endian we can calculate
+   * HMAC-SHA1
+   */
   /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, "login:domain.org:password", strlen("login:domain.org:password"));
-  turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf), ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
+  md5_generate(md_buf, "login:domain.org:password",
+      strlen("login:domain.org:password"));
+  turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf),
+      ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
 
   /* put iovec into a raw buffer */
   {
@@ -621,9 +661,12 @@ START_TEST(test_message_parse)
   fail_unless(message.mapped_addr != NULL, "mapped_addr must be present");
   fail_unless(message.peer_addr != NULL, "peer_addr must be present");
   fail_unless(message.relayed_addr != NULL, "relayed_addr must be present");
-  fail_unless(message.alternate_server != NULL, "alternate_server must be present");
-  fail_unless(message.xor_mapped_addr != NULL, "xor_mapped_addr must be present");
-  fail_unless(message.reservation_token != NULL, "reservation_token must be present");
+  fail_unless(message.alternate_server != NULL,
+      "alternate_server must be present");
+  fail_unless(message.xor_mapped_addr != NULL,
+      "xor_mapped_addr must be present");
+  fail_unless(message.reservation_token != NULL,
+      "reservation_token must be present");
   fail_unless(message.data != NULL, "data must be present");
   fail_unless(message.channel_number != NULL, "channel_number must be present");
   fail_unless(message.lifetime != NULL, "lifetime must be present");
@@ -631,10 +674,13 @@ START_TEST(test_message_parse)
   fail_unless(message.realm != NULL, "realm must be present");
   fail_unless(message.username != NULL, "username must be present");
   fail_unless(message.even_port != NULL, "even_port must be present");
-  fail_unless(message.requested_transport != NULL, "requested_transport must be present");
+  fail_unless(message.requested_transport != NULL,
+      "requested_transport must be present");
   fail_unless(message.dont_fragment != NULL, "dont_fragment must be present");
-  fail_unless(message.unknown_attribute != NULL, "unknown_attribute must be present");
-  fail_unless(message.message_integrity == NULL, "fingerprint MUST be the last attribute");
+  fail_unless(message.unknown_attribute != NULL,
+      "unknown_attribute must be present");
+  fail_unless(message.message_integrity == NULL,
+      "fingerprint MUST be the last attribute");
   fail_unless(message.fingerprint != NULL, "fingerprint must be present");
   fail_unless(message.software != NULL, "software must be present");
   fail_unless(message.error_code != NULL, "error_code must be present");

@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2008-2009 Sebastien Vincent.
+ * Copyright (C) 2008-2010 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -50,9 +50,9 @@
 
 /**
  * \file tls_peer.h
- * \brief (D)TLS peer implementation.
+ * \brief TLS and DTLS peer implementation.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifndef TLS_PEER_H
@@ -149,7 +149,9 @@ struct tls_peer
  * \param key_file private key file.
  * \return valid pointer on tls_peer or NULL if failure
  */
-struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr, uint16_t port, const char* ca_file, const char* cert_file, const char* key_file);
+struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr,
+    uint16_t port, const char* ca_file, const char* cert_file,
+    const char* key_file);
 
 /**
  * \brief Free a (D)TLS peer.
@@ -166,7 +168,8 @@ void tls_peer_free(struct tls_peer** peer);
  * \param addrlen sizeof address
  * \return bytes sent or -1 if error(s)
  */
-ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen, const struct sockaddr* addr, socklen_t addrlen);
+ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen,
+    const struct sockaddr* addr, socklen_t addrlen);
 
 /**
  * \brief Read a message using TLS for TCP use only.
@@ -182,7 +185,9 @@ ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen, c
  * \note Before calling this function, the caller must have recv() data.
  * \warning TCP use only!
  */
-ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen, int sock);
+ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen,
+    char* bufout, ssize_t bufoutlen, const struct sockaddr* addr,
+    socklen_t addrlen, int sock);
 
 /**
  * \brief Read a message using TLS for UDP use only.
@@ -197,7 +202,9 @@ ssize_t tls_peer_tcp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char
  * \note Before calling this function, the caller must have recvfrom() data.
  * \warning UDP use only!
  */
-ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char* bufout, ssize_t bufoutlen, const struct sockaddr* addr, socklen_t addrlen);
+ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen,
+    char* bufout, ssize_t bufoutlen, const struct sockaddr* addr,
+    socklen_t addrlen);
 
 /**
  * \brief Do the (D)TLS handshake.
@@ -206,7 +213,8 @@ ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen, char
  * \param daddr_size sockaddr size
  * \return 0 if success, -1 otherwise
  */
-int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr, socklen_t daddr_size);
+int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr,
+    socklen_t daddr_size);
 
 /**
  * \brief Print the connection informations.
@@ -230,7 +238,8 @@ int tls_peer_is_encrypted(const char* buf, size_t len);
  * \param reuse allow socket to reuse transport address (SO_REUSE)
  * \return socket descriptor, -1 otherwise
  */
-int socket_create(enum protocol_type type, const char* addr, uint16_t port, int reuse);
+int socket_create(enum protocol_type type, const char* addr, uint16_t port,
+    int reuse);
 
 #ifdef __cplusplus
 }

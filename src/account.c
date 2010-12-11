@@ -47,8 +47,8 @@
 #include "account.h"
 #include "protocol.h"
 
-struct account_desc* account_desc_new(const char* username, const char* password, const char* realm,
-    enum account_state state)
+struct account_desc* account_desc_new(const char* username,
+    const char* password, const char* realm, enum account_state state)
 {
   struct account_desc* ret = NULL;
 
@@ -73,7 +73,8 @@ struct account_desc* account_desc_new(const char* username, const char* password
 
   ret->allocations = 0;
 
-  turn_calculate_authentication_key(username, realm, password, ret->key, sizeof(ret->key));
+  turn_calculate_authentication_key(username, realm, password, ret->key,
+      sizeof(ret->key));
 
   return ret;
 }
@@ -89,7 +90,8 @@ void account_desc_set_state(struct account_desc* desc, enum account_state state)
   desc->state = state;
 }
 
-struct account_desc* account_list_find(struct list_head* list, const char* username, const char* realm)
+struct account_desc* account_list_find(struct list_head* list,
+    const char* username, const char* realm)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;

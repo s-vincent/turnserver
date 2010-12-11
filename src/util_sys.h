@@ -189,9 +189,8 @@ typedef struct sfd_set
 /**
  * \brief Test if socket has data to read.
  *
- * It is a convenient function to test if socket
- * is valid, can be tested in select and if it has
- * data to read.
+ * It is a convenient function to test if socket is valid, can be tested in
+ * select and if it has data to read.
  * \param sock socket to read
  * \param nsock parameter of (p)select() function
  * \param fdsr set of descriptor (see select())
@@ -245,8 +244,10 @@ int is_little_endian(void);
  * \param buf a buffer
  * \param buflen size of buffer
  * \return pointer on buf
- * \note This function use strerror_r if available, and assume strerror() is reentrant on systems which do not have strerror_r().
- * \warning If you do a multithreaded program, be sure strerror_r() is available or strerror() is reentrant on your system.
+ * \note This function use strerror_r if available, and assume strerror() is
+ * reentrant on systems which do not have strerror_r().
+ * \warning If you do a multithreaded program, be sure strerror_r() is available
+ * or strerror() is reentrant on your system.
  */
 char* get_error(int errnum, char* buf, size_t buflen);
 
@@ -254,13 +255,15 @@ char* get_error(int errnum, char* buf, size_t buflen);
  * \brief Go in daemon mode.
  * \param dir change directory to this, default is /.
  * \param mask to fix permission: mask & 0777, default is 0.
- * \param cleanup cleanup function, if not NULL it is executed before father _exit()
+ * \param cleanup cleanup function, if not NULL it is executed before father
+ * _exit()
  * \param arg argument of cleanup function
  * \return -1 if error\n
  * In case of father, this function never returns (_exit)\n
  * If success 0 is returned in case of child
  */
-int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg), void* arg);
+int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg),
+    void* arg);
 
 /**
  * \brief Free elements of an iovec array.
@@ -284,7 +287,8 @@ void iovec_free_data(struct iovec* iov, uint32_t nb);
  * \return 0 if success, -1 otherwise
  * \note Should work on POSIX and *BSD systems.
  */
-int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff, gid_t gid_eff, const char* user_name);
+int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
+    gid_t gid_eff, const char* user_name);
 
 /**
  * \brief Gain lost privileges.
@@ -377,7 +381,8 @@ char* strdup(const char* s);
  * \param hex buffer
  * \param hex_len length of buffer
  */
-void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex, size_t hex_len);
+void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex,
+    size_t hex_len);
 
 /**
  * \brief Convert a ascii stream into integer value.
@@ -401,24 +406,28 @@ void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t);
  * \param fd the socket descriptor to write the data
  * \param iov the iovector which contains the data
  * \param iovcnt number of element that should be written
- * \param addr source address to send with UDP, set to NULL if you want to send with TCP
+ * \param addr source address to send with UDP, set to NULL if you want to send
+ * with TCP
  * \param addr_size sizeof addr
  * \return number of bytes written or -1 if error
  * \warning this function work only with socket!
  */
-ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t addr_size);
+ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt,
+    const struct sockaddr* addr, socklen_t addr_size);
 
 /**
  * \brief The readv() function for win32 socket.
  * \param fd the socket descriptor to read the data
  * \param iov the iovector to store the data
  * \param iovcnt number of element that should be filled
- * \param addr if not NULL it considers using a UDP socket, otherwise it considers using a TCP one
+ * \param addr if not NULL it considers using a UDP socket, otherwise it
+ * considers using a TCP one
  * \param addr_size pointer on address size, will be filled by this function
  * \return number of bytes read or -1 if error
  * \warning this function work only with socket!
  */
-ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt, const struct sockaddr* addr, socklen_t* addr_size);
+ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt,
+    const struct sockaddr* addr, socklen_t* addr_size);
 #endif
 
 #ifdef __cplusplus

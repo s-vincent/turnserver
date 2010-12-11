@@ -50,9 +50,11 @@
 #include "allocation.h"
 #include "turnserver.h"
 
-struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username,
-    const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr,
-    const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
+struct allocation_desc* allocation_desc_new(const uint8_t* id,
+    uint8_t transport_protocol, const char* username, const unsigned char* key,
+    const char* realm, const unsigned char* nonce,
+    const struct sockaddr* relayed_addr, const struct sockaddr* server_addr,
+    const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime)
 {
   struct allocation_desc* ret = NULL;
   size_t len_username = 0;
@@ -60,8 +62,8 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   len_username = strlen(username);
 
-  if(!username || !relayed_addr || !server_addr || !client_addr || len_username == 0 ||
-     !addr_size || !id || !realm || !key || !nonce)
+  if(!username || !relayed_addr || !server_addr || !client_addr ||
+      len_username == 0 || !addr_size || !id || !realm || !key || !nonce)
   {
     return NULL;
   }
@@ -84,8 +86,10 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport
 
   strncpy(ret->username, username, len_username);
   ret->username[len_username] = 0x00;
-  memcpy(ret->key, key, 16); /* 16 = MD5 length */
-  memcpy(ret->nonce, nonce, 24); /* see protocol.c for nonce length */
+  /* 16 = MD5 length */
+  memcpy(ret->key, key, 16);
+  /* see protocol.c for nonce length */
+  memcpy(ret->nonce, nonce, 24);
   strncpy(ret->realm, realm, sizeof(ret->realm) - 1);
   ret->realm[sizeof(ret->realm) - 1] = 0x00;
 
@@ -159,7 +163,8 @@ void allocation_desc_free(struct allocation_desc** desc)
   /* free up the lists */
   list_iterate_safe(get, n, &ret->peers_channels)
   {
-    struct allocation_channel* tmp = list_get(get, struct allocation_channel, list);
+    struct allocation_channel* tmp = list_get(get, struct allocation_channel,
+        list);
     timer_delete(tmp->expire_timer);
     LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
@@ -168,7 +173,8 @@ void allocation_desc_free(struct allocation_desc** desc)
 
   list_iterate_safe(get, n, &ret->peers_permissions)
   {
-    struct allocation_permission* tmp = list_get(get, struct allocation_permission, list);
+    struct allocation_permission* tmp = list_get(get,
+        struct allocation_permission, list);
     timer_delete(tmp->expire_timer);
     LIST_DEL(&tmp->list);
     LIST_DEL(&tmp->list2);
@@ -177,7 +183,8 @@ void allocation_desc_free(struct allocation_desc** desc)
 
   list_iterate_safe(get, n, &ret->tcp_relays)
   {
-    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
+    struct allocation_tcp_relay* tmp = list_get(get,
+        struct allocation_tcp_relay, list);
     allocation_tcp_relay_list_remove(&ret->tcp_relays, tmp);
   }
 
@@ -225,15 +232,16 @@ void allocation_desc_set_timer(struct allocation_desc* desc, uint32_t lifetime)
   }
 }
 
-struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family,
-    const uint8_t* peer_addr)
+struct allocation_permission* allocation_desc_find_permission(
+    struct allocation_desc* desc, int family, const uint8_t* peer_addr)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
   list_iterate_safe(get, n, &desc->peers_permissions)
   {
-    struct allocation_permission* tmp = list_get(get, struct allocation_permission, list);
+    struct allocation_permission* tmp = list_get(get,
+        struct allocation_permission, list);
 
     /* check only the network address (not the port) */
     if(tmp->family != family)
@@ -241,7 +249,8 @@ struct allocation_permission* allocation_desc_find_permission(struct allocation_
       continue;
     }
 
-    if(tmp->family == family && !memcmp(tmp->peer_addr, peer_addr, family == AF_INET ? 4 : 16))
+    if(tmp->family == family && !memcmp(tmp->peer_addr, peer_addr,
+          family == AF_INET ? 4 : 16))
     {
       return tmp;
     }
@@ -250,15 +259,16 @@ struct allocation_permission* allocation_desc_find_permission(struct allocation_
   return NULL;
 }
 
-struct allocation_permission* allocation_desc_find_permission_sockaddr(struct allocation_desc* desc,
-    const struct sockaddr* addr)
+struct allocation_permission* allocation_desc_find_permission_sockaddr(
+    struct allocation_desc* desc, const struct sockaddr* addr)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
   list_iterate_safe(get, n, &desc->peers_permissions)
   {
-    struct allocation_permission* tmp = list_get(get, struct allocation_permission, list);
+    struct allocation_permission* tmp = list_get(get,
+        struct allocation_permission, list);
 
     /* check only the network address (not the port) */
     if(tmp->family != addr->sa_family)
@@ -298,8 +308,8 @@ struct allocation_permission* allocation_desc_find_permission_sockaddr(struct al
   return NULL;
 }
 
-int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family,
-    const uint8_t* peer_addr)
+int allocation_desc_add_permission(struct allocation_desc* desc,
+    uint32_t lifetime, int family, const uint8_t* peer_addr)
 {
   struct allocation_permission* ret = NULL;
   struct sigevent event;
@@ -333,18 +343,19 @@ int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifeti
   return 0;
 }
 
-uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, const uint8_t* peer_addr,
-    uint16_t peer_port)
+uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family,
+    const uint8_t* peer_addr, uint16_t peer_port)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
   list_iterate_safe(get, n, &desc->peers_channels)
   {
-    struct allocation_channel* tmp = list_get(get, struct allocation_channel, list);
+    struct allocation_channel* tmp = list_get(get, struct allocation_channel,
+        list);
 
-    if(tmp->family == family && !memcmp(&tmp->peer_addr, peer_addr, family == AF_INET ? 4 : 16) &&
-       tmp->peer_port == peer_port)
+    if(tmp->family == family && !memcmp(&tmp->peer_addr, peer_addr,
+          family == AF_INET ? 4 : 16) && tmp->peer_port == peer_port)
     {
       return tmp->channel_number;
     }
@@ -354,14 +365,16 @@ uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, 
   return 0;
 }
 
-struct allocation_channel* allocation_desc_find_channel_number(struct allocation_desc* desc, uint16_t channel)
+struct allocation_channel* allocation_desc_find_channel_number(
+    struct allocation_desc* desc, uint16_t channel)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
   list_iterate_safe(get, n, &desc->peers_channels)
   {
-    struct allocation_channel* tmp = list_get(get, struct allocation_channel, list);
+    struct allocation_channel* tmp = list_get(get, struct allocation_channel,
+        list);
 
     if(tmp->channel_number == channel)
     {
@@ -373,8 +386,8 @@ struct allocation_channel* allocation_desc_find_channel_number(struct allocation
   return 0;
 }
 
-int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family,
-    const uint8_t* peer_addr, uint16_t peer_port)
+int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel,
+    uint32_t lifetime, int family, const uint8_t* peer_addr, uint16_t peer_port)
 {
   struct allocation_channel* ret = NULL;
   struct sigevent event;
@@ -410,7 +423,8 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, 
   return 0;
 }
 
-void allocation_channel_set_timer(struct allocation_channel* channel, uint32_t lifetime)
+void allocation_channel_set_timer(struct allocation_channel* channel,
+    uint32_t lifetime)
 {
   struct itimerspec expire;
   struct itimerspec old;
@@ -429,7 +443,8 @@ void allocation_channel_set_timer(struct allocation_channel* channel, uint32_t l
   }
 }
 
-void allocation_permission_set_timer(struct allocation_permission* permission, uint32_t lifetime)
+void allocation_permission_set_timer(struct allocation_permission* permission,
+    uint32_t lifetime)
 {
   struct itimerspec expire;
   struct itimerspec old;
@@ -466,7 +481,8 @@ void allocation_list_add(struct list_head* list, struct allocation_desc* desc)
   LIST_ADD_TAIL(&desc->list, list);
 }
 
-void allocation_list_remove(struct list_head* list, struct allocation_desc* desc)
+void allocation_list_remove(struct list_head* list,
+    struct allocation_desc* desc)
 {
   /* to avoid compilation warning */
   list = NULL;
@@ -475,7 +491,8 @@ void allocation_list_remove(struct list_head* list, struct allocation_desc* desc
   allocation_desc_free(&desc);
 }
 
-struct allocation_desc* allocation_list_find_username(struct list_head* list, const char* username)
+struct allocation_desc* allocation_list_find_username(struct list_head* list,
+    const char* username)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -493,7 +510,8 @@ struct allocation_desc* allocation_list_find_username(struct list_head* list, co
   return NULL;
 }
 
-struct allocation_desc* allocation_list_find_id(struct list_head* list, const uint8_t* id)
+struct allocation_desc* allocation_list_find_id(struct list_head* list,
+    const uint8_t* id)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -511,8 +529,9 @@ struct allocation_desc* allocation_list_find_id(struct list_head* list, const ui
   return NULL;
 }
 
-struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int transport_protocol,
-    const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size)
+struct allocation_desc* allocation_list_find_tuple(struct list_head* list,
+    int transport_protocol, const struct sockaddr* server_addr,
+    const struct sockaddr* client_addr, socklen_t addr_size)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -533,8 +552,8 @@ struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int t
   return NULL;
 }
 
-struct allocation_desc* allocation_list_find_relayed(struct list_head* list, const struct sockaddr* relayed_addr,
-    socklen_t addr_size)
+struct allocation_desc* allocation_list_find_relayed(struct list_head* list,
+    const struct sockaddr* relayed_addr, socklen_t addr_size)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -553,8 +572,9 @@ struct allocation_desc* allocation_list_find_relayed(struct list_head* list, con
   return NULL;
 }
 
-int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family,
-    const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id)
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id,
+    int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port,
+    uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id)
 {
   struct allocation_tcp_relay* ret = NULL;
   struct sigevent event;
@@ -627,7 +647,8 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int
   return 0;
 }
 
-void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_tcp_relay* relay)
+void allocation_tcp_relay_list_remove(struct list_head* list,
+    struct allocation_tcp_relay* relay)
 {
   list = list; /* not used */
 
@@ -656,14 +677,16 @@ void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_
   free(relay);
 }
 
-struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation_desc* desc, uint32_t id)
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(
+    struct allocation_desc* desc, uint32_t id)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
   list_iterate_safe(get, n, &desc->tcp_relays)
   {
-    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
+    struct allocation_tcp_relay* tmp = list_get(get,
+        struct allocation_tcp_relay, list);
 
     if(tmp->connection_id == id)
     {
@@ -675,15 +698,17 @@ struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation
   return NULL;
 }
 
-struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocation_desc* desc, int family,
-    const uint8_t* peer_addr, uint16_t peer_port)
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(
+    struct allocation_desc* desc, int family, const uint8_t* peer_addr,
+    uint16_t peer_port)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
   list_iterate_safe(get, n, &desc->tcp_relays)
   {
-    struct allocation_tcp_relay* tmp = list_get(get, struct allocation_tcp_relay, list);
+    struct allocation_tcp_relay* tmp = list_get(get,
+        struct allocation_tcp_relay, list);
 
     if(tmp->family != family)
     {
@@ -700,7 +725,8 @@ struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocati
   return NULL;
 }
 
-void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay, uint32_t timeout)
+void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay,
+    uint32_t timeout)
 {
   struct itimerspec expire;
   struct itimerspec old;
@@ -719,7 +745,8 @@ void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay, uint32_t
   }
 }
 
-struct allocation_token* allocation_token_new(uint8_t* id, int sock, uint32_t lifetime)
+struct allocation_token* allocation_token_new(uint8_t* id, int sock,
+    uint32_t lifetime)
 {
   struct allocation_token* ret = NULL;
   struct sigevent event;
@@ -760,7 +787,8 @@ void allocation_token_free(struct allocation_token** token)
   *token = NULL;
 }
 
-void allocation_token_set_timer(struct allocation_token* token, uint32_t lifetime)
+void allocation_token_set_timer(struct allocation_token* token,
+    uint32_t lifetime)
 {
   struct itimerspec expire;
   struct itimerspec old;
@@ -777,12 +805,14 @@ void allocation_token_set_timer(struct allocation_token* token, uint32_t lifetim
   }
 }
 
-void allocation_token_list_add(struct list_head* list, struct allocation_token* token)
+void allocation_token_list_add(struct list_head* list,
+    struct allocation_token* token)
 {
   LIST_ADD(&token->list, list);
 }
 
-void allocation_token_list_remove(struct list_head* list, struct allocation_token* token)
+void allocation_token_list_remove(struct list_head* list,
+    struct allocation_token* token)
 {
   list = NULL; /* not used */
 
@@ -790,7 +820,8 @@ void allocation_token_list_remove(struct list_head* list, struct allocation_toke
   allocation_token_free(&token);
 }
 
-struct allocation_token* allocation_token_list_find(struct list_head* list, uint8_t* id)
+struct allocation_token* allocation_token_list_find(struct list_head* list,
+    uint8_t* id)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;

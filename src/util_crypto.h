@@ -129,7 +129,8 @@ int md5_generate(unsigned char* hash, const unsigned char* text, size_t len);
  * \param key_len key length
  * \return 0 if success, -1 otherwise
  */
-int hmac_sha1_generate(unsigned char* hash, const unsigned char* text, size_t text_len, const unsigned char* key, size_t key_len);
+int hmac_sha1_generate(unsigned char* hash, const unsigned char* text,
+    size_t text_len, const unsigned char* key, size_t key_len);
 
 /**
  * \brief Generate a HMAC-MD5 hash.
@@ -140,7 +141,8 @@ int hmac_sha1_generate(unsigned char* hash, const unsigned char* text, size_t te
  * \param key_len key length
  * \return 0 if success, -1 otherwise
  */
-int hmac_md5_generate(unsigned char* hash, const unsigned char* text, size_t text_len, const unsigned char* key, size_t key_len);
+int hmac_md5_generate(unsigned char* hash, const unsigned char* text,
+    size_t text_len, const unsigned char* key, size_t key_len);
 
 /**
  * \brief Generate a CRC-32 (ISO 3309, ITU-T V.42 8.1.1.6.2, RFC 1952).

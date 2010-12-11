@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2009 Sebastien Vincent.
+ * Copyright (C) 2006-2010 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file dbg.h
  * \brief Some routines to print debug message.
  * \author Sebastien Vincent
- * \date 2006-2009
+ * \date 2006-2010
  */
 
 #ifndef DBG_H
@@ -103,7 +103,8 @@ void dbg_print_null(const char* f, int line, const char* format, ...);
  * \author Sebastien Vincent
  * \warning Remember to pass pointer when you cast an integer for buf param.
  */
-void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const char* format, ...);
+void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
+    const char* format, ...);
 
 /**
  * \def debug
@@ -122,16 +123,16 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  * \def debug_hexa
  * \brief Print the content of a buffer in hexadecimal.
  *
- * Use similary like a variadic macro: debug_print_hexa(DBG_ATTR, buf, buflen, format, ...).
+ * Use similary like a variadic macro:
+ * debug_print_hexa(DBG_ATTR, buf, buflen, format, ...).
  * \warning Respect the use: debug_hexa(DBG_ATTR, buf, buflen, ...).
  */
 #define debug_hexa dbg_print_hexa
 
 /**
- * If you want to have debug message on stderr when some
- * pthread functions are used, define DBG_THREAD_LOCK.
- * It could be useful when debugging deadlocks or other
- * thread synchronization stuff.
+ * If you want to have debug message on stderr when some pthread functions are
+ * used, define DBG_THREAD_LOCK. It could be useful when debugging deadlocks or
+ * other thread synchronization stuff.
  */
 #ifdef DBG_THREAD_LOCK
 
@@ -142,7 +143,11 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  * \return 0 if success, a non nul value otherwise
  */
 #define pthread_mutex_lock(x) \
-  do{ dbg_print(DBG_ATTR, "MUTEX LOCK: [%x]\n", pthread_self()); pthread_mutex_lock((x));}while(0)
+  do \
+  { \
+    dbg_print(DBG_ATTR, "MUTEX LOCK: [%x]\n", pthread_self()); \
+    pthread_mutex_lock((x)); \
+  }while(0)
 
 /**
  * \def pthread_mutex_unlock
@@ -151,7 +156,11 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  * \return 0 if success, a non nul value otherwise
  */
 #define pthread_mutex_unlock(x) \
-  do{ dbg_print(DBG_ATTR, "MUTEX UNLOCK: [%x]\n", pthread_self()); pthread_mutex_unlock((x));}while(0)
+  do \
+  { \
+    dbg_print(DBG_ATTR, "MUTEX UNLOCK: [%x]\n", pthread_self()); \
+    pthread_mutex_unlock((x)); \
+  }while(0)
 
 /**
  * \def pthread_join
@@ -161,7 +170,12 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  * \return 0 if success, a non nul value otherwise
  */
 #define pthread_join(x, r) \
-  do{ dbg_print(DBG_ATTR, "[%x] wait to JOIN Thread [%x]\n", pthread_self(), x); pthread_join((x), (r));dbg_print(DBG_ATTR, "[%x] JOIN Thread [%x]\n", pthread_self(), x);}while(0)
+  do \
+  {
+    dbg_print(DBG_ATTR, "[%x] wait to JOIN Thread [%x]\n", pthread_self(), x); \
+    pthread_join((x), (r)); \
+    dbg_print(DBG_ATTR, "[%x] JOIN Thread [%x]\n", pthread_self(), x); \
+  }while(0)
 
 /**
  * \def pthread_exit
@@ -169,7 +183,11 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  * \param x thread id (pthread_t type)
  */
 #define pthread_exit(x) \
-  do{ dbg_print(DBG_ATTR, "EXIT Thread [%x]\n", pthread_self());pthread_exit((x));}while(0)
+  do \
+  { \
+    dbg_print(DBG_ATTR, "EXIT Thread [%x]\n", pthread_self()); \
+    pthread_exit((x)); \
+  }while(0)
 
 /**
  * \def pthread_cancel
@@ -178,7 +196,10 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
  * \return 0 if success, a non nul value otherwise
  */
 #define pthread_cancel(x) \
-  do{ dbg_print(DBG_ATTR, "Cancel Thread [%x] by [%x]\n", x, pthread_self());}while(0)
+  do \
+  { \
+    dbg_print(DBG_ATTR, "Cancel Thread [%x] by [%x]\n", x, pthread_self()); \
+  }while(0)
 
 #endif
 

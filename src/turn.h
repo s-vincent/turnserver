@@ -76,131 +76,134 @@ typedef unsigned __int64 uint64_t;
 /* macros from RFC5389 to determine if message is a request,
  * success/error response or indication
  */
-#define STUN_IS_REQUEST(msg_type)       (((msg_type) & 0x0110) == STUN_REQUEST)
-#define STUN_IS_INDICATION(msg_type)    (((msg_type) & 0x0110) == STUN_INDICATION)
-#define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)
-#define STUN_IS_ERROR_RESP(msg_type)    (((msg_type) & 0x0110) == STUN_ERROR_RESP)
+#define STUN_IS_REQUEST(msg_type)      (((msg_type) & 0x0110) == STUN_REQUEST)
+#define STUN_IS_INDICATION(msg_type)   (((msg_type) & 0x0110) == STUN_INDICATION)
+#define STUN_IS_SUCCESS_RESP(msg_type) (((msg_type) & 0x0110) == STUN_SUCCESS_RESP)
+#define STUN_IS_ERROR_RESP(msg_type)   (((msg_type) & 0x0110) == STUN_ERROR_RESP)
 
-#define TURN_IS_CHANNELDATA(msg_type)   (((msg_type) & 0xC000) != 0) /* bit 0 and 1 are not set to 0 */
+/* bit 0 and 1 are not set to 0 */
+#define TURN_IS_CHANNELDATA(msg_type)  (((msg_type) & 0xC000) != 0)
 
-#define STUN_GET_METHOD(msg_type)       ((msg_type) & 0x3EEF)
-#define STUN_GET_CLASS(msg_type)        ((msg_type) & 0x0110)
+#define STUN_GET_METHOD(msg_type)      ((msg_type) & 0x3EEF)
+#define STUN_GET_CLASS(msg_type)       ((msg_type) & 0x0110)
 
-/* macros to determine if an attribute is comprehension-required or comprehension-optional */
+/* macros to determine if an attribute is comprehension-required or
+ * comprehension-optional
+ */
 #define STUN_IS_COMPREHENSION_REQUIRED(attr_type) (!((attr_type) & 0x8000))
 #define STUN_IS_COMPREHENSION_OPTIONAL(attr_type) (((attr_type) & 0x8000))
 
 /* Request/Response transactions */
 
 /* Binding method */
-#define STUN_METHOD_BINDING             0x0001
+#define STUN_METHOD_BINDING            0x0001
 
 /* Allocate method */
-#define TURN_METHOD_ALLOCATE            0x0003
+#define TURN_METHOD_ALLOCATE           0x0003
 
 /* Refresh method */
-#define TURN_METHOD_REFRESH             0x0004
+#define TURN_METHOD_REFRESH            0x0004
 
 /* CreatePermission method */
-#define TURN_METHOD_CREATEPERMISSION    0x0008
+#define TURN_METHOD_CREATEPERMISSION   0x0008
 
 /* ChannelBind method */
-#define TURN_METHOD_CHANNELBIND         0x0009
+#define TURN_METHOD_CHANNELBIND        0x0009
 
 /* Connect method (RFC6062) */
-#define TURN_METHOD_CONNECT             0x000A
+#define TURN_METHOD_CONNECT            0x000A
 
 /* ConnectionBind method (RFC6062) */
-#define TURN_METHOD_CONNECTIONBIND      0x000B
+#define TURN_METHOD_CONNECTIONBIND     0x000B
 
 /* Indications */
 
 /* Send method */
-#define TURN_METHOD_SEND                0x0006
+#define TURN_METHOD_SEND               0x0006
 
 /* Data method */
-#define TURN_METHOD_DATA                0x0007
+#define TURN_METHOD_DATA               0x0007
 
 /* ConnectionAttempt method (RFC6062) */
-#define TURN_METHOD_CONNECTIONATTEMPT   0x000C
+#define TURN_METHOD_CONNECTIONATTEMPT  0x000C
 
 /* standard STUN attributes */
 
 /* MAPPED-ADDRESS */
-#define STUN_ATTR_MAPPED_ADDRESS        0x0001
+#define STUN_ATTR_MAPPED_ADDRESS       0x0001
 
 /* USERNAME */
-#define STUN_ATTR_USERNAME              0x0006
+#define STUN_ATTR_USERNAME             0x0006
 
 /* MESSAGE-INTEGRITY */
-#define STUN_ATTR_MESSAGE_INTEGRITY     0x0008
+#define STUN_ATTR_MESSAGE_INTEGRITY    0x0008
 
 /* ERROR-CODE */
-#define STUN_ATTR_ERROR_CODE            0x0009
+#define STUN_ATTR_ERROR_CODE           0x0009
 
 /* UNKNOWN-ATTRIBUTES */
-#define STUN_ATTR_UNKNOWN_ATTRIBUTES    0x000A
+#define STUN_ATTR_UNKNOWN_ATTRIBUTES   0x000A
 
 /* REALM */
-#define STUN_ATTR_REALM                 0x0014
+#define STUN_ATTR_REALM                0x0014
 
 /* NONCE */
-#define STUN_ATTR_NONCE                 0x0015
+#define STUN_ATTR_NONCE                0x0015
 
 /* XOR-MAPPED-ADDRESS */
-#define STUN_ATTR_XOR_MAPPED_ADDRESS    0x0020
+#define STUN_ATTR_XOR_MAPPED_ADDRESS   0x0020
 
 /* SOFTWARE */
-#define STUN_ATTR_SOFTWARE              0x8022
+#define STUN_ATTR_SOFTWARE             0x8022
 
 /* ALTERNATE-SERVER */
-#define STUN_ATTR_ALTERNATE_SERVER      0x8023
+#define STUN_ATTR_ALTERNATE_SERVER     0x8023
 
 /* FINGERPRINT */
-#define STUN_ATTR_FINGERPRINT           0x8028
+#define STUN_ATTR_FINGERPRINT          0x8028
 
 /* TURN attributes */
 
 /* CHANNEL-NUMBER */
-#define TURN_ATTR_CHANNEL_NUMBER        0x000C
+#define TURN_ATTR_CHANNEL_NUMBER       0x000C
 
 /* LIFETIME */
-#define TURN_ATTR_LIFETIME              0x000D
+#define TURN_ATTR_LIFETIME             0x000D
 
 /* PEER-ADDRESS */
-#define TURN_ATTR_XOR_PEER_ADDRESS      0x0012
+#define TURN_ATTR_XOR_PEER_ADDRESS     0x0012
 
 /* DATA */
-#define TURN_ATTR_DATA                  0x0013
+#define TURN_ATTR_DATA                 0x0013
 
 /* RELAYED-ADDRESS */
-#define TURN_ATTR_XOR_RELAYED_ADDRESS   0x0016
+#define TURN_ATTR_XOR_RELAYED_ADDRESS  0x0016
 
 /* EVEN-PORT */
-#define TURN_ATTR_EVEN_PORT             0x0018
+#define TURN_ATTR_EVEN_PORT            0x0018
 
 /* REQUESTED-TRANSPORT */
-#define TURN_ATTR_REQUESTED_TRANSPORT   0x0019
+#define TURN_ATTR_REQUESTED_TRANSPORT  0x0019
 
 /* DONT-FRAGMENT */
-#define TURN_ATTR_DONT_FRAGMENT         0X001A
+#define TURN_ATTR_DONT_FRAGMENT        0X001A
 
 /* RESERVATION-TOKEN */
-#define TURN_ATTR_RESERVATION_TOKEN     0x0022
+#define TURN_ATTR_RESERVATION_TOKEN    0x0022
 
 /* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-11) */
 #define TURN_ATTR_REQUESTED_ADDRESS_FAMILY  0x0017
 
 /* CONNECTION-ID (RFC6062) */
-#define TURN_ATTR_CONNECTION_ID         0x002A
+#define TURN_ATTR_CONNECTION_ID        0x002A
 
 /* STUN error codes */
-#define STUN_ERROR_TRY_ALTERNATE        300
-#define STUN_ERROR_BAD_REQUEST          400
-#define STUN_ERROR_UNAUTHORIZED         401
-#define STUN_ERROR_UNKNOWN_ATTRIBUTE    420
-#define STUN_ERROR_STALE_NONCE          438
-#define STUN_ERROR_SERVER_ERROR         500
+#define STUN_ERROR_TRY_ALTERNATE       300
+#define STUN_ERROR_BAD_REQUEST         400
+#define STUN_ERROR_UNAUTHORIZED        401
+#define STUN_ERROR_UNKNOWN_ATTRIBUTE   420
+#define STUN_ERROR_STALE_NONCE         438
+#define STUN_ERROR_SERVER_ERROR        500
 
 /* TURN error codes */
 #define TURN_ERROR_FORBIDDEN                      403
@@ -243,14 +246,14 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_447            "Connection Timeout or Failure"
 
 /* STUN magic cookie */
-#define STUN_MAGIC_COOKIE               0x2112A442
+#define STUN_MAGIC_COOKIE              0x2112A442
 
 /* STUN FINGERPRINT XOR value */
-#define STUN_FINGERPRINT_XOR_VALUE      0x5354554E
+#define STUN_FINGERPRINT_XOR_VALUE     0x5354554E
 
 /* family address for MAPPED-ADDRESS like attributes */
-#define STUN_ATTR_FAMILY_IPV4           0x01
-#define STUN_ATTR_FAMILY_IPV6           0x02
+#define STUN_ATTR_FAMILY_IPV4          0x01
+#define STUN_ATTR_FAMILY_IPV6          0x02
 
 /* default allocation lifetime (in seconds) unless refreshed */
 #define TURN_DEFAULT_ALLOCATION_LIFETIME      600
@@ -292,7 +295,8 @@ typedef unsigned __int64 uint64_t;
 struct turn_msg_hdr
 {
   uint16_t turn_msg_type; /**< Message type (first 2 bit are always set to 0) */
-  uint16_t turn_msg_len; /**< Message length (without the 20 bytes of this header) */
+  uint16_t turn_msg_len; /**< Message length (without the 20 bytes of this
+                           header) */
   uint32_t turn_msg_cookie; /**< Magic Cookie */
   uint8_t turn_msg_id[12]; /**< Transaction ID (96 bit) */
 }__attribute__((packed));
@@ -352,7 +356,9 @@ struct turn_attr_error_code
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
-  uint32_t turn_attr_reserved_class : 24; /**< 21 bit reserved (value = 0) and 3 bit which indicates hundred digits of the response code (3 - 6) */
+  uint32_t turn_attr_reserved_class : 24; /**< 21 bit reserved (value = 0) and 3
+                                            bit which indicates hundred digits
+                                            of the response code (3 - 6) */
   uint32_t turn_attr_number : 8; /**< Number (0 - 99) */
   uint8_t turn_attr_reason[]; /**< Variable-size reason */
 }__attribute__((packed));
@@ -510,7 +516,7 @@ struct turn_attr_even_port
 {
   uint16_t turn_attr_type; /**< Attribute type */
   uint16_t turn_attr_len; /**< Length of "value" */
-  uint8_t turn_attr_flags; /**< Flags (for the moment just R flag are defined) */
+  uint8_t turn_attr_flags; /**< Flags (just R flag are defined in RFC5766) */
 }__attribute__((packed));
 
 /**

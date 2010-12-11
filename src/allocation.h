@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
  * \file allocation.h
  * \brief Allocation between TURN client and external(s) client(s).
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2010
  */
 
 #ifndef ALLOCATION_H
@@ -118,12 +118,16 @@ struct allocation_tcp_relay
   int client_sock; /**< Client data connection (client <-> server) */
   timer_t expire_timer; /**< Expire timer */
   int new; /**< If the connection is newly initiated */
-  int ready; /**< If remote peer is connected (i.e. connect() has succeed before timeout) */
-  time_t created; /**< Time when this relay has been created (this is used to calculted timeout) */
-  char* buf; /**< Internal buffer for peer data (before receiving ConnectionBind) */
+  int ready; /**< If remote peer is connected (i.e. connect() has succeed
+               before timeout) */
+  time_t created; /**< Time when this relay has been created (this is used to
+                    calculted timeout) */
+  char* buf; /**< Internal buffer for peer data (before receiving
+               ConnectionBind) */
   size_t buf_len; /**< Length of current data in internal buffer */
   size_t buf_size; /**< Capacity of internal buffer */
-  uint8_t connect_msg_id[12]; /**< TURN message ID of the connection request (if any) */
+  uint8_t connect_msg_id[12]; /**< TURN message ID of the connection request
+                                (if any) */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };
@@ -145,17 +149,23 @@ struct allocation_desc
   struct list_head peers_permissions; /**< List of peers permissions */
   struct list_head tcp_relays; /**< TCP relays information */
   int relayed_sock; /**< Socket for the allocated transport address */
-  int relayed_sock_tcp; /**< Socket for the allocated transport address to contact TCP peer (RFC6062). It is set to -1 if Connect request succeed */
+  int relayed_sock_tcp; /**< Socket for the allocated transport address to
+                          contact TCP peer (RFC6062). It is set to -1 if Connect
+                          request succeed */
   int relayed_tls; /**< If allocation has been set in TLS */
   int relayed_dtls; /**< If allocation has been set in DTLS */
-  int tuple_sock; /**< Socket for the connection between the TURN server and the TURN client */
+  int tuple_sock; /**< Socket for the connection between the TURN server and the
+                    TURN client */
   uint8_t transaction_id[12]; /**< Transaction ID of the Allocate Request */
   timer_t expire_timer; /**< Expire timer */
   unsigned long bucket_capacity; /**< Capacity of token bucket */
   unsigned long bucket_tokenup; /**< Number of tokens available for upload */
-  unsigned long bucket_tokendown; /**< Number of tokens available for download */
-  struct timeval last_timeup ; /**< Last time of bandwidth limit checking for upload */
-  struct timeval last_timedown ; /**< Last time of bandwidth limit checking for download */
+  unsigned long bucket_tokendown; /**< Number of tokens available for
+                                    download */
+  struct timeval last_timeup ; /**< Last time of bandwidth limit checking for
+                                 upload */
+  struct timeval last_timedown ; /**< Last time of bandwidth limit checking for
+                                   download */
   struct list_head list; /**< For list management */
   struct list_head list2; /**< For list management (expired list) */
 };
@@ -175,7 +185,11 @@ struct allocation_desc
  * \param lifetime expire of the allocation
  * \return pointer on struct allocation_desc, or NULL if problem
  */
-struct allocation_desc* allocation_desc_new(const uint8_t* id, uint8_t transport_protocol, const char* username, const unsigned char* key, const char* realm, const unsigned char* nonce, const struct sockaddr* relayed_addr, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime);
+struct allocation_desc* allocation_desc_new(const uint8_t* id,
+    uint8_t transport_protocol, const char* username, const unsigned char* key,
+    const char* realm, const unsigned char* nonce,
+    const struct sockaddr* relayed_addr, const struct sockaddr* server_addr,
+    const struct sockaddr* client_addr, socklen_t addr_size, uint32_t lifetime);
 
 /**
  * \brief Free an allocation descriptor.
@@ -197,7 +211,8 @@ void allocation_desc_set_timer(struct allocation_desc* desc, uint32_t lifetime);
  * \param peer_addr network address
  * \return pointer on allocation_permission or NULL if not found
  */
-struct allocation_permission* allocation_desc_find_permission(struct allocation_desc* desc, int family, const uint8_t* peer_addr);
+struct allocation_permission* allocation_desc_find_permission(
+    struct allocation_desc* desc, int family, const uint8_t* peer_addr);
 
 /**
  * \brief Find if a peer (network address only) has a permissions installed.
@@ -205,7 +220,8 @@ struct allocation_permission* allocation_desc_find_permission(struct allocation_
  * \param addr network address
  * \return pointer on allocation_permission or NULL if not found
  */
-struct allocation_permission* allocation_desc_find_permission_sockaddr(struct allocation_desc* desc, const struct sockaddr* addr);
+struct allocation_permission* allocation_desc_find_permission_sockaddr(
+    struct allocation_desc* desc, const struct sockaddr* addr);
 
 /**
  * \brief Add a permission for a peer.
@@ -215,7 +231,8 @@ struct allocation_permission* allocation_desc_find_permission_sockaddr(struct al
  * \param peer_addr network address
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_permission(struct allocation_desc* desc, uint32_t lifetime, int family, const uint8_t* peer_addr);
+int allocation_desc_add_permission(struct allocation_desc* desc,
+    uint32_t lifetime, int family, const uint8_t* peer_addr);
 
 /**
  * \brief Find if a peer (transport address) has a channel bound.
@@ -233,7 +250,8 @@ uint32_t allocation_desc_find_channel(struct allocation_desc* desc, int family, 
  * \param channel channel number
  * \return pointer on allocation_channel if found, NULL otherwise
  */
-struct allocation_channel* allocation_desc_find_channel_number(struct allocation_desc* desc, uint16_t channel);
+struct allocation_channel* allocation_desc_find_channel_number(
+    struct allocation_desc* desc, uint16_t channel);
 
 /**
  * \brief Add a channel to a peer (transport address).
@@ -245,7 +263,9 @@ struct allocation_channel* allocation_desc_find_channel_number(struct allocation
  * \param peer_port peer port
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, uint32_t lifetime, int family, const uint8_t* peer_addr, uint16_t peer_port);
+int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel,
+    uint32_t lifetime, int family, const uint8_t* peer_addr,
+    uint16_t peer_port);
 
 /**
  * \brief Add a TCP relay.
@@ -257,17 +277,21 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel, 
  * \param peer_port peer port
  * \param timeout TCP relay timeout (if no ConnectionBind is received)
  * \param buffer_size internal buffer size (for peer data)
- * \param connect_msg_id Connect request message ID if client contact another peer otherwise put NULL
+ * \param connect_msg_id Connect request message ID if client contact another
+ * peer otherwise put NULL
  * \return 0 if success, -1 otherwise
  */
-int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id, int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port, uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id);
+int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id,
+    int peer_sock, int family, const uint8_t* peer_addr, uint16_t peer_port,
+    uint32_t timeout, size_t buffer_size, uint8_t* connect_msg_id);
 
 /**
  * \brief Remove a TCP relay.
  * \param list list of TCP relays
  * \param relay relay to remove
  */
-void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_tcp_relay* relay);
+void allocation_tcp_relay_list_remove(struct list_head* list,
+    struct allocation_tcp_relay* relay);
 
 /**
  * \brief Find a TCP relay identified by its connection ID.
@@ -275,7 +299,8 @@ void allocation_tcp_relay_list_remove(struct list_head* list, struct allocation_
  * \param id connection ID
  * \return TCP relay if found, NULL otherwise
  */
-struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation_desc* desc, uint32_t id);
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(
+    struct allocation_desc* desc, uint32_t id);
 
 /**
  * Find a TCP relay identified by its peer address and port.
@@ -285,7 +310,9 @@ struct allocation_tcp_relay* allocation_desc_find_tcp_relay_id(struct allocation
  * \param peer_port peer port
  * \return TCP relay if found, NULL otherwise
  */
-struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocation_desc* desc, int family, const uint8_t* peer_addr, uint16_t peer_port);
+struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(
+    struct allocation_desc* desc, int family, const uint8_t* peer_addr,
+    uint16_t peer_port);
 
 /**
  * \brief Set timer of an TCP relay.
@@ -294,21 +321,24 @@ struct allocation_tcp_relay* allocation_desc_find_tcp_relay_addr(struct allocati
  * \param relay TCP relay
  * \param timeout timeout to set
  */
-void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay, uint32_t timeout);
+void allocation_tcp_relay_set_timer(struct allocation_tcp_relay* relay,
+    uint32_t timeout);
 
 /**
  * \brief Reset the timer of the channel.
  * \param channel allocation channel
  * \param lifetime lifetime
  */
-void allocation_channel_set_timer(struct allocation_channel* channel, uint32_t lifetime);
+void allocation_channel_set_timer(struct allocation_channel* channel,
+    uint32_t lifetime);
 
 /**
  * \brief Reset the timer of the permission.
  * \param permission allocation permission
  * \param lifetime lifetime
  */
-void allocation_permission_set_timer(struct allocation_permission* permission, uint32_t lifetime);
+void allocation_permission_set_timer(struct allocation_permission* permission,
+    uint32_t lifetime);
 
 /**
  * \brief Free a list of allocations.
@@ -328,7 +358,8 @@ void allocation_list_add(struct list_head* list, struct allocation_desc* desc);
  * \param list list of allocations
  * \param desc allocation to remove
  */
-void allocation_list_remove(struct list_head* list, struct allocation_desc* desc);
+void allocation_list_remove(struct list_head* list,
+    struct allocation_desc* desc);
 
 /**
  * \brief Find in the list a element that match ID.
@@ -336,7 +367,8 @@ void allocation_list_remove(struct list_head* list, struct allocation_desc* desc
  * \param id transaction ID
  * \return pointer on allocation_desc or NULL if not found
  */
-struct allocation_desc* allocation_list_find_id(struct list_head* list, const uint8_t* id);
+struct allocation_desc* allocation_list_find_id(struct list_head* list,
+    const uint8_t* id);
 
 /**
  * \brief Find in the list a element that match username.
@@ -344,7 +376,8 @@ struct allocation_desc* allocation_list_find_id(struct list_head* list, const ui
  * \param username username
  * \return pointer on allocation_desc or NULL if not found
  */
-struct allocation_desc* allocation_list_find_username(struct list_head* list, const char* username);
+struct allocation_desc* allocation_list_find_username(struct list_head* list,
+    const char* username);
 
 /**
  * \brief Find in the list a element that match the 5-tuple.
@@ -355,7 +388,9 @@ struct allocation_desc* allocation_list_find_username(struct list_head* list, co
  * \param addr_size sizeof addr
  * \return pointer on allocation_desc or NULL if not found
  */
-struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int transport_protocol, const struct sockaddr* server_addr, const struct sockaddr* client_addr, socklen_t addr_size);
+struct allocation_desc* allocation_list_find_tuple(struct list_head* list,
+    int transport_protocol, const struct sockaddr* server_addr,
+    const struct sockaddr* client_addr, socklen_t addr_size);
 
 /**
  * \brief Find in the list a element that match the relayed address.
@@ -364,7 +399,8 @@ struct allocation_desc* allocation_list_find_tuple(struct list_head* list, int t
  * \param addr_size sizeof addr
  * \return pointer on allocation_desc or NULL if not found
  */
-struct allocation_desc* allocation_list_find_relayed(struct list_head* list, const struct sockaddr* relayed_addr, socklen_t addr_size);
+struct allocation_desc* allocation_list_find_relayed(struct list_head* list,
+    const struct sockaddr* relayed_addr, socklen_t addr_size);
 
 /**
  * \brief Create a new token.
@@ -373,7 +409,8 @@ struct allocation_desc* allocation_list_find_relayed(struct list_head* list, con
  * \param lifetime lifetime
  * \return pointer on allocation_token or NULL if problem
  */
-struct allocation_token* allocation_token_new(uint8_t* id, int sock, uint32_t lifetime);
+struct allocation_token* allocation_token_new(uint8_t* id, int sock,
+    uint32_t lifetime);
 
 /**
  * \brief Free a token.
@@ -386,14 +423,16 @@ void allocation_token_free(struct allocation_token** token);
  * \param token allocation descriptor
  * \param lifetime lifetime timer
  */
-void allocation_token_set_timer(struct allocation_token* token, uint32_t lifetime);
+void allocation_token_set_timer(struct allocation_token* token,
+    uint32_t lifetime);
 
 /**
  * \brief Add a token to a list.
  * \param list list of tokens
  * \param token token to add
  */
-void allocation_token_list_add(struct list_head* list, struct allocation_token* token);
+void allocation_token_list_add(struct list_head* list,
+    struct allocation_token* token);
 
 /**
  * \brief Find a specified token.
@@ -401,7 +440,8 @@ void allocation_token_list_add(struct list_head* list, struct allocation_token* 
  * \param id token ID (64 bit)
  * \return pointer on allocation_token or NULL if not found
  */
-struct allocation_token* allocation_token_list_find(struct list_head* list, uint8_t* id);
+struct allocation_token* allocation_token_list_find(struct list_head* list,
+    uint8_t* id);
 
 /**
  * \brief Free a token list.
@@ -414,7 +454,8 @@ void allocation_token_list_free(struct list_head* list);
  * \param list list of allocations
  * \param desc allocation to remove
  */
-void allocation_token_list_remove(struct list_head* list, struct allocation_token* desc);
+void allocation_token_list_remove(struct list_head* list,
+    struct allocation_token* desc);
 
 #endif /* ALLOCATION_H */
 

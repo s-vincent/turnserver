@@ -80,7 +80,8 @@ struct account_desc
  * \param state account state
  * \return pointer on account_desc or NULL if problem
  */
-struct account_desc* account_desc_new(const char* username, const char* password, const char* realm, enum account_state state);
+struct account_desc* account_desc_new(const char* username,
+    const char* password, const char* realm, enum account_state state);
 
 /**
  * \brief Free an account.
@@ -102,7 +103,8 @@ void account_desc_set_state(struct account_desc* desc, enum account_state state)
  * \param realm realm
  * \return pointer on account_desc or NULL if not found
  */
-struct account_desc* account_list_find(struct list_head* list, const char* username, const char* realm);
+struct account_desc* account_list_find(struct list_head* list,
+    const char* username, const char* realm);
 
 /**
  * \brief Free a list of accounts.

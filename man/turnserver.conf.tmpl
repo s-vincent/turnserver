@@ -8,7 +8,7 @@ turnserver.conf \- TurnServer configuration file
 .sp
 
 .SH DESCRIPTION
-This is the TurnServer configuration file. 
+This is the TurnServer configuration file.
 .br
 Here are the configuration options supported.
 
@@ -38,7 +38,7 @@ The main advantage to have multiple public IPv6 addresses is to do load sharing.
 .BR "udp_port " "= number"
 The UDP port of the server to listen for incoming connections.
 
-.TP 
+.TP
 .BR "tcp_port " "= number"
 The TCP port of the server to listen for incoming connections.
 
@@ -52,8 +52,8 @@ Enable or not TLS over TCP connections.
 
 .TP
 .BR "dtls " "= boolean"
-Enable or not TLS over UDP connections. It is an experimental feature of TurnServer and 
-it is not defined by TURN standard.
+Enable or not TLS over UDP connections. It is an experimental feature of
+TurnServer and it is not defined by TURN standard.
 
 .TP
 .BR "max_port " "= number"
@@ -69,12 +69,13 @@ Enable or not TURN-TCP extension. This extension is documented in RFC6062.
 
 .TP
 .BR "tcp_buffer_userspace " "= boolean"
-Enable or not userspace buffering for TURN-TCP extension. If false server will use OS buffering.
+Enable or not userspace buffering for TURN-TCP extension. If false server will
+use OS buffering.
 
 .TP
 .BR "tcp_buffer_size " "= number"
-TURN-TCP internal buffer size. It is used to bufferize data coming from TCP peer when
-client does not have sent ConnectionBind.
+TURN-TCP internal buffer size. It is used to bufferize data coming from TCP peer
+when client does not have sent ConnectionBind.
 
 .TP
 .BR "daemon " "= boolean"
@@ -82,8 +83,8 @@ Run the program as daemon.
 
 .TP
 .BR "unpriv_user " "= string"
-If the program is run as root or setuid root, the program will drop its privileges
-to the unpriv_user privileges.
+If the program is run as root or setuid root, the program will drop its
+privileges to the unpriv_user privileges.
 
 To use this feature, create a special user with the adduser command:
 adduser --system --group turnserver
@@ -123,9 +124,10 @@ Bandwidth limit for restricted userse in KBytes/s.
 .B }
 .fi
 
-Defines an entry for the denied access list. This can appear multiple time. Format is defined as follow:
+Defines an entry for the denied access list. This can appear multiple time.
+Format is defined as follow:
 .br
-.B address 
+.B address
 is a string representing an IPv4 or IPv6 address.
 .br
 .B mask
@@ -134,12 +136,13 @@ is a number representing the bitmask (i.e. 24 is similar as 255.255.255.0, ...).
 .B port
 is a number representing the network port. The 0 value means all ports.
 
-It is strongly recommended to restrict addresses 127.0.0.1 and ::1 if there are private
-services running on the TURN server.
+It is strongly recommended to restrict addresses 127.0.0.1 and ::1 if there are
+private services running on the TURN server.
 
 .TP
 .BR "ca_file " "= string"
-The pathname of the Certification Authority certificate (required when tls=true).
+The pathname of the Certification Authority certificate (required when
+tls=true).
 
 .TP
 .BR "cert_file " "= string"
@@ -209,7 +212,7 @@ denied_address {
 
 denied_address {
   address = "127.0.0.1"
-  mask = 8 
+  mask = 8
   port = 0
 
 }

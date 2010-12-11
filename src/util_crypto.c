@@ -92,9 +92,9 @@ int seed_prng_init(void)
     RAND_seed(&now, sizeof(now)); /* not very good... */
   }
 #else
-  /* RAND_screen() or RAND_event() are not good for servers applications (run without
-   * user interaction). However it seems that OpenSSL already initialize something
-   * internally for Windows.
+  /* RAND_screen() or RAND_event() are not good for servers applications (run
+   * without user interaction). However it seems that OpenSSL already initialize
+   * something internally for Windows.
    */
 #endif
 
@@ -142,8 +142,8 @@ int md5_generate(unsigned char* hash, const unsigned char* text, size_t len)
   return 0;
 }
 
-int hmac_sha1_generate(unsigned char* hash, const unsigned char* text, size_t text_len,
-    const unsigned char* key, size_t key_len)
+int hmac_sha1_generate(unsigned char* hash, const unsigned char* text,
+    size_t text_len, const unsigned char* key, size_t key_len)
 {
   unsigned int md_len = SHA_DIGEST_LENGTH;
 
@@ -155,8 +155,8 @@ int hmac_sha1_generate(unsigned char* hash, const unsigned char* text, size_t te
   return 0;
 }
 
-int hmac_md5_generate(unsigned char* hash, const unsigned char* text, size_t text_len,
-    const unsigned char* key, size_t key_len)
+int hmac_md5_generate(unsigned char* hash, const unsigned char* text,
+    size_t text_len, const unsigned char* key, size_t key_len)
 {
   unsigned int md_len = MD5_DIGEST_LENGTH;
 

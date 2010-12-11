@@ -149,8 +149,8 @@ int turnserver_cfg_tls(void);
 /**
  * \brief Run with DTLS socket.
  *
- * Please note that DTLS (TLS over UDP) is not in TURN standard
- * and so is an experimental feature of TurnServer.
+ * Please note that DTLS (TLS over UDP) is not in TURN standard and so is an
+ * experimental feature of TurnServer.
  * \return 1 if server has to start with DTLS, 0 otherwise
  */
 int turnserver_cfg_dtls(void);
@@ -158,26 +158,22 @@ int turnserver_cfg_dtls(void);
 /**
  * \brief Get the maximum allocation port number.
  *
- * It is strongly discouraged to have ports under
- * 49152 only if server knows there are not other
- * services running on one on these ports.
+ * It is strongly discouraged to have ports under 49152 only if server knows
+ * there are not other services running on one on these ports.
  *
- * It is more than discouraged to have ports for
- * range 1 - 1024. TURN client should not use
- * TURN server to run standard services.
+ * It is more than discouraged to have ports for range 1 - 1024. TURN client
+ * should not use TURN server to run standard services.
  */
 uint16_t turnserver_cfg_max_port(void);
 
 /**
  * \brief Get the minumum allocation port number.
  *
- * It is strongly discouraged to have ports under
- * 49152 only if server knows there are not other
- * services running on one on these ports.
+ * It is strongly discouraged to have ports under 49152 only if server knows
+ * there are not other services running on one on these ports.
  *
- * It is more than discouraged to have ports for
- * range 1 - 1024. TURN client should not use
- * TURN server to run standard services.
+ * It is more than discouraged to have ports for range 1 - 1024. TURN client
+ * should not use TURN server to run standard services.
  */
 uint16_t turnserver_cfg_min_port(void);
 
@@ -302,13 +298,15 @@ char* turnserver_cfg_account_db_password(void);
 char* turnserver_cfg_account_db_name(void);
 
 /**
- * \brief Get the account database network address (in case of account method is db).
+ * \brief Get the account database network address (in case of account method is
+ * db).
  * \return database network address
  */
 char* turnserver_cfg_account_db_address(void);
 
 /**
- * \brief Get the account database network port (in case of account method is db).
+ * \brief Get the account database network port (in case of account method is
+ * db).
  * \return database network port
  */
 uint16_t turnserver_cfg_account_db_port(void);

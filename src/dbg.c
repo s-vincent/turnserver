@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2009 Sebastien Vincent.
+ * Copyright (C) 2006-2010 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file dbg.c
  * \brief Some routines to print debug message.
  * \author Sebastien Vincent
- * \date 2006-2009
+ * \date 2006-2010
  */
 
 #ifdef HAVE_CONFIG_H
@@ -92,19 +92,24 @@ void dbg_print(const char* f, int line, const char* format, ...)
 #ifdef _MSC_VER
   SYSTEMTIME tlt;
   GetLocalTime (&tlt);
-  fprintf(stderr, "%02d:%02d:%02d.%03u|[%s:%d]", tlt.wHour, tlt.wMinute, tlt.wSecond, tlt.wMilliseconds, f, line);
+  fprintf(stderr, "%02d:%02d:%02d.%03u|[%s:%d]", tlt.wHour, tlt.wMinute,
+      tlt.wSecond, tlt.wMilliseconds, f, line);
 #else
   struct timeval lt;
   struct tm* tlt = NULL;
   gettimeofday(&lt, NULL);
   tlt = localtime((time_t*)&lt.tv_sec);
-  fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d]\t", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, f, line);
+  fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d]\t", tlt->tm_hour, tlt->tm_min,
+      tlt->tm_sec, (uint32_t)lt.tv_usec, f, line);
 #endif
 
   va_start(args, format);
   vfprintf(stderr, format, args);
 
-  /* fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d] %s", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, file, line, msg); */
+  /*
+  fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d] %s", tlt->tm_hour,
+    tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, file, line, msg);
+  */
 }
 
 void dbg_print_null(const char* f, int line, const char* format, ...)
@@ -115,7 +120,8 @@ void dbg_print_null(const char* f, int line, const char* format, ...)
   return;
 }
 
-void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const char* format, ...)
+void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
+    const char* format, ...)
 {
   size_t i = 0;
   va_list args;
@@ -123,13 +129,15 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len, const 
 #ifdef _MSC_VER
   SYSTEMTIME tlt;
   GetLocalTime (&tlt);
-  fprintf(stderr, "%02d:%02d:%02d.%03u [%s:%d]\t", tlt.wHour, tlt.wMinute, tlt.wSecond, tlt.wMilliseconds, f, line);
+  fprintf(stderr, "%02d:%02d:%02d.%03u [%s:%d]\t", tlt.wHour, tlt.wMinute,
+      tlt.wSecond, tlt.wMilliseconds, f, line);
 #else
   struct timeval lt;
   struct tm* tlt = NULL;
   gettimeofday(&lt, NULL);
   tlt = localtime((time_t*)&lt.tv_sec);
-  fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d]\t", tlt->tm_hour, tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, f, line);
+  fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d]\t", tlt->tm_hour, tlt->tm_min,
+      tlt->tm_sec, (uint32_t)lt.tv_usec, f, line);
 #endif
 
   va_start(args, format);

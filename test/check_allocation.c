@@ -92,13 +92,15 @@ START_TEST(test_allocation_list)
   INIT_LIST(allocation_list);
 
   /* create a valid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr,
-                            (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce,
+      (struct sockaddr*)&relayed_addr, (struct sockaddr*)&server_addr,
+      (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* create a valid allocation descriptor */
-  ret2 = allocation_desc_new(id2, IPPROTO_UDP, "login2", key, realm, nonce, (struct sockaddr*)&relayed_addr2,
-                             (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr2, sizeof(client_addr2), 3600);
+  ret2 = allocation_desc_new(id2, IPPROTO_UDP, "login2", key, realm, nonce,
+      (struct sockaddr*)&relayed_addr2, (struct sockaddr*)&server_addr,
+      (struct sockaddr*)&client_addr2, sizeof(client_addr2), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   allocation_list_add(&allocation_list, ret);
@@ -147,35 +149,45 @@ START_TEST(test_allocation_add)
   relayed_addr.sin_port = htons(48000);
 
   /* create a valid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr,
-                            (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce,
+      (struct sockaddr*)&relayed_addr, (struct sockaddr*)&server_addr,
+      (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* add a permission */
   inet_pton(AF_INET, "98.2.1.2", &client_addr.sin_addr);
 
-  nb = allocation_desc_add_permission(ret, 19, client_addr.sin_family, (char*)&client_addr.sin_addr);
+  nb = allocation_desc_add_permission(ret, 19, client_addr.sin_family,
+      (char*)&client_addr.sin_addr);
   fail_unless(nb == 0, "add permission failed");
 
-  /* nb = allocation_desc_add_channel(ret, 58, 18, (struct sockaddr*)&client_addr, sizeof(client_addr)); */
-  nb = allocation_desc_add_channel(ret, 58, 18, client_addr.sin_family, (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
+  /*
+  nb = allocation_desc_add_channel(ret, 58, 18, (struct sockaddr*)&client_addr,
+  sizeof(client_addr));
+  */
+  nb = allocation_desc_add_channel(ret, 58, 18, client_addr.sin_family,
+      (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
   fail_unless(nb == 0, "add channel failed");
 
   /* test finding a permission for a peer */
-  permission = allocation_desc_find_permission(ret, client_addr.sin_family, (char*)&client_addr.sin_addr);
+  permission = allocation_desc_find_permission(ret, client_addr.sin_family,
+      (char*)&client_addr.sin_addr);
   fail_unless(permission != NULL, "Find permission not found for the peer");
 
   inet_pton(AF_INET, "98.2.1.3", &client_addr.sin_addr);
-  permission = allocation_desc_find_permission(ret, client_addr.sin_family, (char*)&client_addr.sin_addr);
+  permission = allocation_desc_find_permission(ret, client_addr.sin_family,
+      (char*)&client_addr.sin_addr);
   fail_unless(permission == NULL, "Find permission found for the peer");
 
   /* test finding channel for a peer */
   inet_pton(AF_INET, "98.2.1.2", &client_addr.sin_addr);
-  channel = allocation_desc_find_channel(ret, client_addr.sin_family, (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
+  channel = allocation_desc_find_channel(ret, client_addr.sin_family,
+      (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
   fail_unless(channel > 0, "Find channel failed");
 
   inet_pton(AF_INET, "98.2.1.3", &client_addr.sin_addr);
-  channel = allocation_desc_find_channel(ret, client_addr.sin_family, (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
+  channel = allocation_desc_find_channel(ret, client_addr.sin_family,
+      (char*)&client_addr.sin_addr, ntohs(client_addr.sin_port));
   fail_unless(channel == 0, "Find channel success");
 
   /* free it */
@@ -211,8 +223,9 @@ START_TEST(test_allocation_create)
   relayed_addr.sin_port = htons(48000);
 
   /* create a valid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, (struct sockaddr*)&relayed_addr,
-                            (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce,
+      (struct sockaddr*)&relayed_addr, (struct sockaddr*)&server_addr,
+      (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
   fail_unless(ret != NULL, "Invalid parameter or memory problem");
 
   /* free it */
@@ -220,8 +233,9 @@ START_TEST(test_allocation_create)
   fail_unless(ret == NULL, "allocation_desc_free does not set to NULL!");
 
   /* create a invalid allocation descriptor */
-  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, NULL, (struct sockaddr*)&server_addr,
-                            (struct sockaddr*)&client_addr, sizeof(client_addr), 3600);
+  ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce, NULL,
+      (struct sockaddr*)&server_addr, (struct sockaddr*)&client_addr,
+      sizeof(client_addr), 3600);
   fail_unless(ret == NULL, "Invalid parameter (NULL in parameter)");
 }
 END_TEST
