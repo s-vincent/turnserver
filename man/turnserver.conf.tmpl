@@ -161,6 +161,11 @@ Note that only the "file" method is implemented.
 .BR "account_file " "= string"
 The pathname of the account file (required when account_method=file).
 
+.TP
+.BR "mod_tmpuser " "= boolean"
+Enable or not mod_tmpuser which consist of a socket that listen on localhost
+and external program can create or delete temporary user.
+
 .SH EXAMPLE
 
 listen_address = { "172.16.0.1" }

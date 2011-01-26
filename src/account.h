@@ -67,6 +67,7 @@ struct account_desc
   unsigned char key[16]; /**< MD5 hash */
   enum account_state state; /**< Access state */
   size_t allocations; /**< Number of allocations used */
+  int is_tmp; /**< If account is a temporary account */
   struct list_head list; /**< For list management */
 };
 

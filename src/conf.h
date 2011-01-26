@@ -311,5 +311,11 @@ char* turnserver_cfg_account_db_address(void);
  */
 uint16_t turnserver_cfg_account_db_port(void);
 
+/**
+ * \brief Returns whether or not mod_tmpuser is enabled.
+ * \return 1 if mod_tmpuser is enabled, 0 otherwise
+ */
+int turnserver_cfg_mod_tmpuser(void);
+
 #endif /* CONF_H */
 

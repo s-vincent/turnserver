@@ -1,7 +1,8 @@
-2010-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
+2011-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
   * Version 0.5      - Add restricted users feature;
-                     - Add RFC6062 (TURN-TCP) document.
+                     - Add RFC6062 (TURN-TCP) document;
+										 - Add mod_tmpuser to create/delete temporary users.
 
 2010-05-02  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

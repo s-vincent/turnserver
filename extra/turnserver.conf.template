@@ -110,3 +110,6 @@ account_method = "file"
 ## Account file (if account_method = file).
 account_file = "./turnusers.txt"
 
+## mod_tmpuser.
+mod_tmpuser = false
+

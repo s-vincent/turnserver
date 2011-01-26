@@ -108,6 +108,7 @@ static cfg_opt_t opts[]=
   CFG_STR("account_file", "users.txt", CFGF_NONE),
   CFG_SEC("denied_address", denied_address_opts, CFGF_MULTI),
   CFG_INT("bandwidth_per_allocation", 0, CFGF_NONE),
+  CFG_BOOL("mod_tmpuser", cfg_false, CFGF_NONE),
   /* the following attributes are not used for the moment */
   CFG_STR("account_db_login", "anonymous", CFGF_NONE),
   CFG_STR("account_db_password", "anonymous", CFGF_NONE),
@@ -415,3 +416,7 @@ uint16_t turnserver_cfg_account_db_port(void)
   return cfg_getint(g_cfg, "account_db_port");
 }
 
+int turnserver_cfg_mod_tmpuser(void)
+{
+  return cfg_getbool(g_cfg, "mod_tmpuser");
+}

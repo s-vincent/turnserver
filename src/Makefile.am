@@ -18,7 +18,8 @@ noinst_HEADERS = turnserver.h \
 								 tls_peer.h \
 								 allocation.h \
 								 account.h \
-								 conf.h
+								 conf.h \
+								 mod_tmpuser.h
 
 turnserver_SOURCES = turnserver.c \
 										 protocol.c \
@@ -28,7 +29,8 @@ turnserver_SOURCES = turnserver.c \
 										 tls_peer.c \
 										 allocation.c \
 										 account.c \
-										 conf.c
+										 conf.c \
+										 mod_tmpuser.c
 
 test_turn_client_SOURCES = test_turn_client.c \
 											protocol.c \

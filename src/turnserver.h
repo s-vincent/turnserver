@@ -92,5 +92,21 @@ struct denied_address
   struct list_head list; /**< For list management */
 };
 
+/**
+ * \struct socket_desc
+ * \brief Descriptor for TCP client connected.
+ *
+ * It contains a buffer for TCP segment reconstruction.
+ */
+struct socket_desc
+{
+  int sock; /**< Socket descriptor */
+  char buf[1500]; /**< Internal buffer for TCP stream reconstruction */
+  size_t buf_pos; /**< Position in the internal buffer */
+  size_t msg_len; /**< Message length that is not complete */
+  int tls; /**< If socket uses TLS */
+  struct list_head list; /**< For list management */
+};
+
 #endif /* TURNSERVER_H */
 
