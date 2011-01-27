@@ -4820,7 +4820,16 @@ static void turnserver_main(struct listen_sockets* sockets,
 
           if(nb > 0)
           {
-            tmpuser_process_msg(buf, nb);
+            int r = tmpuser_process_msg(buf, nb);
+
+            if(!r)
+            {
+              send(tmp->sock, "success", sizeof("success"), 0);
+            }
+            else
+            {
+              send(tmp->sock, "error", sizeof("error"), 0);
+            }
           }
           else
           {

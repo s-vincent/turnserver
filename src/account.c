@@ -168,6 +168,14 @@ int account_parse_file(struct list_head* list, const char* file)
       continue;
     }
 
+    /* replace end of line by NULL character */
+    save_ptr = strchr(line, '\n');
+    if(save_ptr)
+    {
+      *save_ptr = 0x00;
+    }
+    save_ptr = NULL;
+
     token = strtok_r(line, delim, &save_ptr);
     if(!token)
     {
@@ -196,13 +204,6 @@ int account_parse_file(struct list_head* list, const char* file)
 
     if(token)
     {
-      /* replace end of line by NULL character */
-      save_ptr = strchr(token, '\n');
-      if(save_ptr)
-      {
-        *save_ptr = 0x00;
-      }
-
       if(!strcmp(token, "authorized"))
       {
         state = AUTHORIZED;
