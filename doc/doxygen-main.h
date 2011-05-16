@@ -22,8 +22,7 @@
  * can be done with UDP or TCP protocol.
  *
  * TurnServer supports also RFC5389 (STUN Binding request), RFC6062 (relay data
- * with TCP protocol) and draft-ietf-behave-turn-ipv6 (relay IPv6-IPv6,
- * IPv4-IPv6 and IPv6-IPv4).
+ * with TCP protocol) and RFC6156 (relay IPv6-IPv6, IPv4-IPv6 and IPv6-IPv4).
  *
  * \section section-modules Modules
  *

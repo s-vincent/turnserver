@@ -191,7 +191,7 @@ typedef unsigned __int64 uint64_t;
 /* RESERVATION-TOKEN */
 #define TURN_ATTR_RESERVATION_TOKEN    0x0022
 
-/* REQUESTED-ADDRESS-FAMILY (draft-ietf-behave-turn-ipv6-11) */
+/* REQUESTED-ADDRESS-FAMILY (RFC6156) */
 #define TURN_ATTR_REQUESTED_ADDRESS_FAMILY  0x0017
 
 /* CONNECTION-ID (RFC6062) */
@@ -213,7 +213,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_ALLOCATION_QUOTA_REACHED       486
 #define TURN_ERROR_INSUFFICIENT_CAPACITY          508
 
-/* draft-ietf-behave-turn-ipv6-11 */
+/* RFC6156 (TURN-IPV6) */
 #define TURN_ERROR_ADDRESS_FAMILY_NOT_SUPPORTED   440
 #define TURN_ERROR_PEER_ADDRESS_FAMILY_MISMATCH   443
 
@@ -237,7 +237,7 @@ typedef unsigned __int64 uint64_t;
 #define TURN_ERROR_486            "Allocation quota reached"
 #define TURN_ERROR_508            "Insufficient capacity"
 
-/* draft-ietf-behave-turn-ipv6-11 */
+/* RFC6156 (TURN-IPV6) */
 #define TURN_ERROR_440            "Address family not supported"
 #define TURN_ERROR_443            "Peer address family mismatch"
 
@@ -565,7 +565,7 @@ struct turn_channel_data
 
 /**
  * \struct turn_attr_requested_address_family.
- * \brief REQUESTED-ADDRESS-FAMILY attribute (draft-ietf-behave-turn-ipv6-11).
+ * \brief REQUESTED-ADDRESS-FAMILY attribute (RFC6156).
  */
 struct turn_attr_requested_address_family
 {

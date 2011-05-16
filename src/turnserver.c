@@ -817,7 +817,7 @@ static int turnserver_process_connect_request(int transport_protocol, int sock,
 
   /* check if the address is not blacklisted, also check for an IPv6 tunneled
    * address that can lead to a tunne amplification attack
-   * (see section 9.1 of draft-ietf-behave-turn-ipv6-11)
+   * (see section 9.1 of RFC6156)
    */
   if(turnserver_is_address_denied(peer_addr, len, peer_port) ||
       turnserver_is_ipv6_tunneled_address(peer_addr, len))
@@ -1323,9 +1323,8 @@ static int turnserver_process_channeldata(int transport_protocol,
       break;
   }
 
-  /* draft-ietf-behave-turn-ipv6-11:  If present, the
-   * DONT-FRAGMENT attribute MUST be ignored by the server for
-   * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+  /* RFC6156: If present, the DONT-FRAGMENT attribute MUST be ignored by the
+   * server for IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
    */
   if(desc->relayed_addr.ss_family == AF_INET &&
      (desc->tuple.client_addr.ss_family == AF_INET ||
@@ -1447,7 +1446,7 @@ static int turnserver_process_send_indication(
 
   /* check if the address is not blacklisted, also check for an IPv6 tunneled
    * address that can lead to a tunnel amplification attack (see section 9.1 of
-   * draft-ietf-behave-turn-ipv6-11)
+   * RFC6156)
    */
   if(turnserver_is_address_denied(peer_addr, len, peer_port) ||
       turnserver_is_ipv6_tunneled_address(peer_addr, len))
@@ -1507,9 +1506,8 @@ static int turnserver_process_send_indication(
         break;
     }
 
-    /* draft-ietf-behave-turn-ipv6-11:  If present, the
-     * DONT-FRAGMENT attribute MUST be ignored by the server for
-     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+    /* RFC6156: If present, the DONT-FRAGMENT attribute MUST be ignored by the
+     * server for IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
     if(desc->relayed_addr.ss_family == AF_INET &&
        (desc->tuple.client_addr.ss_family == AF_INET ||
@@ -1914,7 +1912,7 @@ static int turnserver_process_channelbind_request(int transport_protocol,
 
   /* check if the address is not blacklisted, also check for an IPv6 tunneled
    * address that can lead to a tunnel amplification attack (see section 9.1 of
-   * draft-ietf-behave-turn-ipv6-11)
+   * RFC6156)
    */
   if(turnserver_is_address_denied(peer_addr, len, peer_port) ||
       turnserver_is_ipv6_tunneled_address(peer_addr, len))
@@ -2096,8 +2094,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock,
   /* save key from allocation as it could be freed if lifetime equals 0 */
   memcpy(key, desc->key, sizeof(desc->key));
 
-  /* draft-ietf-behave-turn-ipv6-11: at this stage server knows the 5-tuple
-   * and the allocation associated.
+  /* RFC6156: at this stage server knows the 5-tuple and the allocation
+   * associated.
    * No matter to know if the relayed address has a different address family
    * than 5-tuple, so no need to have REQUESTED-ADDRESS-FAMILY attribute in
    * Refresh request.
@@ -2323,7 +2321,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     port2 = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
 
     /* Do not accept allocation request from IPv6 tunneled address,
-     * see section 9.1 of draft-ietf-behave-turn-ipv6-11
+     * see section 9.1 of RC6156
      */
     if(turnserver_is_ipv6_tunneled_address(
           ((struct sockaddr_in6*)saddr)->sin6_addr.s6_addr, 16))
@@ -2451,8 +2449,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(message->requested_addr_family && message->reservation_token)
   {
-    /* draft-ietf-behave-turn-ipv6-11: cannot have both
-     * REQUESTED-ADDRESS-FAMILY and RESERVATION-TOKEN => error 400
+    /* RFC6156: cannot have both REQUESTED-ADDRESS-FAMILY and RESERVATION-TOKEN
+     * => error 400
      */
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 400, saddr, saddr_size, speer, account->key);
@@ -2524,7 +2522,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
         TURN_MAX_ALLOCATION_LIFETIME);
   }
 
-  /* draft-ietf-behave-turn-ipv6-11 */
+  /* RFC6156 */
   if(message->requested_addr_family)
   {
     switch(message->requested_addr_family->turn_attr_family)
@@ -3660,9 +3658,8 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
     socklen_t optlen = sizeof(int);
 
 #ifdef OS_SET_DF_SUPPORT
-    /* draft-ietf-behave-turn-ipv6-11:  If present, the
-     * DONT-FRAGMENT attribute MUST be ignored by the server for
-     * IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
+    /* RFC6156: If present, the DONT-FRAGMENT attribute MUST be ignored by the
+     * server for IPv4-IPv6, IPv6-IPv6 and IPv6-IPv4 relays
      */
     if((desc->tuple.client_addr.ss_family == AF_INET ||
           (desc->tuple.client_addr.ss_family == AF_INET6 &&
