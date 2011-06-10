@@ -60,7 +60,6 @@ static struct tmpuser g_tmpuser;
  * \param user user name
  * \param password user password
  * \param domain domain name
- * \param state state
  * \return 0 if success, -1 otherwise
  */
 static int tmpuser_create(const char* user, const char* password,
