@@ -86,6 +86,7 @@ typedef int ssize_t;
 #include <ws2tcpip.h>
 typedef int socklen_t;
 #else
+#include <sys/socket.h>
 #include <netinet/in.h>
 #endif
 

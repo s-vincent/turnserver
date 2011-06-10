@@ -253,7 +253,7 @@ struct turn_attr_hdr* turn_attr_create(uint16_t type, uint16_t len,
     return NULL;
   }
 
-  ret->turn_attr_type = type;
+  ret->turn_attr_type = htons(type);
   ret->turn_attr_len = htons(len);
   memcpy(ret->turn_attr_value, data, len);
 
@@ -1771,7 +1771,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len,
     return -1;
   }
 
-  while(len > 4)
+  while(len >= 4)
   {
     struct turn_attr_hdr* attr = (struct turn_attr_hdr*)ptr;
 
@@ -1880,7 +1880,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len,
         message->connection_id = (struct turn_attr_connection_id*)ptr;
         break;
       default:
-        if(attr->turn_attr_type <= 0x7fff)
+        if(ntohs(attr->turn_attr_type <= 0x7fff))
         {
           /* comprehension-required attribute but server does not understand
            * it
@@ -1889,7 +1889,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len,
           {
             break;
           }
-          unknown[unknown_index] = attr->turn_attr_type;
+          unknown[unknown_index] = htons(attr->turn_attr_type);
           (*unknown_size)--;
           unknown_index++;
         }
