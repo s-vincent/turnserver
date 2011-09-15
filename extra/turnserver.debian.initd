@@ -19,14 +19,15 @@ case "$1" in
     ;;
   stop)
     echo "Stopping $NAME"
-    start-stop-daemon --stop --pidfile /var/run/turnserver/turnserver.pid --oknodo --exec $DAEMON -- -c $CONFIG
+    start-stop-daemon --stop --pidfile /var/run/turnserver/turnserver.pid --oknodo --exec $DAEMON --
     rm -f /var/run/turnserver/turnserver.pid
 		echo "."
       ;;
   restart)
     echo "Restarting $NAME"
-    start-stop-daemon --stop --pidfile /var/run/turnserver/turnserver.pid --oknodo --exec $DAEMON -- -c $CONFIG
+    start-stop-daemon --stop --pidfile /var/run/turnserver/turnserver.pid --oknodo --exec $DAEMON --
     rm -f /var/run/turnserver/turnserver.pid
+    sleep 2
     start-stop-daemon --start --background -m --pidfile /var/run/turnserver/turnserver.pid --exec $DAEMON -- -c $CONFIG
 		echo "."
     ;;

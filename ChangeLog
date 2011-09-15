@@ -4,7 +4,7 @@
                      - Add RFC6062 (TURN-TCP) document;
                      - Add RFC6156 (TURN-IPV6) document;
                      - Add mod_tmpuser to create/delete temporary users;
-										 - Fix endianess.
+                     - Fix endianess.
 
 2010-05-02  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
