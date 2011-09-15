@@ -1,4 +1,4 @@
-AM_CFLAGS = -std=c99 -Wall -Wextra -Wstrict-prototypes -Wredundant-decls -Wshadow -Werror -pedantic -fno-strict-aliasing -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=600 -O2
+AM_CFLAGS = -std=c99 -Wall -Wextra -Wstrict-prototypes -Wredundant-decls -Wshadow -pedantic -fno-strict-aliasing -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=600 -O2
 
 if ENABLE_DEBUG_BUILD
 AM_CFLAGS += -g 
