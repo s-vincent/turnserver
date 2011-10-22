@@ -241,7 +241,7 @@ static void signal_handler(int code)
 static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 {
   /* to avoid compilation warning because it is not used */
-  extra = NULL;
+  (void)extra;
 
   if(!g_run)
   {
@@ -4133,6 +4133,8 @@ static void turnserver_handle_tcp_accept(int sock,
   char* proto = NULL;
   int rsock = accept(sock, (struct sockaddr*)&saddr, &saddr_size);
 
+  (void)proto; /* avoid compilation warning in release mode */
+
   if(rsock > 0)
   {
     if(!turnserver_check_relay_address(listen_address, listen_addressv6,
@@ -4196,6 +4198,8 @@ static void turnserver_main(struct listen_sockets* sockets,
   char* proto = NULL;
   char* listen_address = turnserver_cfg_listen_address();
   char* listen_addressv6 = turnserver_cfg_listen_addressv6();
+
+  (void)proto;
 
   max_fd = SFD_SETSIZE;
 

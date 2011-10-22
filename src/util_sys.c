@@ -392,7 +392,7 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
   return -1;
 #else
   /* Unix */
-  gid_eff = 0; /* not used for the moment */
+  (void)gid_eff; /* not used for the moment */
 
   if(uid_real == 0 || uid_eff == 0)
   {

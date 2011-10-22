@@ -115,9 +115,9 @@ void dbg_print(const char* f, int line, const char* format, ...)
 void dbg_print_null(const char* f, int line, const char* format, ...)
 {
   /* to avoid compilation warnings */
-  f = format;
-  line = 0;
-  return;
+  (void)f;
+  (void)line;
+  (void)format;
 }
 
 void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,

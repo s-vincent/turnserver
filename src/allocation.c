@@ -485,7 +485,7 @@ void allocation_list_remove(struct list_head* list,
     struct allocation_desc* desc)
 {
   /* to avoid compilation warning */
-  list = NULL;
+  (void)list;
 
   LIST_DEL(&desc->list);
   allocation_desc_free(&desc);
@@ -814,7 +814,7 @@ void allocation_token_list_add(struct list_head* list,
 void allocation_token_list_remove(struct list_head* list,
     struct allocation_token* token)
 {
-  list = NULL; /* not used */
+  (void)list; /* not used */
 
   LIST_DEL(&token->list);
   allocation_token_free(&token);
