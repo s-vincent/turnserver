@@ -458,8 +458,6 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
     hdr->turn_msg_len += iov[index].iov_len;
     index++;
 
-    (void)attr;
-
     if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
     {
       /* MESSAGE-INTEGRITY option has to be in message, so
@@ -568,8 +566,6 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  (void)attr;
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
@@ -668,8 +664,6 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
   attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
-  (void)attr;
 
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
@@ -777,8 +771,6 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
   attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
-  (void)attr;
 
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
@@ -890,8 +882,6 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
   attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
-  (void)attr;
 
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
@@ -1047,8 +1037,6 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
-  (void)attr;
-
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
@@ -1135,8 +1123,6 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
-  (void)attr;
 
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
@@ -1293,8 +1279,6 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   attr = turn_attr_xor_peer_address_create(peer_addr, STUN_MAGIC_COOKIE, id, &iov[index]);
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
-
-  (void)attr;
 
   if(turn_add_message_integrity(iov, &index, md_buf, 16, 1) == -1)
   {
