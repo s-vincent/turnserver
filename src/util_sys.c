@@ -425,8 +425,8 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
     /* get user_name information (UID and GID) */
     if(getpwnam_r(user_name, tmpUser, buf, sizeof(buf), &tmp) == 0)
     {
-      setegid(user.pw_uid);
-      return seteuid(user.pw_gid);
+      setegid(user.pw_gid);
+      return seteuid(user.pw_uid);
     }
     else
     {
