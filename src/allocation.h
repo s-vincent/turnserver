@@ -374,10 +374,11 @@ struct allocation_desc* allocation_list_find_id(struct list_head* list,
  * \brief Find in the list a element that match username.
  * \param list list of allocations
  * \param username username
+ * \param realm realm
  * \return pointer on allocation_desc or NULL if not found
  */
 struct allocation_desc* allocation_list_find_username(struct list_head* list,
-    const char* username);
+    const char* username, const char* realm);
 
 /**
  * \brief Find in the list a element that match the 5-tuple.

@@ -222,7 +222,10 @@ int account_parse_file(struct list_head* list, const char* file)
     if(state != REFUSED)
     {
       desc = account_desc_new(login, password, realm, state);
-      account_list_add(list, desc);
+      if(desc)
+      {
+        account_list_add(list, desc);
+      }
     }
 
     /* cleanup */

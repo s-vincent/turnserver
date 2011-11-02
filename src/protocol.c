@@ -563,7 +563,7 @@ struct turn_attr_hdr* turn_attr_unknown_attributes_create(
   }
 
   ret->turn_attr_type = htons(STUN_ATTR_UNKNOWN_ATTRIBUTES);
-  ret->turn_attr_len = htons(len * 2);
+  ret->turn_attr_len = htons(attr_size);
 
   ptr = (uint16_t*)ret->turn_attr_attributes;
   tmp_len = len;
@@ -1880,7 +1880,7 @@ int turn_parse_message(const char* msg, ssize_t msg_len,
         message->connection_id = (struct turn_attr_connection_id*)ptr;
         break;
       default:
-        if(ntohs(attr->turn_attr_type <= 0x7fff))
+        if(ntohs(attr->turn_attr_type) <= 0x7fff)
         {
           /* comprehension-required attribute but server does not understand
            * it

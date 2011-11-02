@@ -60,7 +60,10 @@ struct allocation_desc* allocation_desc_new(const uint8_t* id,
   size_t len_username = 0;
   struct sigevent event;
 
-  len_username = strlen(username);
+  if(username)
+  {
+    len_username = strlen(username);
+  }
 
   if(!username || !relayed_addr || !server_addr || !client_addr ||
       len_username == 0 || !addr_size || !id || !realm || !key || !nonce)
@@ -492,7 +495,7 @@ void allocation_list_remove(struct list_head* list,
 }
 
 struct allocation_desc* allocation_list_find_username(struct list_head* list,
-    const char* username)
+    const char* username, const char* realm)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
@@ -500,7 +503,7 @@ struct allocation_desc* allocation_list_find_username(struct list_head* list,
   list_iterate_safe(get, n, list)
   {
     struct allocation_desc* tmp = list_get(get, struct allocation_desc, list);
-    if(!strcmp(tmp->username, username))
+    if(!strcmp(tmp->username, username) && !strcmp(tmp->realm, realm))
     {
       return tmp;
     }

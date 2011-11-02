@@ -105,6 +105,7 @@ void dbg_print(const char* f, int line, const char* format, ...)
 
   va_start(args, format);
   vfprintf(stderr, format, args);
+  va_end(args);
 
   /*
   fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d] %s", tlt->tm_hour,
@@ -142,6 +143,7 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 
   va_start(args, format);
   vfprintf(stderr, format, args);
+  va_end(args);
 
   for(i = 0 ; i < len ; i++)
   {

@@ -2650,7 +2650,17 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
         token = allocation_token_new(reservation_token, reservation_sock,
             TURN_DEFAULT_TOKEN_LIFETIME);
-        allocation_token_list_add(&g_token_list, token);
+        if(token)
+        {
+          allocation_token_list_add(&g_token_list, token);
+        }
+        else
+        {
+          close(reservation_sock);
+          close(relayed_sock);
+          reservation_sock = -1;
+          relayed_sock = -1;
+        }
       }
     }
 
@@ -2925,6 +2935,25 @@ static int turnserver_process_turn(int transport_protocol, int sock,
     desc = allocation_list_find_tuple(allocation_list, transport_protocol,
         daddr, saddr, saddr_size);
 
+    /* check for the allocated username */
+    if(desc && message->username && message->realm)
+    {
+      size_t len = ntohs(message->username->turn_attr_len);
+      size_t rlen = ntohs(message->realm->turn_attr_len);
+      if(len != strlen(desc->username) ||
+         strncmp((char*)message->username->turn_attr_username,
+           desc->username, len) ||
+         rlen != strlen(desc->realm) ||
+         strncmp((char*)message->realm->turn_attr_realm, desc->realm, rlen))
+      {
+        desc = NULL;
+      }
+    }
+    else
+    {
+      desc = NULL;
+    }
+
     if(!desc)
     {
       /* reject with error 437 if it a request, ignored otherwise */
@@ -2955,9 +2984,12 @@ static int turnserver_process_turn(int transport_protocol, int sock,
     {
       /* check to prevent hijacking the client's allocation */
       size_t len = strlen(account->username);
+      size_t rlen = strlen(account->realm);
       if(len != ntohs(message->username->turn_attr_len) ||
          strncmp((char*)message->username->turn_attr_username,
-           account->username, len))
+           account->username, len) ||
+         rlen != ntohs(message->realm->turn_attr_len) ||
+         strncmp((char*)message->realm->turn_attr_realm, account->realm, rlen))
       {
         /* credentials do not match with those used for allocation
          * => error 441
@@ -3473,7 +3505,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
     {
       turnserver_send_error(transport_protocol, sock, method,
           message.msg->turn_msg_id, 500, saddr, saddr_size, speer,
-          account->key);
+          account ? account->key : NULL);
       return -1;
     }
 
@@ -5269,7 +5301,7 @@ int main(int argc, char** argv)
             struct account_desc* tmp2 = list_get(get2, struct account_desc,
                 list);
 
-            if(!strcmp(tmp->username, tmp2->username))
+            if(!strcmp(tmp->username, tmp2->username) && !strcmp(tmp->realm, tmp2->realm))
             {
               /* found it, try next iteration of account_list */
               found = 1;
@@ -5281,7 +5313,7 @@ int main(int argc, char** argv)
           if(!found)
           {
             while((allocation = allocation_list_find_username(&allocation_list,
-                    tmp->username)))
+                    tmp->username, tmp->realm)))
             {
               allocation_list_remove(&allocation_list, allocation);
             }
@@ -5328,7 +5360,7 @@ int main(int argc, char** argv)
 
         /* find the account and decrement allocations */
         struct account_desc* desc = account_list_find(&account_list,
-            tmp->username, NULL);
+            tmp->username, tmp->realm);
         if(desc)
         {
           desc->allocations--;

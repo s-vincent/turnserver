@@ -243,11 +243,17 @@ int tmpuser_process_msg(const char* buf, ssize_t len)
 
   if(create)
   {
-    return tmpuser_create(login, password, realm);
+    int r = tmpuser_create(login, password, realm);
+    free(login);
+    free(password);
+    free(realm);
+    return r;
   }
   else if(delete)
   {
-    return tmpuser_delete(login);
+    int r = tmpuser_delete(login);
+    free(login);
+    return r;
   }
 
   return -1;

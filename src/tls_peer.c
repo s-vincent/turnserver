@@ -477,6 +477,10 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr,
 
   tls_peer_write(peer, NULL, 0, daddr, daddr_size);
   speer = tls_peer_find_connection(peer, daddr, daddr_size);
+  if(!speer)
+  {
+    return -1;
+  }
 
   while(!speer->handshake_complete)
   {
