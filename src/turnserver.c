@@ -5533,7 +5533,10 @@ int main(int argc, char** argv)
   account_list_free(&account_list);
 
   /* free mod_tmpuser */
-  tmpuser_destroy();
+  if(turnserver_cfg_mod_tmpuser())
+  {
+    tmpuser_destroy();
+  }
 
   /* free the token list */
   allocation_token_list_free(&g_token_list);

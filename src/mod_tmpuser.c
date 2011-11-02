@@ -44,6 +44,7 @@
  */
 struct tmpuser
 {
+  int initialized; /**< initialized flag */
   int sock; /**< Localhost socket */
   struct list_head* account_list; /**< account list */
   struct list_head client_list; /**< TCP client socket list */
@@ -137,9 +138,11 @@ int tmpuser_init(struct list_head* account_list)
   {
     close(g_tmpuser.sock);
     g_tmpuser.sock = -1;
+    return -1;
   }
 
   g_tmpuser.account_list = account_list;
+  g_tmpuser.initialized = 1;
   return 0;
 }
 
@@ -263,6 +266,11 @@ void tmpuser_destroy(void)
 {
   struct list_head* get = NULL;
   struct list_head* n = NULL;
+
+  if(!g_tmpuser.initialized)
+  {
+    return;
+  }
 
   if(g_tmpuser.sock > 0)
   {
