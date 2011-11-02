@@ -891,6 +891,9 @@ static int turnserver_process_connect_request(int transport_protocol, int sock,
   else if(ret < 0)
   {
     /* error */
+    char error_str[256];
+    get_error(errno, error_str, sizeof(error_str));
+    syslog(LOG_ERR, "connect to peer failed: %s", error_str);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 447, saddr, saddr_size, speer, desc->key);
     return -1;
@@ -2088,6 +2091,8 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock,
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   uint8_t key[16];
+  char str[INET6_ADDRSTRLEN];
+  uint16_t port = 0;
 
   debug(DBG_ATTR, "Refresh request received!\n");
 
@@ -2151,6 +2156,23 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock,
     lifetime = MIN(turnserver_cfg_allocation_lifetime(),
         TURN_DEFAULT_ALLOCATION_LIFETIME);
   }
+
+  if(saddr->sa_family == AF_INET)
+  {
+    inet_ntop(AF_INET, &((struct sockaddr_in*)saddr)->sin_addr, str,
+        INET6_ADDRSTRLEN);
+    port = ntohs(((struct sockaddr_in*)saddr)->sin_port);
+  }
+  else /* IPv6 */
+  {
+    inet_ntop(AF_INET6, &((struct sockaddr_in6*)saddr)->sin6_addr, str,
+        INET6_ADDRSTRLEN);
+    port = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
+  }
+
+  syslog(LOG_INFO, "Refresh transport=%u (d)tls=%u source=%s:%u account=%s",
+      transport_protocol, desc->relayed_tls || desc->relayed_dtls, str, port,
+      desc->username);
 
   if(lifetime > 0)
   {
@@ -2336,7 +2358,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(account->allocations >= turnserver_cfg_max_relay_per_username())
   {
     /* quota exceeded => error 486 */
-    syslog(LOG_INFO, "Allocation transport=%u (d)tls=%u source=%s:%u account=%s"
+    syslog(LOG_WARNING, "Allocation transport=%u (d)tls=%u source=%s:%u account=%s"
         " quota exceeded", transport_protocol, speer ? 1 : 0, str2, port2,
         account->username);
     turnserver_send_error(transport_protocol, sock, method,
@@ -2612,6 +2634,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       if(relayed_sock_tcp == -1)
       {
         /* system error */
+        char error_str[256];
+        get_error(errno, error_str, sizeof(error_str));
+        syslog(LOG_ERR, "Unable to allocate TCP relay socket: %s", error_str);
         close(relayed_sock);
         turnserver_send_error(transport_protocol, sock, method,
             message->msg->turn_msg_id, 500, saddr, saddr_size, speer,
@@ -2622,6 +2647,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
       if(listen(relayed_sock, 5) == -1)
       {
         /* system error */
+        char error_str[256];
+        get_error(errno, error_str, sizeof(error_str));
+        syslog(LOG_ERR, "Unable to listen on relayed socket: %s", error_str);
         close(relayed_sock);
         close(relayed_sock_tcp);
         turnserver_send_error(transport_protocol, sock, method,
@@ -2669,6 +2697,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
   if(relayed_sock == -1)
   {
+    char error_str[256];
+    get_error(errno, error_str, sizeof(error_str));
+    syslog(LOG_ERR, "Unable to allocate socket: %s", error_str);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
@@ -2677,6 +2708,9 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
   if(getsockname(relayed_sock, (struct sockaddr*)&relayed_addr, &relayed_size)
       != 0)
   {
+    char error_str[256];
+    get_error(errno, error_str, sizeof(error_str));
+    syslog(LOG_ERR, "Error in getsockname: %s", error_str);
     close(relayed_sock);
     return -1;
   }
@@ -5142,7 +5176,7 @@ int main(int argc, char** argv)
 
   /* syslog system */
   openlog("TurnServer", LOG_PID, LOG_DAEMON);
-  syslog(LOG_INFO, "TurnServer start");
+  syslog(LOG_NOTICE, "TurnServer start");
 
   /* Some versions of getaddrinfo do not prefer IPv6+IPv4 addresses over
    * IPv4 only when passing NULL as "node" parameter.
@@ -5176,8 +5210,10 @@ int main(int argc, char** argv)
   {
     if(listen(sockets.sock_tcp, 5) == -1)
     {
-      debug(DBG_ATTR, "TCP socket failed to listen()\n");
-      syslog(LOG_ERR, "TCP socket failed to listen()");
+      char error_str[256];
+      get_error(errno, error_str, sizeof(error_str));
+      debug(DBG_ATTR, "TCP socket failed to listen(): %s\n", error_str);
+      syslog(LOG_ERR, "TCP socket failed to listen(): %s", error_str);
       close(sockets.sock_tcp);
       sockets.sock_tcp = -1;
     }
@@ -5185,8 +5221,10 @@ int main(int argc, char** argv)
 
   if(sockets.sock_tcp == -1)
   {
-    debug(DBG_ATTR, "TCP socket creation failed\n");
-    syslog(LOG_ERR, "TCP socket creation failed");
+    char error_str[256];
+    get_error(errno, error_str, sizeof(error_str));
+    debug(DBG_ATTR, "TCP socket creation failed: %s\n", error_str);
+    syslog(LOG_ERR, "TCP socket creation failed: %s", error_str);
   }
 
   if(turnserver_cfg_tls() || turnserver_cfg_dtls())
@@ -5207,8 +5245,10 @@ int main(int argc, char** argv)
       {
         if(listen(speer->sock, 5) == -1)
         {
-          debug(DBG_ATTR, "TLS socket failed to listen()\n");
-          syslog(LOG_ERR, "TLS socket failed to listen()");
+          char error_str[256];
+          get_error(errno, error_str, sizeof(error_str));
+          debug(DBG_ATTR, "TLS socket failed to listen(): %s\n", error_str);
+          syslog(LOG_ERR, "TLS socket failed to listen(): %s", error_str);
           tls_peer_free(&speer);
           speer = NULL;
         }
@@ -5282,7 +5322,7 @@ int main(int argc, char** argv)
       if(account_parse_file(&tmp_list, turnserver_cfg_account_file()) == -1)
       {
         debug(DBG_ATTR, "Reload account file failed!\n");
-        syslog(LOG_INFO, "Reload account file failed!");
+        syslog(LOG_ERR, "Reload account file failed!");
       }
       else
       {
@@ -5451,7 +5491,7 @@ int main(int argc, char** argv)
   fprintf(stderr, "\n");
   debug(DBG_ATTR,"Exiting\n");
 
-  syslog(LOG_INFO, "TurnServer stop");
+  syslog(LOG_NOTICE, "TurnServer stop");
   closelog();
 
   /* avoid signal handling during cleanup */
