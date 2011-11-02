@@ -5170,7 +5170,7 @@ int main(int argc, char** argv)
 
   /* TCP socket */
   sockets.sock_tcp = socket_create(IPPROTO_TCP, listen_addr,
-      turnserver_cfg_tcp_port(), 0);
+      turnserver_cfg_tcp_port(), 1);
 
   if(sockets.sock_tcp > 0)
   {

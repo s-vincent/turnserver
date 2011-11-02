@@ -69,6 +69,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+#include <netinet/tcp.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -771,6 +772,11 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port,
     if(reuse)
     {
       setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
+    }
+
+    if (type == TCP)
+    {
+      setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(int));
     }
 
     /* accept IPv6 and IPv4 on the same socket */
