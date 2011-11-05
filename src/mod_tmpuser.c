@@ -29,6 +29,19 @@
  *  files in the program, then also delete it here.
  */
 
+/**
+ * \file mod_tmpuser.c
+ * \brief Module that can add/delete temporary user.
+ *
+ * It consists of a socket that will listen for incoming messages and process
+ * them. Message format is as follow:
+ * - To create a user, create user:password:domain
+ * - To delete a user, delete user
+ *
+ * \author Sebastien Vincent
+ * \date 2011
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

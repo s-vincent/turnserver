@@ -39,6 +39,7 @@
  * - To delete a user, delete user
  *
  * \author Sebastien Vincent
+ * \date 2011
  */
 
 #ifndef MOD_TMPUSER_H
