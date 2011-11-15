@@ -4578,6 +4578,7 @@ static void turnserver_main(struct listen_sockets* sockets,
            (getsockname(tmp->sock, (struct sockaddr*)&daddr,
                         &daddr_size) == -1))
         {
+          close(tmp->sock);
           LIST_DEL(&tmp->list);
           free(tmp);
           continue;

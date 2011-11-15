@@ -1352,6 +1352,7 @@ int main(int argc, char** argv)
   size_t userdomainpass_len = 0;
   unsigned char md_buf[16]; /* MD5 */
   int ret = EXIT_SUCCESS;
+  int r = -1;
 
 #if defined(_WIN32) || defined(_WIN64)
   /* Windows need to initialize and startup
@@ -1472,9 +1473,9 @@ int main(int argc, char** argv)
   hints.ai_protocol = transport_protocol;
   hints.ai_flags = 0;
 
-  if(getaddrinfo(conf.server_address, port_str, &hints, &res) != 0)
+  if((r = getaddrinfo(conf.server_address, port_str, &hints, &res)) != 0)
   {
-    perror("getaddrinfo");
+    fprintf(stderr, "getaddrinfo(%s:%s): %s\n", conf.server_address, port_str, gai_strerror(r));
     exit(EXIT_FAILURE);
   }
 
@@ -1490,9 +1491,9 @@ int main(int argc, char** argv)
   hints.ai_protocol = IPPROTO_UDP;
   hints.ai_flags = 0;
 
-  if(getaddrinfo(conf.peer_address, conf.peer_port, &hints, &res) != 0)
+  if((r = getaddrinfo(conf.peer_address, conf.peer_port, &hints, &res)) != 0)
   {
-    perror("getaddrinfo");
+    fprintf(stderr, "getaddrinfo(%s:%s): %s\n", conf.peer_address, conf.peer_port, gai_strerror(r));
     exit(EXIT_FAILURE);
   }
 

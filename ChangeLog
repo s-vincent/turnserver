@@ -1,3 +1,9 @@
+2011-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
+
+  * Version 0.6      - Add spec file to build an RPM package (by Ken Cox);
+                     - Better syslog logging separated by level (by Ken Cox):
+                     - Bug fixes provided by Ryo Sato and Ken Cox.
+
 2011-06-10  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
   * Version 0.5      - Add restricted users feature;
