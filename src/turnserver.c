@@ -364,7 +364,7 @@ static inline void turnserver_unblock_realtime_signal(void)
 static void turnserver_print_help(const char* name, const char* version)
 {
   fprintf(stdout, "TurnServer %s\n", version);
-  fprintf(stdout, "Usage: %s [-c file] [-h] [-v]\n", name);
+  fprintf(stdout, "Usage: %s [-c file] [-p pidfile] [-h] [-v]\n", name);
 }
 
 /**
@@ -373,11 +373,12 @@ static void turnserver_print_help(const char* name, const char* version)
  * \param argv array of argument
  * \param configuration_file configuration (-c) argument will be filled in if
  * any
+ * \param pid_file pid file (-p) argument will be filled in if any
  */
 static void turnserver_parse_cmdline(int argc, char** argv,
-    char** configuration_file)
+    char** configuration_file, char** pid_file)
 {
-  static const char* optstr = "c:hv";
+  static const char* optstr = "c:p:hv";
   int s = 0;
 
   while((s = getopt(argc, argv, optstr)) != -1)
@@ -400,6 +401,12 @@ static void turnserver_parse_cmdline(int argc, char** argv,
         if(optarg)
         {
           *configuration_file = optarg;
+        }
+        break;
+      case 'p': /* pid file */
+        if(optarg)
+        {
+          *pid_file = optarg;
         }
         break;
       default:
@@ -4946,6 +4953,40 @@ static void turnserver_cleanup(void* arg)
 }
 
 /**
+ * \brief Write pid in a file.
+ * \param pidfile pidfile pathname
+ */
+static void turnserver_write_pidfile(const char *pidfile)
+{
+  if(pidfile)
+  {
+    FILE *f = fopen(pidfile, "w");
+
+    if(!f) 
+    {
+      syslog(LOG_ERR, "Can't open %s for write: %s", pidfile, strerror(errno));
+    }
+    else
+    {
+      fprintf(f, "%d\n", getpid());
+      fclose(f);
+    }
+  }
+}
+
+/**
+ * \brief Remove pidfile.
+ * \param pidfile pidfile pathname
+ */
+static void turnserver_remove_pidfile(const char* pidfile)
+{
+  if(pidfile)
+  {
+    unlink(pidfile);
+  }
+}
+
+/**
  * \brief Entry point of the program.
  * \param argc number of argument
  * \param argv array of argument
@@ -4959,6 +5000,7 @@ int main(int argc, char** argv)
   struct list_head* get = NULL;
   struct listen_sockets sockets;
   char* configuration_file = NULL;
+  char* pid_file = NULL;
   char* listen_addr = NULL;
   struct sigaction sa;
 
@@ -5070,7 +5112,7 @@ int main(int argc, char** argv)
   }
 
   /* parse the arguments */
-  turnserver_parse_cmdline(argc, argv, &configuration_file);
+  turnserver_parse_cmdline(argc, argv, &configuration_file, &pid_file);
 
   if(!configuration_file)
   {
@@ -5165,12 +5207,15 @@ int main(int argc, char** argv)
     /* run as daemon, we take care to cleanup existing allocated memory such
      * as account and denied address list of the father process before _exit()
      */
-    if(go_daemon("./", 0, turnserver_cleanup, &account_list) == -1)
+    if(go_daemon("/", 0, turnserver_cleanup, &account_list) == -1)
     {
       fprintf(stderr, "Failed to start daemon, exiting...\n");
       turnserver_cleanup(&account_list);
       exit(EXIT_FAILURE);
     }
+
+    /* write pid file */
+    turnserver_write_pidfile(pid_file);
   }
 
   debug(DBG_ATTR, "TurnServer start\n");
@@ -5588,6 +5633,11 @@ int main(int argc, char** argv)
     struct denied_address* tmp = list_get(get, struct denied_address, list);
     LIST_DEL(&tmp->list);
     free(tmp);
+  }
+
+  if(turnserver_cfg_daemon())
+  {
+    turnserver_remove_pidfile(pid_file);
   }
 
   /* free the configuration parser */
