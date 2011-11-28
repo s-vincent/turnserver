@@ -5187,12 +5187,6 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-  /* mod_tmpuser */
-  if(turnserver_cfg_mod_tmpuser())
-  {
-    tmpuser_init(&account_list);
-  }
-
 #if 0
   /* print account information */
   list_iterate_safe(get, n, &account_list)
@@ -5223,6 +5217,12 @@ int main(int argc, char** argv)
   /* syslog system */
   openlog("TurnServer", LOG_PID, LOG_DAEMON);
   syslog(LOG_NOTICE, "TurnServer start");
+
+  /* mod_tmpuser */
+  if(turnserver_cfg_mod_tmpuser())
+  {
+    tmpuser_init(&account_list);
+  }
 
   /* Some versions of getaddrinfo do not prefer IPv6+IPv4 addresses over
    * IPv4 only when passing NULL as "node" parameter.
