@@ -140,7 +140,7 @@ int tmpuser_init(struct list_head* account_list)
   INIT_LIST(g_tmpuser.client_list);
 
   g_tmpuser.account_list = NULL;
-  g_tmpuser.sock = socket_create(TCP, "localhost", 8086, 0);
+  g_tmpuser.sock = socket_create(TCP, "localhost", 8086, 0, 1);
 
   if(g_tmpuser.sock == -1)
   {

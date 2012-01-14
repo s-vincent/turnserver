@@ -138,6 +138,7 @@ struct tls_peer
   SSL_CTX* ctx_server; /**< SSL context for server side */
   struct list_head remote_peers; /**< Remote peers */
   BIO* bio_fake; /**< Fake BIO for read operations */
+  int (*verify_callback)(int, X509_STORE_CTX *); /**< Verification callback */
 };
 
 /**
@@ -147,12 +148,13 @@ struct tls_peer
  * \param port listen port
  * \param ca_file Certification Authority file
  * \param cert_file certificate file
- * \param key_file private key file.
+ * \param key_file private key file
+ * \param verify_callback callback to verify certificate
  * \return valid pointer on tls_peer or NULL if failure
  */
 struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr,
     uint16_t port, const char* ca_file, const char* cert_file,
-    const char* key_file);
+    const char* key_file, int (*verify_callback)(int, X509_STORE_CTX *));
 
 /**
  * \brief Free a (D)TLS peer.
@@ -237,10 +239,11 @@ int tls_peer_is_encrypted(const char* buf, size_t len);
  * \param addr address or FQDN name
  * \param port to bind
  * \param reuse allow socket to reuse transport address (SO_REUSE)
+ * \param nodelay disable naggle algorithm for TCP sockets only (TCP_NODELAY)
  * \return socket descriptor, -1 otherwise
  */
 int socket_create(enum protocol_type type, const char* addr, uint16_t port,
-    int reuse);
+    int reuse, int nodelay);
 
 #ifdef __cplusplus
 }

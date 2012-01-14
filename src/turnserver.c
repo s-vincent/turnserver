@@ -2620,6 +2620,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
      */
     relayed_sock = socket_create(
         message->requested_transport->turn_attr_protocol, str, port,
+        message->requested_transport->turn_attr_protocol == IPPROTO_TCP,
         message->requested_transport->turn_attr_protocol == IPPROTO_TCP);
 
     if(relayed_sock == -1)
@@ -2636,7 +2637,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
        * the second will be used to connect peer (Connect request)
        */
       relayed_sock_tcp = socket_create(
-          message->requested_transport->turn_attr_protocol, str, port, 1);
+          message->requested_transport->turn_attr_protocol, str, port, 1, 1);
 
       if(relayed_sock_tcp == -1)
       {
@@ -2669,7 +2670,8 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(r_flag)
     {
       reservation_port = port + 1;
-      reservation_sock = socket_create(IPPROTO_UDP, str, reservation_port, 0);
+      reservation_sock = socket_create(IPPROTO_UDP, str, reservation_port, 0, 
+          0);
 
       if(reservation_sock == -1)
       {
@@ -4167,6 +4169,16 @@ static void turnserver_handle_tcp_incoming_connection(int sock,
   hdr->turn_msg_len += iov[index].iov_len;
   index++;
 
+  if(!(attr = turn_attr_xor_peer_address_create((struct sockaddr*)&saddr,
+          STUN_MAGIC_COOKIE, msg_id, &iov[index])))
+  {
+    close(rsock);
+    iovec_free_data(iov, index);
+    return;
+  }
+  hdr->turn_msg_len += iov[index].iov_len;
+  index++;
+
   if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
       == -1)
   {
@@ -5240,7 +5252,7 @@ int main(int argc, char** argv)
   /* initialize listen sockets */
   /* UDP socket */
   sockets.sock_udp = socket_create(IPPROTO_UDP, listen_addr,
-      turnserver_cfg_udp_port(), 0);
+      turnserver_cfg_udp_port(), 0, 0);
 
   if(sockets.sock_udp == -1)
   {
@@ -5250,7 +5262,7 @@ int main(int argc, char** argv)
 
   /* TCP socket */
   sockets.sock_tcp = socket_create(IPPROTO_TCP, listen_addr,
-      turnserver_cfg_tcp_port(), 1);
+      turnserver_cfg_tcp_port(), 1, 1);
 
   if(sockets.sock_tcp > 0)
   {
@@ -5285,7 +5297,7 @@ int main(int argc, char** argv)
       /* TLS over TCP socket */
       speer = tls_peer_new(IPPROTO_TCP, listen_addr, turnserver_cfg_tls_port(),
           turnserver_cfg_ca_file(), turnserver_cfg_cert_file(),
-          turnserver_cfg_private_key_file());
+          turnserver_cfg_private_key_file(), NULL);
 
       if(speer)
       {
@@ -5312,7 +5324,7 @@ int main(int argc, char** argv)
       /* TLS over UDP socket */
       speer = tls_peer_new(IPPROTO_UDP, listen_addr, turnserver_cfg_tls_port(),
           turnserver_cfg_ca_file(), turnserver_cfg_cert_file(),
-          turnserver_cfg_private_key_file());
+          turnserver_cfg_private_key_file(), NULL);
 
       if(speer)
       {

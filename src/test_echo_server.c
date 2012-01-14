@@ -107,13 +107,13 @@ int main(int argc, char** argv)
   }
 
   /* try to bind on all addresses (IPv6+IPv4 mode) */
-  sock = socket_create(IPPROTO_UDP, "::", port, 0);
+  sock = socket_create(IPPROTO_UDP, "::", port, 0, 0);
 
   if(sock == -1)
   {
     perror("socket");
     fprintf(stderr, "Maybe IPv6 is not available, try IPv4 only mode\n");
-    sock = socket_create(IPPROTO_UDP, "0.0.0.0", port, 0);
+    sock = socket_create(IPPROTO_UDP, "0.0.0.0", port, 0, 1);
   }
 
   if(sock == -1)

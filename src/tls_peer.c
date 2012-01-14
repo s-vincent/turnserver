@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2011 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2008-2010 Sebastien Vincent.
+ * Copyright (C) 2008-2011 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@
  * \file tls_peer.c
  * \brief TLS and DTLS peer implementation.
  * \author Sebastien Vincent
- * \date 2008-2010
+ * \date 2008-2011
  */
 
 #ifdef HAVE_CONFIG_H
@@ -99,7 +99,6 @@
 #ifndef IPV6_V6ONLY
 #define IPV6_V6ONLY 27
 #endif
-
 
 #ifdef __cplusplus
 extern "C"
@@ -246,7 +245,8 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl,
     case SSL_ERROR_NONE:
       break;
     case SSL_ERROR_SSL:
-      fprintf(stderr, "SSL_ERROR_SSL: %s\n", ERR_reason_error_string(ERR_get_error()));
+      fprintf(stderr, "SSL_ERROR_SSL: %s\n", 
+          ERR_reason_error_string(ERR_get_error()));
       /* big problem, remove the connection */
       tls_peer_remove_connection(peer, ssl);
       break;
@@ -283,10 +283,12 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl,
  * \param ca_file Certification Authority file
  * \param cert_file certificate file
  * \param key_file private key file
+ * \param verify_callback certificate verification callback
  * \return 0 if success, -1 otherwise
  */
 static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file,
-    const char* cert_file, const char* key_file)
+    const char* cert_file, const char* key_file, 
+    int (*verify_callback)(int, X509_STORE_CTX *))
 {
   if(SSL_CTX_set_cipher_list(ctx, "DEFAULT") != 1)
   {
@@ -294,7 +296,7 @@ static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file,
   }
 
   SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-      NULL);
+      verify_callback);
   SSL_CTX_set_verify_depth(ctx, 1);
   /* SSL_CTX_set_options(ctx, SSL_OP_NO_QUERY_MTU); */
 
@@ -375,9 +377,9 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type,
   {
     /* load certificates in ctx_client and ctx_server */
     if((tls_peer_load_certificates(peer->ctx_client, ca_file, cert_file,
-            key_file) == -1) ||
+            key_file, peer->verify_callback) == -1) ||
        (tls_peer_load_certificates(peer->ctx_server, ca_file, cert_file,
-            key_file) == -1))
+            key_file, peer->verify_callback) == -1))
     {
       return -1;
     }
@@ -391,7 +393,7 @@ static int tls_peer_setup(struct tls_peer* peer, enum protocol_type type,
     SSL_CTX_set_client_CA_list(peer->ctx_server, calist);
   }
 
-  peer->sock = socket_create(type, addr, port, 0);
+  peer->sock = socket_create(type, addr, port, 0, 0);
   peer->type = type;
 
   return (peer->sock > 0)  ? 0 : -1;
@@ -438,6 +440,29 @@ static ssize_t tls_peer_read(struct tls_peer* peer, char* buf, ssize_t buflen,
   }
 
   return len;
+}
+
+/**
+ * \brief Verify certificate chain.
+ * \param ssl SSL pointer 
+ * \return 1 if certificate verification is OK, 0 otherwise
+ */
+static int verify_certificate(SSL* ssl)
+{
+    X509* x509 = SSL_get_peer_certificate(ssl);
+    
+    if(x509)
+    {
+      if(SSL_get_verify_result(ssl) != X509_V_OK)
+      {
+        /* printf("problem certificate\n"); */
+        return 0;
+      }
+
+      return 1;
+    }
+    
+  return 1;
 }
 
 void tls_peer_print_connection(struct tls_peer* peer)
@@ -530,11 +555,15 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr,
         {
           if(peer->type == TCP)
           {
-            tls_peer_tcp_read(peer, buf, nb, bufout, sizeof(bufout), daddr,
-                daddr_size, peer->sock);
+            if(tls_peer_tcp_read(peer, buf, nb, bufout, sizeof(bufout), daddr,
+                daddr_size, peer->sock) == -1)
+            {
+              return -1;
+            }
           }
           else /* UDP */
           {
+            /* DTLS can return -1 for handshake so no failure if it happens */
             tls_peer_udp_read(peer, buf, nb, bufout, sizeof(bufout), daddr,
                 daddr_size);
           }
@@ -621,6 +650,12 @@ ssize_t tls_peer_udp_read(struct tls_peer* peer, char* buf, ssize_t buflen,
 
     SSL_set_accept_state(ssl);
 
+    if(!verify_certificate(ssl))
+    {
+      SSL_free(ssl);
+      return -1;
+    }
+
     bio_write = BIO_new_dgram(peer->sock, BIO_NOCLOSE);
     (void)BIO_dgram_set_peer(bio_write, addr);
 
@@ -655,7 +690,14 @@ ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen,
   {
     /* printf("new peer\n"); */
     SSL* ssl = SSL_new(peer->ctx_client);
+
     SSL_set_connect_state(ssl);
+   
+    if(!verify_certificate(ssl))
+    {
+      SSL_free(ssl);
+      return -1;
+    }
 
     if(peer->type != TCP)
     {
@@ -737,7 +779,7 @@ int tls_peer_is_encrypted(const char* buf, size_t len)
 }
 
 int socket_create(enum protocol_type type, const char* addr, uint16_t port,
-    int reuse)
+    int reuse, int nodelay)
 {
   int sock = -1;
   struct addrinfo hints;
@@ -774,7 +816,7 @@ int socket_create(enum protocol_type type, const char* addr, uint16_t port,
       setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
     }
 
-    if (type == TCP)
+    if (type == TCP && nodelay)
     {
       setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(int));
     }
@@ -840,7 +882,7 @@ void tls_peer_free(struct tls_peer** peer)
 
 struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr,
     uint16_t port, const char* ca_file, const char* cert_file,
-    const char* key_file)
+    const char* key_file, int (*verify_callback)(int, X509_STORE_CTX *))
 {
   struct tls_peer* ret = NULL;
 
@@ -850,6 +892,8 @@ struct tls_peer* tls_peer_new(enum protocol_type type, const char* addr,
   }
 
   memset(ret, 0x00, sizeof(struct tls_peer));
+
+  ret->verify_callback = verify_callback;
 
   if(tls_peer_setup(ret, type, addr, port, ca_file, cert_file, key_file) == -1)
   {

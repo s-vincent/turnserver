@@ -228,6 +228,20 @@ static void client_parse_cmdline(int argc, char** argv, struct client_configurat
 }
 
 /**
+ * \brief SSL verification callback.
+ * \param preverify_ok status of the pre verification
+ * \param store X509 store context
+ * \return 1 if verification is OK, 0 otherwise
+ */
+int verify_callback(int preverify_ok, X509_STORE_CTX* store)
+{
+  (void)store;
+  /* uncomment the following line to fail the SSL certificate verification */
+  /* preverify_ok = 0; */
+  return preverify_ok;
+}
+
+/**
  * \brief Receive TURN message.
  * \param transport_protocol transport protocol
  * \param sock socket descriptor
@@ -293,7 +307,8 @@ static int client_recv_message(int transport_protocol, int sock, struct tls_peer
  * \param addr local address
  * \param port local port
  * \param sock if function succeed, will store socket descriptor
- * \param speer if function succeed and speer is valid pointer, it will store TLS stuff
+ * \param speer if function succeed and speer is valid pointer, 
+ * it will store TLS stuff
  * \param ca_file certification authority file
  * \param certificate_file SSL certificate file
  * \param key_file SSL private key file
@@ -304,7 +319,8 @@ static int client_setup_socket(int transport_protocol, const char* addr, uint16_
 {
   if(speer)
   {
-    *speer = tls_peer_new(transport_protocol, addr, port, ca_file, certificate_file, key_file);
+    *speer = tls_peer_new(transport_protocol, addr, port, ca_file,
+        certificate_file, key_file, verify_callback);
 
     if((*speer))
     {
@@ -316,7 +332,7 @@ static int client_setup_socket(int transport_protocol, const char* addr, uint16_
   }
   else if(sock)
   {
-    *sock = socket_create(transport_protocol, addr, port, 0);
+    *sock = socket_create(transport_protocol, addr, port, 0, 1);
     return (*sock != -1) ? 0 : -1;
   }
 
