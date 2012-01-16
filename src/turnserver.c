@@ -937,7 +937,6 @@ static int turnserver_process_connectionbind_request(int transport_protocol,
   struct turn_attr_hdr* attr = NULL;
   struct iovec iov[8];
   size_t index = 0;
-  uint8_t id[12];
 
   debug(DBG_ATTR, "ConnectionBind request received!\n");
 
@@ -999,12 +998,9 @@ static int turnserver_process_connectionbind_request(int transport_protocol,
     return 0;
   }
 
-  /* send response */
-  turn_generate_transaction_id(id);
-
   /* ConnectionBind response */
-  if((hdr = turn_msg_connectionbind_response_create(0, id, &iov[index]))
-      == NULL)
+  if(!(hdr = turn_msg_connectionbind_response_create(0,
+      message->msg->turn_msg_id, &iov[index])))
   {
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
