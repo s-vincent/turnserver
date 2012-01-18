@@ -2,7 +2,8 @@
 
   * Version 0.6      - Add spec file to build an RPM package (by Ken Cox);
                      - Better syslog logging separated by level (by Ken Cox):
-                     - Bug fixes provided by Ryo Sato and Ken Cox.
+                     - Bug fixes provided by Ryo Sato and Ken Cox;
+                     - Fixes TURN-TCP bugs reported by Nigel Pattinson.
 
 2011-06-10  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
