@@ -1,4 +1,4 @@
-2011-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
+2012-02-22  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
   * Version 0.6      - Add spec file to build an RPM package (by Ken Cox);
                      - Better syslog logging separated by level (by Ken Cox):
