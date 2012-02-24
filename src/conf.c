@@ -64,10 +64,10 @@
 extern int cfg_yylex_destroy(void);
 
 /**
- * \var denied_address_opts
+ * \var g_denied_address_opts
  * \brief Denied address option.
  */
-static cfg_opt_t denied_address_opts[] =
+static cfg_opt_t g_denied_address_opts[] =
 {
   CFG_STR("address", "", CFGF_NONE),
   CFG_INT("mask", 24, CFGF_NONE),
@@ -76,10 +76,10 @@ static cfg_opt_t denied_address_opts[] =
 };
 
 /**
- * \var opts
+ * \var g_opts
  * \brief Options recognized.
  */
-static cfg_opt_t opts[]=
+static cfg_opt_t g_opts[]=
 {
   CFG_STR("listen_address", NULL, CFGF_LIST),
   CFG_STR("listen_addressv6", NULL, CFGF_LIST),
@@ -106,7 +106,7 @@ static cfg_opt_t opts[]=
   CFG_STR("realm", "domain.org", CFGF_NONE),
   CFG_STR("account_method", "file", CFGF_NONE),
   CFG_STR("account_file", "users.txt", CFGF_NONE),
-  CFG_SEC("denied_address", denied_address_opts, CFGF_MULTI),
+  CFG_SEC("denied_address", g_denied_address_opts, CFGF_MULTI),
   CFG_INT("bandwidth_per_allocation", 0, CFGF_NONE),
   CFG_BOOL("mod_tmpuser", cfg_false, CFGF_NONE),
   /* the following attributes are not used for the moment */
@@ -129,7 +129,7 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
   int ret = 0;
   size_t i = 0;
   size_t nb = 0;
-  g_cfg = cfg_init(opts, CFGF_NONE);
+  g_cfg = cfg_init(g_opts, CFGF_NONE);
 
   ret = cfg_parse(g_cfg, file);
 
