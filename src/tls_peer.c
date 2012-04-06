@@ -207,7 +207,7 @@ static void tls_peer_remove_connection(struct tls_peer* peer,
     struct ssl_peer* ssl)
 {
   /* to avoid compilation warnings */
-  peer = peer;
+  (void)peer;
 
   LIST_DEL(&ssl->list);
   ssl_peer_free(&ssl);

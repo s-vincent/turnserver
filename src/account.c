@@ -135,7 +135,7 @@ void account_list_add(struct list_head* list, struct account_desc* desc)
 void account_list_remove(struct list_head* list, struct account_desc* desc)
 {
   /* to avoid compilation warning */
-  list = list;
+  (void)list;
 
   LIST_DEL(&desc->list);
 }

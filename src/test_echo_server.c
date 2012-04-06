@@ -90,7 +90,7 @@ int main(int argc, char** argv)
   ssize_t nb = -1;
   uint16_t port = 0;
 
-  argc = argc; /* avoid compilation warning */
+  (void)argc; /* avoid compilation warning */
 
   signal(SIGUSR1, signal_handler);
   signal(SIGUSR2, signal_handler);

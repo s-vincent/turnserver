@@ -653,7 +653,7 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id,
 void allocation_tcp_relay_list_remove(struct list_head* list,
     struct allocation_tcp_relay* relay)
 {
-  list = list; /* not used */
+  (void)list; /* not used */
 
   LIST_DEL(&relay->list);
   LIST_DEL(&relay->list2);
