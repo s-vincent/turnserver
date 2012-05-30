@@ -245,7 +245,7 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl,
     case SSL_ERROR_NONE:
       break;
     case SSL_ERROR_SSL:
-      fprintf(stderr, "SSL_ERROR_SSL: %s\n", 
+      fprintf(stderr, "SSL_ERROR_SSL: %s\n",
           ERR_reason_error_string(ERR_get_error()));
       /* big problem, remove the connection */
       tls_peer_remove_connection(peer, ssl);
@@ -287,7 +287,7 @@ static void tls_peer_manage_error(struct tls_peer* peer, struct ssl_peer* ssl,
  * \return 0 if success, -1 otherwise
  */
 static int tls_peer_load_certificates(SSL_CTX* ctx, const char* ca_file,
-    const char* cert_file, const char* key_file, 
+    const char* cert_file, const char* key_file,
     int (*verify_callback)(int, X509_STORE_CTX *))
 {
   if(SSL_CTX_set_cipher_list(ctx, "DEFAULT") != 1)
@@ -444,13 +444,13 @@ static ssize_t tls_peer_read(struct tls_peer* peer, char* buf, ssize_t buflen,
 
 /**
  * \brief Verify certificate chain.
- * \param ssl SSL pointer 
+ * \param ssl SSL pointer
  * \return 1 if certificate verification is OK, 0 otherwise
  */
 static int verify_certificate(SSL* ssl)
 {
     X509* x509 = SSL_get_peer_certificate(ssl);
-    
+
     if(x509)
     {
       if(SSL_get_verify_result(ssl) != X509_V_OK)
@@ -461,7 +461,7 @@ static int verify_certificate(SSL* ssl)
 
       return 1;
     }
-    
+
   return 1;
 }
 
@@ -692,7 +692,7 @@ ssize_t tls_peer_write(struct tls_peer* peer, const char* buf, ssize_t buflen,
     SSL* ssl = SSL_new(peer->ctx_client);
 
     SSL_set_connect_state(ssl);
-   
+
     if(!verify_certificate(ssl))
     {
       SSL_free(ssl);

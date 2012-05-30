@@ -307,7 +307,7 @@ static int client_recv_message(int transport_protocol, int sock, struct tls_peer
  * \param addr local address
  * \param port local port
  * \param sock if function succeed, will store socket descriptor
- * \param speer if function succeed and speer is valid pointer, 
+ * \param speer if function succeed and speer is valid pointer,
  * it will store TLS stuff
  * \param ca_file certification authority file
  * \param certificate_file SSL certificate file
@@ -1563,7 +1563,6 @@ int main(int argc, char** argv)
 
   snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
   md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
-
 
   /* client connected and can send TURN message */
   fprintf(stdout, "sock: %d speer: %p connected!\n", sock, (void*)speer);

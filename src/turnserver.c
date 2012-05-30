@@ -2666,7 +2666,7 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     if(r_flag)
     {
       reservation_port = port + 1;
-      reservation_sock = socket_create(IPPROTO_UDP, str, reservation_port, 0, 
+      reservation_sock = socket_create(IPPROTO_UDP, str, reservation_port, 0,
           0);
 
       if(reservation_sock == -1)
@@ -4970,7 +4970,7 @@ static void turnserver_write_pidfile(const char *pidfile)
   {
     FILE *f = fopen(pidfile, "w");
 
-    if(!f) 
+    if(!f)
     {
       syslog(LOG_ERR, "Can't open %s for write: %s", pidfile, strerror(errno));
     }
