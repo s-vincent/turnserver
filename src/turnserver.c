@@ -2969,28 +2969,31 @@ static int turnserver_process_turn(int transport_protocol, int sock,
   }
 
   /* check the 5-tuple except for an Allocate request */
-  if(!(STUN_IS_REQUEST(hdr_msg_type) && method == TURN_METHOD_ALLOCATE))
+  if(method != TURN_METHOD_ALLOCATE)
   {
     desc = allocation_list_find_tuple(allocation_list, transport_protocol,
         daddr, saddr, saddr_size);
 
-    /* check for the allocated username */
-    if(desc && message->username && message->realm)
+    if(STUN_IS_REQUEST(hdr_msg_type))
     {
-      size_t len = ntohs(message->username->turn_attr_len);
-      size_t rlen = ntohs(message->realm->turn_attr_len);
-      if(len != strlen(desc->username) ||
-         strncmp((char*)message->username->turn_attr_username,
-           desc->username, len) ||
-         rlen != strlen(desc->realm) ||
-         strncmp((char*)message->realm->turn_attr_realm, desc->realm, rlen))
+      /* check for the allocated username */
+      if(desc && message->username && message->realm)
+      {
+        size_t len = ntohs(message->username->turn_attr_len);
+        size_t rlen = ntohs(message->realm->turn_attr_len);
+        if(len != strlen(desc->username) ||
+           strncmp((char*)message->username->turn_attr_username,
+             desc->username, len) ||
+           rlen != strlen(desc->realm) ||
+           strncmp((char*)message->realm->turn_attr_realm, desc->realm, rlen))
+        {
+          desc = NULL;
+        }
+      }
+      else
       {
         desc = NULL;
       }
-    }
-    else
-    {
-      desc = NULL;
     }
 
     if(!desc)
