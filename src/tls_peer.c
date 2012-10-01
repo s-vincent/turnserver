@@ -471,7 +471,7 @@ void tls_peer_print_connection(struct tls_peer* peer)
   struct list_head* get = NULL;
   char buf[INET6_ADDRSTRLEN];
 
-  fprintf(stdout, "Current peer informations (List size = %u)\n",
+  fprintf(stdout, "Current peer information (List size = %u)\n",
       list_size(&peer->remote_peers));
 
   list_iterate_safe(get, n, &peer->remote_peers)

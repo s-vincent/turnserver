@@ -9,8 +9,6 @@ AC_CONFIG_HEADER([config.h])
 # Unit tests with Check framework
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4],,[AC_MSG_RESULT([testing is disabled])])
 
-CFLAGS=""
-
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
