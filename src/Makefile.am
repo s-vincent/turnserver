@@ -7,7 +7,8 @@ AM_CFLAGS += -DNDEBUG
 endif
 
 INCLUDE = -I.
-bin_PROGRAMS = turnserver test_turn_client test_echo_server
+sbin_PROGRAMS = turnserver
+bin_PROGRAMS = test_turn_client test_echo_server
 noinst_HEADERS = turnserver.h \
 								 turn.h \
 								 protocol.h \
