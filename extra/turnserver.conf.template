@@ -108,7 +108,7 @@ private_key_file = "./server.key"
 account_method = "file"
 
 ## Account file (if account_method = file).
-account_file = "./turnusers.txt"
+account_file = "/usr/local/etc/turnusers.txt"
 
 ## mod_tmpuser.
 mod_tmpuser = false
