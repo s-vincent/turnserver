@@ -1,8 +1,8 @@
 # Adding doxygen support
 include aminclude.am
 
-SUBDIRS = src man test
-EXTRA_DIST = extra doc Doxyfile aminclude.am	acinclude.m4
+SUBDIRS = src man test doc
+EXTRA_DIST = extra Doxyfile aminclude.am	acinclude.m4
 
 # valgrind
 valgrind-run:

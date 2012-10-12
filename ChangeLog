@@ -1,3 +1,7 @@
+2012-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
+
+	* Version 0.8			 - Modification to ease Debian repository integration.
+
 2012-10-01  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
   * Version 0.7      - Fixes compilation warnings with clang;

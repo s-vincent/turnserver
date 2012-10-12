@@ -103,7 +103,7 @@ information.
 The format of each line is:
 login:password:realm:state
 
-The state can be "authorized", "refused" or "restricted". The "refused" state
+The state can be "authorized", "refused" or "restricted". The "restricted" state
 means the account has bandwidth restrictions.
 
 Note: realm have to match realm parameter defined in TurnServer configuration
@@ -127,4 +127,27 @@ privileges to the user who launched the binary.
 
 Note: if turnserver is launched as root and unpriv_user not set, the program
 will not loose its root privileges.
+
+5) How-to test simply turnserver
+--------------------------------
+
+TurnServer is shipped with two test tools: test_turn_client and 
+test_echo_server. The first one is a minimal TURN client and test_echo_server
+is a simple UDP echo server.
+
+To test TurnServer simply:
+- configure turnserver.conf;
+- configure turnusers.txt ;
+- launch "turnserver -c /path/to/turnserver.conf";
+- launch "test_echo_server 8086";
+- launch "test_turn_client -t udp -s turnserver_address -p turnserver_address -w 8086 -u user -g password -d domain.org".
+
+The turnserver_address parameter should be the address configured in
+turnserver.conf's listen_address or listen_addressv6. if you want to use
+localhost here, you should configure listen_address to 127.0.0.1 _and_ 
+listen_addressv6 to ::1. The user, password and domain.org parameters are the
+ones from turnusers.txt.
+
+It is not necessary to run the server and the test tools on different computers
+but it is recommended just to be sure everything work as in real use-case.
 
