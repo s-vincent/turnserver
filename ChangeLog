@@ -1,6 +1,6 @@
-2012-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
+2012-10-17	Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.8			 - Modification to ease Debian repository integration.
+	* Version 0.7.1		 - Minor modifications to ease Debian package integration.
 
 2012-10-01  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

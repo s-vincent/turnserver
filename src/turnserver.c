@@ -97,7 +97,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.7"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.7.1"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
