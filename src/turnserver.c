@@ -33,7 +33,7 @@
  * \file turnserver.c
  * \brief TURN Server implementation.
  * \author Sebastien Vincent
- * \date 2008-2010
+ * \date 2008-2012
  */
 
 #ifdef HAVE_CONFIG_H
@@ -97,7 +97,7 @@
  * \def SOFTWARE_DESCRIPTION
  * \brief Textual description of the server.
  */
-#define SOFTWARE_DESCRIPTION "TurnServer 0.7.1"
+#define SOFTWARE_DESCRIPTION "TurnServer 0.8"
 
 /**
  * \def DEFAULT_CONFIGURATION_FILE
@@ -391,7 +391,7 @@ static void turnserver_parse_cmdline(int argc, char** argv,
         break;
       case 'v': /* version */
         fprintf(stdout, "TurnServer %s\n", PACKAGE_VERSION);
-        fprintf(stdout, "Copyright (C) 2008-2010 Sebastien Vincent.\n");
+        fprintf(stdout, "Copyright (C) 2008-2012 Sebastien Vincent.\n");
         fprintf(stdout, "This is free software; see the source for copying "
             "conditions.  There is NO\n");
         fprintf(stdout, "warranty; not even for MERCHANTABILITY or FITNESS FOR "
