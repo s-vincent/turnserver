@@ -2,7 +2,11 @@
 include aminclude.am
 
 SUBDIRS = src man test doc
-EXTRA_DIST = extra Doxyfile aminclude.am	acinclude.m4
+SUBDIRS += extra
+
+EXTRA_DIST = Doxyfile aminclude.am	acinclude.m4
+EXTRA_DIST += LICENSE
+EXTRA_DIST += LICENSE.OpenSSL
 
 # valgrind
 valgrind-run:
