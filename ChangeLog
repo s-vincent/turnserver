@@ -2,6 +2,10 @@
 
 	* Version 0.8			 - 
 
+2012-11-19      Daniel Pocock <daniel@pocock.com.au>
+
+        * Version 0.7.2          - Further tweaks to autotools
+
 2012-10-17	Sebastien Vincent <sebastien.vincent@turnserver.org>
 
 	* Version 0.7.1		 - Minor modifications to ease Debian package integration.
