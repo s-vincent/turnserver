@@ -135,7 +135,7 @@ SHORT_NAMES            = NO
 # will interpret the first line (until the first dot) of a JavaDoc-style
 # comment as the brief description. If set to NO, the JavaDoc
 # comments will behave just like regular Qt-style comments
-# (thus requiring an explicit \@brief command for a brief description.)
+# (thus requiring an explicit @brief command for a brief description.)
 
 JAVADOC_AUTOBRIEF      = YES 
 
@@ -175,7 +175,7 @@ TAB_SIZE               = 8
 # This tag can be used to specify a number of aliases that acts
 # as commands in the documentation. An alias has the form "name=value".
 # For example adding "sideeffect=\par Side Effects:\n" will allow you to
-# put the command \sideeffect (or \@sideeffect) in the documentation, which
+# put the command \sideeffect (or @sideeffect) in the documentation, which
 # will result in a user-defined paragraph with heading "Side Effects:".
 # You can put \n's in the value part of an alias to insert newlines.
 
