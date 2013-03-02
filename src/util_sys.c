@@ -413,11 +413,17 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
       }
 
 #ifdef _POSIX_SAVED_IDS
-      setegid(gid_real);
+      if(setegid(gid_real) == -1)
+      {
+        return -1;
+      }
       return seteuid(uid_real);
 #else
       /* i.e. for *BSD */
-      setregid(-1, gid_real);
+      if(setregid(-1, gid_real) == -1)
+      {
+        return -1;
+      }
       return setreuid(-1, uid_real);
 #endif
     }
@@ -425,7 +431,10 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
     /* get user_name information (UID and GID) */
     if(getpwnam_r(user_name, tmpUser, buf, sizeof(buf), &tmp) == 0)
     {
-      setegid(user.pw_gid);
+      if(setegid(user.pw_gid) == -1)
+      {
+        return -1;
+      }
       return seteuid(user.pw_uid);
     }
     else
@@ -447,11 +456,17 @@ int uid_gain_privileges(uid_t uid_eff, gid_t gid_eff)
 #else
   /* Unix */
 #ifdef _POSIX_SAVED_IDS
-  setegid(gid_eff);
+  if(setegid(gid_eff) == -1)
+  {
+    return -1;
+  }
   return seteuid(uid_eff);
 #else
   /* i.e for *BSD */
-  setregid(-1, gid_eff);
+  if(setregid(-1, gid_eff) == -1)
+  {
+    return -1;
+  }
   return setreuid(-1, uid_eff);
 #endif
 #endif
