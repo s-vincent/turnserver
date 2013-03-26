@@ -646,45 +646,45 @@ static int turnserver_send_error(int transport_protocol, int sock, int method,
   struct iovec iov[16]; /* should be sufficient */
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
-  size_t index = 0;
+  size_t idx = 0;
 
   switch(error)
   {
     case 400: /* Bad request */
-      hdr = turn_error_response_400(method, id, &iov[index], &index);
+      hdr = turn_error_response_400(method, id, &iov[idx], &idx);
       break;
     case 403: /* Forbidden */
-      hdr = turn_error_response_403(method, id, &iov[index], &index);
+      hdr = turn_error_response_403(method, id, &iov[idx], &idx);
       break;
     case 437: /* Alocation mismatch */
-      hdr = turn_error_response_437(method, id, &iov[index], &index);
+      hdr = turn_error_response_437(method, id, &iov[idx], &idx);
       break;
     case 440: /* Address family not supported */
-      hdr = turn_error_response_440(method, id, &iov[index], &index);
+      hdr = turn_error_response_440(method, id, &iov[idx], &idx);
       break;
     case 441: /* Wrong credentials */
-      hdr = turn_error_response_441(method, id, &iov[index], &index);
+      hdr = turn_error_response_441(method, id, &iov[idx], &idx);
       break;
     case 442: /* Unsupported transport protocol */
-      hdr = turn_error_response_442(method, id, &iov[index], &index);
+      hdr = turn_error_response_442(method, id, &iov[idx], &idx);
       break;
     case 443: /* Peer address family mismatch */
-      hdr = turn_error_response_443(method, id, &iov[index], &index);
+      hdr = turn_error_response_443(method, id, &iov[idx], &idx);
       break;
     case 446: /* Connection already exists (RFC6062) */
-      hdr = turn_error_response_446(method, id, &iov[index], &index);
+      hdr = turn_error_response_446(method, id, &iov[idx], &idx);
       break;
     case 447: /* Connection timeout or failure (RFC6062) */
-      hdr = turn_error_response_447(method, id, &iov[index], &index);
+      hdr = turn_error_response_447(method, id, &iov[idx], &idx);
       break;
     case 486: /* Allocation quota reached */
-      hdr = turn_error_response_486(method, id, &iov[index], &index);
+      hdr = turn_error_response_486(method, id, &iov[idx], &idx);
       break;
     case 500: /* Server error */
-      hdr = turn_error_response_500(method, id, &iov[index], &index);
+      hdr = turn_error_response_500(method, id, &iov[idx], &idx);
       break;
     case 508: /* Insufficient port capacity */
-      hdr = turn_error_response_508(method, id, &iov[index], &index);
+      hdr = turn_error_response_508(method, id, &iov[idx], &idx);
       break;
     default:
       break;
@@ -697,27 +697,27 @@ static int turnserver_send_error(int transport_protocol, int sock, int method,
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
   if(key)
   {
-    if(turn_add_message_integrity(iov, &index, key, 16, 1) == -1)
+    if(turn_add_message_integrity(iov, &idx, key, 16, 1) == -1)
     {
       /* MESSAGE-INTEGRITY option has to be in message, so
        * deallocate ressources and return
        */
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       return -1;
     }
     /* function above already set turn_msg_len field to big endian */
   }
   else
   {
-    turn_add_fingerprint(iov, &index); /* not fatal if not successful */
+    turn_add_fingerprint(iov, &idx); /* not fatal if not successful */
 
     /* convert to big endian */
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
@@ -725,13 +725,13 @@ static int turnserver_send_error(int transport_protocol, int sock, int method,
 
   /* finally send the response */
   if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
   return 0;
 }
 
@@ -936,7 +936,7 @@ static int turnserver_process_connectionbind_request(int transport_protocol,
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   struct iovec iov[8];
-  size_t index = 0;
+  size_t idx = 0;
 
   debug(DBG_ATTR, "ConnectionBind request received!\n");
 
@@ -1000,57 +1000,57 @@ static int turnserver_process_connectionbind_request(int transport_protocol,
 
   /* ConnectionBind response */
   if(!(hdr = turn_msg_connectionbind_response_create(0,
-      message->msg->turn_msg_id, &iov[index])))
+      message->msg->turn_msg_id, &iov[idx])))
   {
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
-  index++;
+  idx++;
 
   /* connection-id */
   if(!(attr = turn_attr_connection_id_create(
-          message->connection_id->turn_attr_id, &iov[index])))
+          message->connection_id->turn_attr_id, &iov[idx])))
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          strlen(SOFTWARE_DESCRIPTION), &iov[index])))
+          strlen(SOFTWARE_DESCRIPTION), &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+  if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
       == -1)
   {
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, account->key);
     return -1;
   }
 
   if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return -1;
   }
 
   /* free message */
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
 
   /* initialized client socket */
   tcp_relay->client_sock = sock;
@@ -1137,51 +1137,51 @@ static int turnserver_process_binding_request(int transport_protocol, int sock,
     socklen_t saddr_size, struct tls_peer* speer)
 {
   struct iovec iov[4]; /* header, software, xor-address, fingerprint */
-  size_t index = 0;
+  size_t idx = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
 
   debug(DBG_ATTR, "Binding request received!\n");
 
   if(!(hdr = turn_msg_binding_response_create(0, message->msg->turn_msg_id,
-          &iov[index])))
+          &iov[idx])))
   {
     return -1;
   }
-  index++;
+  idx++;
 
   if(!(attr = turn_attr_xor_mapped_address_create(saddr, STUN_MAGIC_COOKIE,
-          message->msg->turn_msg_id, &iov[index])))
+          message->msg->turn_msg_id, &iov[idx])))
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
   /* NOTE: maybe add a configuration flag to enable/disable fingerprint in
    * output message
    */
   /* add a fingerprint */
-  if(!(attr = turn_attr_fingerprint_create(0, &iov[index])))
+  if(!(attr = turn_attr_fingerprint_create(0, &iov[idx])))
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, STUN_METHOD_BINDING,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
     return -1;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
   /* compute fingerprint */
 
@@ -1190,18 +1190,18 @@ static int turnserver_process_binding_request(int transport_protocol, int sock,
 
   /* do not take into account the attribute itself */
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc =
-    htonl(turn_calculate_fingerprint(iov, index - 1));
+    htonl(turn_calculate_fingerprint(iov, idx - 1));
   ((struct turn_attr_fingerprint*)attr)->turn_attr_crc ^=
     htonl(STUN_FINGERPRINT_XOR_VALUE);
 
   if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
   return 0;
 }
 
@@ -1615,7 +1615,7 @@ static int turnserver_process_createpermission_request(int transport_protocol,
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   struct iovec iov[4]; /* header, software, integrity, fingerprint */
-  size_t index = 0;
+  size_t idx = 0;
   char str[INET6_ADDRSTRLEN];
   char str2[INET6_ADDRSTRLEN];
   char str3[INET6_ADDRSTRLEN];
@@ -1777,26 +1777,26 @@ static int turnserver_process_createpermission_request(int transport_protocol,
 
   /* send a CreatePermission success response */
   if(!(hdr = turn_msg_createpermission_response_create(0,
-          message->msg->turn_msg_id, &iov[index])))
+          message->msg->turn_msg_id, &iov[idx])))
   {
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
     return -1;
   }
-  index++;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+  if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
       == -1)
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
     return -1;
@@ -1808,13 +1808,13 @@ static int turnserver_process_createpermission_request(int transport_protocol,
   /* finally send the response */
 
   if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
   return 0;
 }
 
@@ -1837,7 +1837,7 @@ static int turnserver_process_channelbind_request(int transport_protocol,
   uint16_t hdr_msg_type = htons(message->msg->turn_msg_type);
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
   struct iovec iov[5]; /* header, lifetime, software, integrity, fingerprint */
-  size_t index = 0;
+  size_t idx = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   uint16_t channel = 0;
@@ -2026,26 +2026,26 @@ static int turnserver_process_channelbind_request(int transport_protocol,
 
   /* finally send the response */
   if(!(hdr = turn_msg_channelbind_response_create(0, message->msg->turn_msg_id,
-          &iov[index])))
+          &iov[idx])))
   {
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
     return -1;
   }
-  index++;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+  if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
       == -1)
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
     return -1;
@@ -2056,13 +2056,13 @@ static int turnserver_process_channelbind_request(int transport_protocol,
 
   /* finally send the response */
   if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
   return 0;
 }
 
@@ -2090,7 +2090,7 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock,
   uint16_t method = STUN_GET_METHOD(hdr_msg_type);
   uint32_t lifetime = 0;
   struct iovec iov[5]; /* header, lifetime, software, integrity, fingerprint */
-  size_t index = 0;
+  size_t idx = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   uint8_t key[16];
@@ -2207,35 +2207,35 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock,
   }
 
   if(!(hdr = turn_msg_refresh_response_create(0, message->msg->turn_msg_id,
-          &iov[index])))
+          &iov[idx])))
   {
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
     return -1;
   }
-  index++;
+  idx++;
 
-  if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
+  if(!(attr = turn_attr_lifetime_create(lifetime, &iov[idx])))
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
     return -1;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
-  if(turn_add_message_integrity(iov, &index, key, sizeof(key), 1) == -1)
+  if(turn_add_message_integrity(iov, &idx, key, sizeof(key), 1) == -1)
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     turnserver_send_error(transport_protocol, sock, method,
         message->msg->turn_msg_id, 500, saddr, saddr_size, speer, key);
     return -1;
@@ -2245,13 +2245,13 @@ static int turnserver_process_refresh_request(int transport_protocol, int sock,
 
   /* finally send the response */
   if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
   return 0;
 }
 
@@ -2389,13 +2389,13 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     uint16_t unknown[2];
     struct turn_msg_hdr* error = NULL;
     struct turn_attr_hdr* attr = NULL;
-    size_t index = 0;
+    size_t idx = 0;
 
     /* send error 420 */
     unknown[0] = TURN_ATTR_DONT_FRAGMENT;
 
     if(!(error = turn_error_response_420(method, message->msg->turn_msg_id,
-            unknown, 1, iov, &index)))
+            unknown, 1, iov, &idx)))
     {
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500, saddr, saddr_size, speer,
@@ -2405,16 +2405,16 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
 
     /* software (not fatal if it cannot be allocated) */
     if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-            sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+            sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
     {
-      error->turn_msg_len += iov[index].iov_len;
-      index++;
+      error->turn_msg_len += iov[idx].iov_len;
+      idx++;
     }
 
-    if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+    if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
         == -1)
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500, saddr, saddr_size, speer,
           account->key);
@@ -2422,14 +2422,14 @@ static int turnserver_process_allocate_request(int transport_protocol, int sock,
     }
 
     if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-          ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+          ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
         == -1)
     {
       debug(DBG_ATTR, "turn_send_message failed\n");
     }
 
     /* free sent data */
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return 0;
   }
 #endif
@@ -2806,39 +2806,39 @@ send_success_response:
     struct iovec iov[12];
     struct turn_msg_hdr* hdr = NULL;
     struct turn_attr_hdr* attr = NULL;
-    size_t index = 0;
+    size_t idx = 0;
 
     if(!(hdr = turn_msg_allocate_response_create(0, message->msg->turn_msg_id,
-            &iov[index])))
+            &iov[idx])))
     {
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
       return -1;
     }
-    index++;
+    idx++;
 
     /* required attributes */
     if(!(attr = turn_attr_xor_relayed_address_create(
             (struct sockaddr*)&relayed_addr, STUN_MAGIC_COOKIE,
-            message->msg->turn_msg_id, &iov[index])))
+            message->msg->turn_msg_id, &iov[idx])))
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
       return -1;
     }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
 
-    if(!(attr = turn_attr_lifetime_create(lifetime, &iov[index])))
+    if(!(attr = turn_attr_lifetime_create(lifetime, &iov[idx])))
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500,saddr, saddr_size, speer, desc->key);
       return -1;
     }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
 
     switch(saddr->sa_family)
     {
@@ -2849,51 +2849,51 @@ send_success_response:
         port = ntohs(((struct sockaddr_in6*)saddr)->sin6_port);
         break;
       default:
-        iovec_free_data(iov, index);
+        iovec_free_data(iov, idx);
         return -1;
         break;
     }
 
     if(!(attr = turn_attr_xor_mapped_address_create(saddr, STUN_MAGIC_COOKIE,
-            message->msg->turn_msg_id, &iov[index])))
+            message->msg->turn_msg_id, &iov[idx])))
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
       return -1;
     }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
 
     if(reservation_port)
     {
       /* server has stored a socket/port */
       debug(DBG_ATTR, "Send a reservation-token attribute\n");
       if(!(attr = turn_attr_reservation_token_create(reservation_token,
-              &iov[index])))
+              &iov[idx])))
       {
-        iovec_free_data(iov, index);
+        iovec_free_data(iov, idx);
         turnserver_send_error(transport_protocol, sock, method,
             message->msg->turn_msg_id, 500, saddr, saddr_size, speer,
             desc->key);
         return -1;
       }
-      hdr->turn_msg_len += iov[index].iov_len;
-      index++;
+      hdr->turn_msg_len += iov[idx].iov_len;
+      idx++;
     }
 
     /* software (not fatal if it cannot be allocated) */
     if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-            sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+            sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
     {
-      hdr->turn_msg_len += iov[index].iov_len;
-      index++;
+      hdr->turn_msg_len += iov[idx].iov_len;
+      idx++;
     }
 
-    if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+    if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
         == -1)
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       turnserver_send_error(transport_protocol, sock, method,
           message->msg->turn_msg_id, 500, saddr, saddr_size, speer, desc->key);
       return -1;
@@ -2902,13 +2902,13 @@ send_success_response:
     debug(DBG_ATTR, "Allocation successful, send success allocate response\n");
 
     if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-          ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+          ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
         == -1)
     {
       debug(DBG_ATTR, "turn_send_message failed\n");
     }
 
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
   }
 
   return 0;
@@ -3267,7 +3267,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
       struct turn_msg_hdr* error = NULL;
       struct turn_attr_hdr* attr = NULL;
       char* key = NULL;
-      size_t index = 0;
+      size_t idx = 0;
 
       debug(DBG_ATTR, "No message integrity\n");
 
@@ -3276,7 +3276,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
           strlen(key));
 
       if(!(error = turn_error_response_401(method, message.msg->turn_msg_id,
-              turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
+              turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &idx)))
       {
         turnserver_send_error(transport_protocol, sock, method,
             message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
@@ -3285,26 +3285,26 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
       /* software (not fatal if it cannot be allocated) */
       if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-              sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+              sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
       {
-        error->turn_msg_len += iov[index].iov_len;
-        index++;
+        error->turn_msg_len += iov[idx].iov_len;
+        idx++;
       }
 
-      turn_add_fingerprint(iov, &index); /* not fatal if not successful */
+      turn_add_fingerprint(iov, &idx); /* not fatal if not successful */
 
       /* convert to big endian */
       error->turn_msg_len = htons(error->turn_msg_len);
 
       if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
             ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov,
-            index) == -1)
+            idx) == -1)
       {
         debug(DBG_ATTR, "turn_send_message failed\n");
       }
 
       /* free sent data */
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       return 0;
     }
 
@@ -3324,7 +3324,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
       /* nonce staled => error 438 */
       /* header, error-code, realm, nonce, software */
       struct iovec iov[5];
-      size_t index = 0;
+      size_t idx = 0;
       struct turn_msg_hdr* error = NULL;
       struct turn_attr_hdr* attr = NULL;
       uint8_t nonce[48];
@@ -3333,10 +3333,10 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
       turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key,
           strlen(key));
-      index = 0;
+      idx = 0;
 
       if(!(error = turn_error_response_438(method, message.msg->turn_msg_id,
-              realm, nonce, sizeof(nonce), iov, &index)))
+              realm, nonce, sizeof(nonce), iov, &idx)))
       {
         turnserver_send_error(transport_protocol, sock, method,
             message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
@@ -3345,10 +3345,10 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
       /* software (not fatal if it cannot be allocated) */
       if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-              sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+              sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
       {
-        error->turn_msg_len += iov[index].iov_len;
-        index++;
+        error->turn_msg_len += iov[idx].iov_len;
+        idx++;
       }
 
       /* convert to big endian */
@@ -3356,13 +3356,13 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
       if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
             ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov,
-            index) == -1)
+            idx) == -1)
       {
         debug(DBG_ATTR, "turn_send_message failed\n");
       }
 
       /* free sent data */
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       return 0;
     }
 
@@ -3394,7 +3394,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
       {
         /* not valid username => error 401 */
         struct iovec iov[5]; /* header, error-code, realm, nonce, software */
-        size_t index = 0;
+        size_t idx = 0;
         struct turn_msg_hdr* error = NULL;
         struct turn_attr_hdr* attr = NULL;
         uint8_t nonce[48];
@@ -3405,10 +3405,10 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)key,
             strlen(key));
-        index = 0;
+        idx = 0;
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id,
-                realm, nonce, sizeof(nonce), iov, &index)))
+                realm, nonce, sizeof(nonce), iov, &idx)))
         {
           turnserver_send_error(transport_protocol, sock, method,
               message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
@@ -3417,26 +3417,26 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
         /* software (not fatal if it cannot be allocated) */
         if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-                sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+                sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
         {
-          error->turn_msg_len += iov[index].iov_len;
-          index++;
+          error->turn_msg_len += iov[idx].iov_len;
+          idx++;
         }
 
-        turn_add_fingerprint(iov, &index); /* not fatal if not successful */
+        turn_add_fingerprint(iov, &idx); /* not fatal if not successful */
 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
         if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
               ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov,
-              index) == -1)
+              idx) == -1)
         {
           debug(DBG_ATTR, "turn_send_message failed\n");
         }
 
         /* free sent data */
-        iovec_free_data(iov, index);
+        iovec_free_data(iov, idx);
         return 0;
       }
     }
@@ -3474,7 +3474,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
       {
         /* integrity does not match => error 401 */
         struct iovec iov[5]; /* header, error-code, realm, nonce, software */
-        size_t index = 0;
+        size_t idx = 0;
         struct turn_msg_hdr* error = NULL;
         struct turn_attr_hdr* attr = NULL;
         uint8_t nonce[48];
@@ -3488,10 +3488,10 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 #endif
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)nonce_key,
             strlen(nonce_key));
-        index = 0;
+        idx = 0;
 
         if(!(error = turn_error_response_401(method, message.msg->turn_msg_id,
-                turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &index)))
+                turnserver_cfg_realm(), nonce, sizeof(nonce), iov, &idx)))
         {
           turnserver_send_error(transport_protocol, sock, method,
               message.msg->turn_msg_id, 500, saddr, saddr_size, speer, NULL);
@@ -3500,26 +3500,26 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
         /* software (not fatal if it cannot be allocated) */
         if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-                sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+                sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
         {
-          error->turn_msg_len += iov[index].iov_len;
-          index++;
+          error->turn_msg_len += iov[idx].iov_len;
+          idx++;
         }
 
-        turn_add_fingerprint(iov, &index); /* not fatal if not successful */
+        turn_add_fingerprint(iov, &idx); /* not fatal if not successful */
 
         /* convert to big endian */
         error->turn_msg_len = htons(error->turn_msg_len);
 
         if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
               ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov,
-              index) == -1)
+              idx) == -1)
         {
           debug(DBG_ATTR, "turn_send_message failed\n");
         }
 
         /* free sent data */
-        iovec_free_data(iov, index);
+        iovec_free_data(iov, idx);
         return 0;
       }
     }
@@ -3529,7 +3529,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
   if(unknown_size)
   {
     struct iovec iov[4]; /* header, error-code, unknown-attributes, software */
-    size_t index = 0;
+    size_t idx = 0;
     struct turn_msg_hdr* error = NULL;
     struct turn_attr_hdr* attr = NULL;
 
@@ -3543,7 +3543,7 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
     /* unknown attributes found => error 420 */
     if(!(error = turn_error_response_420(method, message.msg->turn_msg_id,
-            unknown, unknown_size, iov, &index)))
+            unknown, unknown_size, iov, &idx)))
     {
       turnserver_send_error(transport_protocol, sock, method,
           message.msg->turn_msg_id, 500, saddr, saddr_size, speer,
@@ -3553,24 +3553,24 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
 
     /* software (not fatal if it cannot be allocated) */
     if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-            sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+            sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
     {
-      error->turn_msg_len += iov[index].iov_len;
-      index++;
+      error->turn_msg_len += iov[idx].iov_len;
+      idx++;
     }
 
     /* convert to big endian */
     error->turn_msg_len = htons(error->turn_msg_len);
 
     if(turn_send_message(transport_protocol, sock, speer, saddr, saddr_size,
-          ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+          ntohs(error->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
         == -1)
     {
       debug(DBG_ATTR, "turn_send_message failed\n");
     }
 
     /* free sent data */
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return 0;
   }
 
@@ -3603,7 +3603,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
   uint16_t peer_port;
   uint32_t channel = 0;
   struct iovec iov[8]; /* header, peer-address, data */
-  size_t index = 0;
+  size_t idx = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   struct turn_channel_data channel_data;
@@ -3663,25 +3663,25 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
     channel_data.turn_channel_number = htons(channel);
     channel_data.turn_channel_len = htons(buflen); /* big endian */
 
-    iov[index].iov_base = &channel_data;
-    iov[index].iov_len = sizeof(struct turn_channel_data);
-    index++;
+    iov[idx].iov_base = &channel_data;
+    iov[idx].iov_len = sizeof(struct turn_channel_data);
+    idx++;
 
     if(buflen > 0)
     {
-      iov[index].iov_base = (void*)buf;
-      iov[index].iov_len = buflen;
+      iov[idx].iov_base = (void*)buf;
+      iov[idx].iov_len = buflen;
       len += buflen;
-      index++;
+      idx++;
     }
 
     /* add padding (MUST be included for TCP, MAY be included for UDP) */
     if(buflen % 4)
     {
-      iov[index].iov_base = &padding;
-      iov[index].iov_len = 4 - (buflen % 4);
-      len += iov[index].iov_len;
-      index++;
+      iov[idx].iov_base = &padding;
+      iov[idx].iov_len = 4 - (buflen % 4);
+      len += iov[idx].iov_len;
+      idx++;
     }
   }
   else
@@ -3690,28 +3690,28 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
     uint8_t id[12];
 
     turn_generate_transaction_id(id);
-    if(!(hdr = turn_msg_data_indication_create(0, id, &iov[index])))
+    if(!(hdr = turn_msg_data_indication_create(0, id, &iov[idx])))
     {
       return -1;
     }
-    index++;
+    idx++;
 
     if(!(attr = turn_attr_xor_peer_address_create(saddr, STUN_MAGIC_COOKIE, id,
-            &iov[index])))
+            &iov[idx])))
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       return -1;
     }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
 
-    if(!(attr = turn_attr_data_create(buf, buflen, &iov[index])))
+    if(!(attr = turn_attr_data_create(buf, buflen, &iov[idx])))
     {
-      iovec_free_data(iov, index);
+      iovec_free_data(iov, idx);
       return -1;
     }
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
 
     len = hdr->turn_msg_len + sizeof(struct turn_msg_hdr);
     hdr->turn_msg_len = htons(hdr->turn_msg_len);
@@ -3723,7 +3723,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
   if(speer) /* TLS */
   {
     nb = turn_tls_send(speer, (struct sockaddr*)&desc->tuple.client_addr,
-        sockaddr_get_size(&desc->tuple.client_addr), len, iov, index);
+        sockaddr_get_size(&desc->tuple.client_addr), len, iov, idx);
   }
   else if(desc->tuple.transport_protocol == IPPROTO_UDP) /* UDP */
   {
@@ -3768,7 +3768,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
 
     nb = turn_udp_send(desc->tuple_sock,
         (struct sockaddr*)&desc->tuple.client_addr,
-        sockaddr_get_size(&desc->tuple.client_addr), iov, index);
+        sockaddr_get_size(&desc->tuple.client_addr), iov, idx);
 
     /* if not an IPv4-IPv4 relay, optlen keep its default value 0 */
 #ifdef OS_SET_DF_SUPPORT
@@ -3782,7 +3782,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
   }
   else /* TCP */
   {
-    nb = turn_tcp_send(desc->tuple_sock, iov, index);
+    nb = turn_tcp_send(desc->tuple_sock, iov, idx);
   }
 
   if(nb == -1)
@@ -3793,7 +3793,7 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
   /* if use a channel, do not used dynamic allocation */
   if(!channel)
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
   }
 
   return 0;
@@ -3988,7 +3988,7 @@ static int turnserver_handle_tcp_connect(int sock,
   int err = 0;
   socklen_t err_size = sizeof(int);
   struct iovec iov[8];
-  size_t index = 0;
+  size_t idx = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   struct sockaddr* saddr = (struct sockaddr*)&desc->tuple.client_addr;
@@ -4007,42 +4007,42 @@ static int turnserver_handle_tcp_connect(int sock,
   }
 
   if(!(hdr = turn_msg_connect_response_create(0, relay->connect_msg_id,
-          &iov[index])))
+          &iov[idx])))
   {
     return -2;
   }
-  index++;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
   if(!(attr = turn_attr_connection_id_create(relay->connection_id,
-          &iov[index])))
+          &iov[idx])))
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return -2;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+  if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
       == -1)
   {
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return -2;
   }
 
   /* send message */
   ret = turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer, saddr,
       saddr_size, ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov,
-      index);
+      idx);
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
 
   if(ret == -1)
   {
@@ -4085,7 +4085,7 @@ static void turnserver_handle_tcp_incoming_connection(int sock,
   uint16_t peer_port = 0;
   uint32_t id = 0;
   uint8_t msg_id[12]; /* for ConnectionAttempt message ID */
-  size_t index = 0;
+  size_t idx = 0;
   struct turn_msg_hdr* hdr = NULL;
   struct turn_attr_hdr* attr = NULL;
   struct iovec iov[8];
@@ -4143,46 +4143,46 @@ static void turnserver_handle_tcp_incoming_connection(int sock,
 
   /* now send ConnectionAttempt to client */
   if(!(hdr = turn_msg_connectionattempt_indication_create(0, msg_id,
-          &iov[index])))
+          &iov[idx])))
   {
     /* ignore ? */
     close(rsock);
     return;
   }
-  index++;
+  idx++;
 
   /* software (not fatal if it cannot be allocated) */
   if((attr = turn_attr_software_create(SOFTWARE_DESCRIPTION,
-          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[index])))
+          sizeof(SOFTWARE_DESCRIPTION) - 1, &iov[idx])))
   {
-    hdr->turn_msg_len += iov[index].iov_len;
-    index++;
+    hdr->turn_msg_len += iov[idx].iov_len;
+    idx++;
   }
 
-  if(!(attr = turn_attr_connection_id_create(id, &iov[index])))
+  if(!(attr = turn_attr_connection_id_create(id, &iov[idx])))
   {
     close(rsock);
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
   if(!(attr = turn_attr_xor_peer_address_create((struct sockaddr*)&saddr,
-          STUN_MAGIC_COOKIE, msg_id, &iov[index])))
+          STUN_MAGIC_COOKIE, msg_id, &iov[idx])))
   {
     close(rsock);
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return;
   }
-  hdr->turn_msg_len += iov[index].iov_len;
-  index++;
+  hdr->turn_msg_len += iov[idx].iov_len;
+  idx++;
 
-  if(turn_add_message_integrity(iov, &index, desc->key, sizeof(desc->key), 1)
+  if(turn_add_message_integrity(iov, &idx, desc->key, sizeof(desc->key), 1)
       == -1)
   {
     close(rsock);
-    iovec_free_data(iov, index);
+    iovec_free_data(iov, idx);
     return;
   }
 
@@ -4190,13 +4190,13 @@ static void turnserver_handle_tcp_incoming_connection(int sock,
   if(turn_send_message(IPPROTO_TCP, desc->tuple_sock, speer,
         (struct sockaddr*)&desc->tuple.client_addr,
         sockaddr_get_size(&desc->tuple.client_addr),
-        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, index)
+        ntohs(hdr->turn_msg_len) + sizeof(struct turn_msg_hdr), iov, idx)
       == -1)
   {
     debug(DBG_ATTR, "turn_send_message failed\n");
   }
 
-  iovec_free_data(iov, index);
+  iovec_free_data(iov, idx);
   return;
 }
 
