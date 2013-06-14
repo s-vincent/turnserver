@@ -1,10 +1,10 @@
-2012-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
+2013-06-14	Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.8			 - 
+	* Version 0.7.3		 - Minor fix to be able to compile with recent glibc.
 
-2012-11-19      Daniel Pocock <daniel@pocock.com.au>
+2012-11-19	Daniel Pocock <daniel@pocock.com.au>
 
-        * Version 0.7.2          - Further tweaks to autotools
+  * Version 0.7.2		 - Further tweaks to autotools
 
 2012-10-17	Sebastien Vincent <sebastien.vincent@turnserver.org>
 
