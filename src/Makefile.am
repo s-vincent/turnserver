@@ -14,6 +14,7 @@ noinst_HEADERS = turnserver.h \
 								 protocol.h \
 								 dbg.h \
 								 util_sys.h \
+								 util_net.h \
 								 util_crypto.h \
 								 list.h \
 								 tls_peer.h \
@@ -26,6 +27,7 @@ turnserver_SOURCES = turnserver.c \
 										 protocol.c \
 										 dbg.c \
 										 util_sys.c \
+										 util_net.c \
 										 util_crypto.c \
 										 tls_peer.c \
 										 allocation.c \
@@ -35,11 +37,13 @@ turnserver_SOURCES = turnserver.c \
 
 test_turn_client_SOURCES = test_turn_client.c \
 											protocol.c \
+											util_net.c \
 											util_crypto.c \
 											tls_peer.c \
 											util_sys.c
 
 test_echo_server_SOURCES = test_echo_server.c \
+													 util_net.c \
 													 tls_peer.c
 
 valgrind-run:

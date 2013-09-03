@@ -81,6 +81,7 @@
 
 #include "util_sys.h"
 #include "util_crypto.h"
+#include "util_net.h"
 #include "protocol.h"
 #include "tls_peer.h"
 
@@ -332,7 +333,7 @@ static int client_setup_socket(int transport_protocol, const char* addr, uint16_
   }
   else if(sock)
   {
-    *sock = socket_create(transport_protocol, addr, port, 0, 1);
+    *sock = net_socket_create(transport_protocol, addr, port, 0, 1);
     return (*sock != -1) ? 0 : -1;
   }
 
@@ -481,7 +482,7 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
       /* MESSAGE-INTEGRITY option has to be in message, so
        * deallocate ressources and return
        */
-      iovec_free_data(iov, index);
+      net_iovec_free_data(iov, index);
       return -1;
     }
   }
@@ -493,11 +494,11 @@ static int client_allocate_address(int transport_protocol, int relay_protocol, i
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 
   nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
 
@@ -591,7 +592,7 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -601,11 +602,11 @@ static int client_refresh_allocation(int transport_protocol, int sock, struct tl
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 
   nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
 
@@ -692,7 +693,7 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -702,11 +703,11 @@ static int client_create_permission(int transport_protocol, int sock, struct tls
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 
   nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
 
@@ -801,7 +802,7 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -811,11 +812,11 @@ static int client_send_data(int transport_protocol, int sock, struct tls_peer* s
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 
   nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
 
@@ -914,7 +915,7 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -924,11 +925,11 @@ static int client_channelbind(int transport_protocol, int sock, struct tls_peer*
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 
   nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
 
@@ -985,7 +986,7 @@ static int client_send_channeldata(int transport_protocol, int sock, struct tls_
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -1070,7 +1071,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -1080,11 +1081,11 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
   index = 0;
 
   nb = client_recv_message(transport_protocol, sock, speer, buf, sizeof(buf));
@@ -1159,7 +1160,7 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -1169,10 +1170,10 @@ static int client_send_connect(int transport_protocol, int sock, struct tls_peer
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 
   nb = client_recv_message(transport_protocol, *sock_tcp, NULL, buf, sizeof(buf));
 
@@ -1229,8 +1230,8 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
 
   tv.tv_sec = 10; /* 10 seconds before timeout */
   tv.tv_usec = 0;
-  SFD_ZERO(&fdsr);
-  SFD_SET(sock, &fdsr);
+  NET_SFD_ZERO(&fdsr);
+  NET_SFD_SET(sock, &fdsr);
 
   nsock = sock + 1;
 
@@ -1317,7 +1318,7 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
     /* MESSAGE-INTEGRITY option has to be in message, so
      * deallocate ressources and return
      */
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
@@ -1327,11 +1328,11 @@ static int client_wait_connection(int transport_protocol, int sock, struct tls_p
   {
     fprintf(stderr, "Send failed!\n");
     perror("send");
-    iovec_free_data(iov, index);
+    net_iovec_free_data(iov, index);
     return -1;
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
   return 0;
 }
 
@@ -1561,8 +1562,9 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain, password);
-  md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
+  snprintf((char*)userdomainpass, userdomainpass_len, "%s:%s:%s", user, domain,
+      password);
+  crypto_md5_generate(md_buf, userdomainpass, userdomainpass_len - 1);
 
   /* client connected and can send TURN message */
   fprintf(stdout, "sock: %d speer: %p connected!\n", sock, (void*)speer);

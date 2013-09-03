@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2009 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2013 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2008-2009 Sebastien Vincent.
+ * Copyright (C) 2008-2013 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@
  * \file util_crypto.c
  * \brief Some helper cryptographic functions.
  * \author Sebastien Vincent
- * \date 2008-2009
+ * \date 2008-2013
  */
 
 #include <stdio.h>
@@ -77,7 +77,7 @@ extern "C"
 { /* } */
 #endif
 
-int seed_prng_init(void)
+int crypto_seed_prng_init(void)
 {
 #if !defined(_WIN32) && !defined(_WIN64)
   if(access("/dev/urandom", F_OK) != ENOENT)
@@ -107,12 +107,12 @@ int seed_prng_init(void)
   return 0;
 }
 
-void seed_prng_cleanup(void)
+void crypto_seed_prng_cleanup(void)
 {
   RAND_cleanup();
 }
 
-int random_bytes_generate(uint8_t* id, size_t len)
+int crypto_random_bytes_generate(uint8_t* id, size_t len)
 {
   if(!RAND_bytes(id, len))
   {
@@ -122,7 +122,7 @@ int random_bytes_generate(uint8_t* id, size_t len)
   return 0;
 }
 
-int sha1_generate(unsigned char* hash, const unsigned char* text, size_t len)
+int crypto_sha1_generate(unsigned char* hash, const unsigned char* text, size_t len)
 {
   if(!SHA1(text, len, hash))
   {
@@ -132,7 +132,7 @@ int sha1_generate(unsigned char* hash, const unsigned char* text, size_t len)
   return 0;
 }
 
-int md5_generate(unsigned char* hash, const unsigned char* text, size_t len)
+int crypto_md5_generate(unsigned char* hash, const unsigned char* text, size_t len)
 {
   if(!MD5(text, len, hash))
   {
@@ -142,7 +142,7 @@ int md5_generate(unsigned char* hash, const unsigned char* text, size_t len)
   return 0;
 }
 
-int hmac_sha1_generate(unsigned char* hash, const unsigned char* text,
+int crypto_hmac_sha1_generate(unsigned char* hash, const unsigned char* text,
     size_t text_len, const unsigned char* key, size_t key_len)
 {
   unsigned int md_len = SHA_DIGEST_LENGTH;
@@ -155,7 +155,7 @@ int hmac_sha1_generate(unsigned char* hash, const unsigned char* text,
   return 0;
 }
 
-int hmac_md5_generate(unsigned char* hash, const unsigned char* text,
+int crypto_hmac_md5_generate(unsigned char* hash, const unsigned char* text,
     size_t text_len, const unsigned char* key, size_t key_len)
 {
   unsigned int md_len = MD5_DIGEST_LENGTH;
@@ -168,26 +168,7 @@ int hmac_md5_generate(unsigned char* hash, const unsigned char* text,
   return 0;
 }
 
-void digest_print(const unsigned char* buf, size_t len)
-{
-  unsigned int i = 0;
-  char res[128];
-
-  if(len > sizeof(res) - 1)
-  {
-    return;
-  }
-
-  for(i = 0 ; i < len ; i++)
-  {
-    sprintf(&res[i * 2], "%02x", buf[i]);
-  }
-  res[i * 2] = 0x00;
-
-  fprintf(stderr, "%s\n", res);
-}
-
-uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
+uint32_t crypto_crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
 {
   /* http://fxr.watson.org/fxr/source/libkern/crc32.c?v=DFBSD
    * formal specification http://www.itu.int/rec/T-REC-V.42-200203-I/en
@@ -259,6 +240,25 @@ uint32_t crc32_generate(const uint8_t* data, size_t len, uint32_t prev)
   }
 
   return crc ^ 0xffffffff;
+}
+
+void crypto_digest_print(const unsigned char* buf, size_t len)
+{
+  unsigned int i = 0;
+  char res[128];
+
+  if(len > sizeof(res) - 1)
+  {
+    return;
+  }
+
+  for(i = 0 ; i < len ; i++)
+  {
+    sprintf(&res[i * 2], "%02x", buf[i]);
+  }
+  res[i * 2] = 0x00;
+
+  fprintf(stderr, "%s\n", res);
 }
 
 #ifdef __cplusplus

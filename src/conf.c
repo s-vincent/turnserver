@@ -218,7 +218,7 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
     }
 
     /* add to the list */
-    LIST_ADD(&denied->list, denied_address_list);
+    list_head_add(&denied->list, denied_address_list);
   }
 
   return 0;

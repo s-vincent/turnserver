@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2011 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2013 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2011 Sebastien Vincent.
+ * Copyright (C) 2006-2013 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,11 +49,11 @@
  * \file dbg.h
  * \brief Some routines to print debug message.
  * \author Sebastien Vincent
- * \date 2006-2011
+ * \date 2006-2013
  */
 
-#ifndef DBG_H
-#define DBG_H
+#ifndef VSUTILS_DBG_H
+#define VSUTILS_DBG_H
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -67,39 +67,49 @@ extern "C"
 #include <sys/types.h>
 
 /**
+ * \def DBG_ATTR_FILE
+ * \brief Current file and line seperated with a comma.
+ */
+#define DBG_ATTR_FILE __FILE__, __LINE__
+
+#if __STDC_VERSION__ >= 199901L /* C99 */
+/**
+ * \def DBG_ATTR_FUNC
+ * \brief Current file and line seperated with a comma.
+ */
+#define DBG_ATTR_FUNC __func__, __LINE__
+
+/**
  * \def DBG_ATTR
  * \brief Current file and line seperated with a comma.
  */
-#define DBG_ATTR __FILE__, __LINE__
+#define DBG_ATTR DBG_ATTR_FUNC
+#else
+/**
+ * \def DBG_ATTR
+ * \brief Current file and line seperated with a comma.
+ */
+#define DBG_ATTR DBG_ATTR_FILE
+#endif
 
 /**
  * \brief Print a debug message on stderr.
- * \param f filename
- * \param line line number
- * \param format format of the output (similary to printf param)
- * \param ... list of arguments
+ * \param f filename.
+ * \param line line number.
+ * \param format format of the output (similary to printf param).
+ * \param ... list of arguments.
  * \author Sebastien Vincent
  */
 void dbg_print(const char* f, int line, const char* format, ...);
 
 /**
- * \brief Print nothing!
- * \param f filename
- * \param line line number
- * \param format format of the output (similary to printf param)
- * \param ... list of arguments
- * \author Sebastien Vincent
- */
-void dbg_print_null(const char* f, int line, const char* format, ...);
-
-/**
  * \brief Print the content of a buffer in hexadecimal.
- * \param f filename
- * \param line line number
- * \param buf buffer to print
- * \param len size of the buffer
- * \param format format of the output (similary to printf param)
- * \param ... list of arguments
+ * \param f filename.
+ * \param line line number.
+ * \param buf buffer to print.
+ * \param len size of the buffer.
+ * \param format format of the output (similary to printf param).
+ * \param ... list of arguments.
  * \author Sebastien Vincent
  * \warning Remember to pass pointer when you cast an integer for buf param.
  */
@@ -139,8 +149,8 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 /**
  * \def pthread_mutex_lock
  * \brief Print a debug message when pthread_mutex_lock function is used.
- * \param x thread id (pthread_t type)
- * \return 0 if success, a non nul value otherwise
+ * \param x thread id (pthread_t type).
+ * \return 0 if success, a non nul value otherwise.
  */
 #define pthread_mutex_lock(x) \
   do \
@@ -152,8 +162,8 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 /**
  * \def pthread_mutex_unlock
  * \brief Print a debug message when pthread_mutex_unlock function is used.
- * \param x thread id (pthread_t type)
- * \return 0 if success, a non nul value otherwise
+ * \param x thread id (pthread_t type).
+ * \return 0 if success, a non nul value otherwise.
  */
 #define pthread_mutex_unlock(x) \
   do \
@@ -165,9 +175,9 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 /**
  * \def pthread_join
  * \brief Print a debug message when pthread_join function is used.
- * \param x thread id (pthread_t type)
- * \param r return value of thread is stored in r (void** type)
- * \return 0 if success, a non nul value otherwise
+ * \param x thread id (pthread_t type).
+ * \param r return value of thread is stored in r (void** type).
+ * \return 0 if success, a non nul value otherwise.
  */
 #define pthread_join(x, r) \
   do \
@@ -180,7 +190,7 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 /**
  * \def pthread_exit
  * \brief Print a debug message when pthread_exit function is used.
- * \param x thread id (pthread_t type)
+ * \param x thread id (pthread_t type).
  */
 #define pthread_exit(x) \
   do \
@@ -192,8 +202,8 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 /**
  * \def pthread_cancel
  * \brief Print a debug message when pthread_exit function is used.
- * \param x thread id (pthread_t type)
- * \return 0 if success, a non nul value otherwise
+ * \param x thread id (pthread_t type).
+ * \return 0 if success, a non nul value otherwise.
  */
 #define pthread_cancel(x) \
   do \
@@ -207,5 +217,5 @@ void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,
 }
 #endif
 
-#endif /* DBG_H */
+#endif /* VSUTILS_DBG_H */
 

@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2010 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2013 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2010 Sebastien Vincent.
+ * Copyright (C) 2006-2013 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,13 +49,15 @@
  * \file util_sys.c
  * \brief Some helper system functions.
  * \author Sebastien Vincent
- * \date 2006-2010
+ * \date 2006-2013
  */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
+#include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <fcntl.h>
 
@@ -73,18 +75,18 @@
 #include "util_sys.h"
 
 /**
- * \def UNKNOWN_ERROR
+ * \def SYS_UNKNOWN_ERROR
  * \brief Error string used when no other error string
  * are available.
  */
-#define UNKNOWN_ERROR "Unknown error!"
+#define SYS_UNKNOWN_ERROR "Unknown error!"
 
 #ifdef __cplusplus
 extern "C"
 { /* } */
 #endif
 
-int msleep(unsigned long usec)
+int sys_microsleep(unsigned long usec)
 {
   unsigned long sec = 0;
   struct timeval tv;
@@ -100,7 +102,7 @@ int msleep(unsigned long usec)
   return 0;
 }
 
-long get_dtablesize(void)
+long sys_get_dtablesize(void)
 {
 #if !defined(_WIN32) && !defined(_WIN64)
   return sysconf(_SC_OPEN_MAX);
@@ -109,7 +111,7 @@ long get_dtablesize(void)
      getrlimit(RLIMIT_NOFILE, &limit);
      return limit.rlim_cur;
    */
-#else
+#else /* Windows */
 #ifndef FD_SETSIZE
 #define FD_SETSIZE 256
 #endif
@@ -117,28 +119,28 @@ long get_dtablesize(void)
 #endif
 }
 
-int is_big_endian(void)
+int sys_is_big_endian(void)
 {
   long one = 1;
   return !(*((char *)(&one)));
 }
 
-int is_little_endian(void)
+int sys_is_little_endian(void)
 {
   long one = 1;
   return (*((char *)(&one)));
 }
 
-char* get_error(int errnum, char* buf, size_t buflen)
+char* sys_get_error(int errnum, char* buf, size_t buflen)
 {
   char* error = NULL;
-# if _POSIX_C_SOURCE == 200112L && !defined(_GNU_SOURCE)
+#if _POSIX_C_SOURCE == 200112L && !defined(_GNU_SOURCE)
   /* POSIX version */
   int ret = 0;
   ret = strerror_r(errnum, buf, buflen);
   if(ret == -1)
   {
-    strncpy(buf, UNKNOWN_ERROR, buflen - 1);
+    strncpy(buf, SYS_UNKNOWN_ERROR, buflen - 1);
     buf[buflen - 1] = 0x00;
   }
   error = buf;
@@ -153,7 +155,7 @@ char* get_error(int errnum, char* buf, size_t buflen)
   return error;
 }
 
-int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg),
+int sys_go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg),
     void* arg)
 {
   pid_t pid = -1;
@@ -163,7 +165,7 @@ int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg),
 
 #if defined(_WIN32) || defined(_WIN64)
   return -1;
-#else
+#else /* Unix */
 
   pid = fork();
 
@@ -227,171 +229,12 @@ int go_daemon(const char* dir, mode_t mask, void (*cleanup)(void* arg),
 #endif
 }
 
-char* encode_http_string(const char* str)
-{
-  size_t len = strlen(str);
-  char* p = NULL;
-  unsigned int i = 0;
-  unsigned int j = 0;
-
-  /* in the worst case, it take 3x (%20) the size */
-  p = malloc(sizeof(char) * (3 * len + 1));
-
-  if(!p)
-  {
-    return NULL;
-  }
-
-  for(i = 0, j = 0 ; i < len ; i++, j++)
-  {
-    unsigned int t = (unsigned int)str[i];
-
-    if(t < 42 || t == ',' || (t >= 58 && t < 64) ||
-       (t >= 91 && t < 95) || t == '`' ||
-       t > 122 || t == '+' || t == '&' ||
-       t == ',' || t == ';' || t == '/' ||
-       t == '?' || t == '@' || t == '$' ||
-       t == '=' || t == ':' )
-    {
-      /* replace */
-      sprintf(p + j, "%%%02X", t);
-      j += 2;
-    }
-    else
-    {
-      p[j] = (char)t;
-    }
-  }
-
-  p[j] = 0x00;
-
-  return p;
-}
-
-#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE < 500
-char* strdup(const char* str)
-{
-  char* ret = NULL;
-  size_t nb = strlen(str);
-
-  ret = malloc(nb + 1);
-  if(!ret)
-  {
-    return NULL;
-  }
-  memcpy(ret, str, nb); /* also copy the NULL character */
-  return ret;
-}
-#endif
-
-#if defined(_WIN32) || defined(_WIN64)
-ssize_t sock_readv(int fd, const struct iovec *iov, size_t iovcnt,
-    const struct sockaddr* addr, socklen_t* addr_size)
-{
-  /* it should be sufficient,
-   * the dynamically allocation is timecost.
-   * We could use a static WSABUF* winiov but
-   * the function would be non reentrant.
-   */
-  WSABUF winiov[50];
-  DWORD winiov_len = iovcnt;
-  size_t i = 0;
-  DWORD ret = 0;
-
-  if(iovcnt > sizeof(winiov))
-  {
-    return -1;
-  }
-
-  for(i = 0 ; i < iovcnt ; i++)
-  {
-    winiov[i].len = iov[i].iov_len;
-    winiov[i].buf = iov[i].iov_base;
-  }
-
-  if(addr) /* UDP case */
-  {
-    if(WSARecvFrom(fd, winiov, winiov_len, &ret, NULL, (struct sockaddr*)addr,
-          addr_size, NULL, NULL) != 0)
-    {
-      return -1;
-    }
-  }
-  else /* TCP case */
-  {
-    if(WSARecv(fd, winiov, winiov_len, &ret, NULL, NULL, NULL) != 0)
-    {
-      return -1;
-    }
-  }
-
-  return (ssize_t)ret;
-}
-
-ssize_t sock_writev(int fd, const struct iovec *iov, size_t iovcnt,
-    const struct sockaddr* addr, socklen_t addr_size)
-{
-  /* it should be sufficient,
-   * the dynamically allocation is timecost.
-   * We could use a static WSABUF* winiov but
-   * the function would be non reentrant.
-   */
-  WSABUF winiov[50];
-  DWORD winiov_len = iovcnt;
-  size_t i = 0;
-  DWORD ret = 0; /* number of byte read or written */
-
-  if(iovcnt > sizeof(winiov))
-  {
-    return -1;
-  }
-
-  for(i = 0 ; i < iovcnt ; i++)
-  {
-    winiov[i].len = iov[i].iov_len;
-    winiov[i].buf = iov[i].iov_base;
-  }
-
-  /* UDP case */
-  if(addr)
-  {
-    if(WSASendTo(fd, winiov, winiov_len, &ret, 0, (struct sockaddr*)addr,
-          addr_size, NULL, NULL) != 0)
-    {
-      /* error send */
-      return -1;
-    }
-  }
-  else /* TCP case */
-  {
-    if(WSASend(fd, winiov, winiov_len, &ret, 0, NULL, NULL) != 0)
-    {
-      /* error send */
-      return -1;
-    }
-  }
-  return (ssize_t)ret;
-}
-#endif
-
-void iovec_free_data(struct iovec* iov, uint32_t nb)
-{
-  size_t i = 0;
-
-  for(i = 0 ; i < nb ; i++)
-  {
-    free(iov[i].iov_base);
-    iov[i].iov_base = NULL;
-  }
-}
-
-int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
+int sys_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
     gid_t gid_eff, const char* user_name)
 {
 #if defined(_WIN32) || defined(_WIN64)
   return -1;
-#else
-  /* Unix */
+#else /* Unix */
   (void)gid_eff; /* not used for the moment */
 
   if(uid_real == 0 || uid_eff == 0)
@@ -413,17 +256,10 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
       }
 
 #ifdef _POSIX_SAVED_IDS
-      if(setegid(gid_real) == -1)
-      {
-        return -1;
-      }
+      setegid(gid_real);
       return seteuid(uid_real);
-#else
-      /* i.e. for *BSD */
-      if(setregid(-1, gid_real) == -1)
-      {
-        return -1;
-      }
+#else /* i.e. for *BSD */
+      setregid(-1, gid_real);
       return setreuid(-1, uid_real);
 #endif
     }
@@ -431,10 +267,7 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
     /* get user_name information (UID and GID) */
     if(getpwnam_r(user_name, tmpUser, buf, sizeof(buf), &tmp) == 0)
     {
-      if(setegid(user.pw_gid) == -1)
-      {
-        return -1;
-      }
+      setegid(user.pw_gid);
       return seteuid(user.pw_uid);
     }
     else
@@ -449,31 +282,23 @@ int uid_drop_privileges(uid_t uid_real, gid_t gid_real, uid_t uid_eff,
 #endif
 }
 
-int uid_gain_privileges(uid_t uid_eff, gid_t gid_eff)
+int sys_gain_privileges(uid_t uid_eff, gid_t gid_eff)
 {
 #if defined(_WIN32) || defined(_WIN64)
   return -1;
-#else
-  /* Unix */
+#else /* Unix */
 #ifdef _POSIX_SAVED_IDS
-  if(setegid(gid_eff) == -1)
-  {
-    return -1;
-  }
+  setegid(gid_eff);
   return seteuid(uid_eff);
-#else
-  /* i.e for *BSD */
-  if(setregid(-1, gid_eff) == -1)
-  {
-    return -1;
-  }
+#else /* i.e for *BSD */
+  setregid(-1, gid_eff);
   return setreuid(-1, uid_eff);
 #endif
 #endif
 }
 
-void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex,
-    size_t hex_len)
+void sys_convert_to_hex(const unsigned char* bin, size_t bin_len,
+    unsigned char* hex, size_t hex_len)
 {
   size_t i = 0;
   unsigned char j = 0;
@@ -504,7 +329,8 @@ void hex_convert(const unsigned char* bin, size_t bin_len, unsigned char* hex,
   }
 }
 
-void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t)
+void sys_convert_to_uint32(const unsigned char* data, size_t data_len,
+    uint32_t* t)
 {
   unsigned int i = 0;
   *t = 0;
@@ -524,7 +350,8 @@ void uint32_convert(const unsigned char* data, size_t data_len, uint32_t* t)
   }
 }
 
-void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t)
+void sys_convert_to_uint64(const unsigned char* data, size_t data_len,
+    uint64_t* t)
 {
   unsigned int i = 0;
   *t = 0;
@@ -542,6 +369,40 @@ void uint64_convert(const unsigned char* data, size_t data_len, uint64_t* t)
       *t += data[i] - 'a' + 10;
     }
   }
+}
+
+char* sys_s_strncpy(char* dest, const char* src, size_t n)
+{
+  char* ret = NULL;
+
+  ret = strncpy(dest, src, n - 1);
+  dest[n - 1] = 0x00; /* add the final NULL character */
+
+  return ret;
+}
+
+int sys_s_snprintf(char* str, size_t size, const char* format, ...)
+{
+  va_list args;
+  int ret = 0;
+
+  va_start(args, format);
+  ret = snprintf(str, size - 1, format,  args);
+  str[size - 1] = 0x00; /* add the final NULL character */
+
+  return ret;
+}
+
+void* sys_s_memset(void* src, int c, size_t len)
+{
+  volatile unsigned char* ptr = src;
+  size_t tmp = len;
+
+  while(tmp--)
+  {
+    *ptr++ = c;
+  }
+  return src;
 }
 
 #ifdef __cplusplus

@@ -137,10 +137,10 @@ static int tmpuser_delete(const char* user)
 
 int tmpuser_init(struct list_head* account_list)
 {
-  INIT_LIST(g_tmpuser.client_list);
+  list_head_init(&g_tmpuser.client_list);
 
   g_tmpuser.account_list = NULL;
-  g_tmpuser.sock = socket_create(TCP, "localhost", 8086, 0, 1);
+  g_tmpuser.sock = net_socket_create(TCP, "localhost", 8086, 0, 1);
 
   if(g_tmpuser.sock == -1)
   {
@@ -172,13 +172,13 @@ struct list_head* tmpuser_get_tcp_clients(void)
 void tmpuser_add_tcp_client(struct socket_desc* desc)
 {
   struct list_head* l = (struct list_head*)&desc->list;
-  LIST_ADD(l, &g_tmpuser.client_list);
+  list_head_add(l, &g_tmpuser.client_list);
 }
 
 void tmpuser_remove_tcp_client(struct socket_desc* desc)
 {
   struct list_head* l = (struct list_head*)&desc->list;
-  LIST_DEL(l);
+  list_head_remove(l, l);
 }
 
 int tmpuser_process_msg(const char* buf, ssize_t len)
@@ -290,9 +290,9 @@ void tmpuser_destroy(void)
     close(g_tmpuser.sock);
   }
 
-  list_iterate_safe(get, n, &g_tmpuser.client_list)
+  list_head_iterate_safe(&g_tmpuser.client_list, get, n)
   {
-    struct socket_desc* tmp = list_get(get, struct socket_desc, list);
+    struct socket_desc* tmp = list_head_get(get, struct socket_desc, list);
 
     if(tmp->sock)
     {
@@ -308,6 +308,6 @@ void tmpuser_destroy(void)
    */
   g_tmpuser.account_list = NULL;
 
-  INIT_LIST(g_tmpuser.client_list);
+  list_head_init(&g_tmpuser.client_list);
 }
 

@@ -1,6 +1,6 @@
 /*
  *  TurnServer - TURN server implementation.
- *  Copyright (C) 2008-2011 Sebastien Vincent <sebastien.vincent@turnserver.org>
+ *  Copyright (C) 2008-2013 Sebastien Vincent <sebastien.vincent@turnserver.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
  */
 
 /*
- * Copyright (C) 2006-2011 Sebastien Vincent.
+ * Copyright (C) 2006-2013 Sebastien Vincent.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@
  * \file dbg.c
  * \brief Some routines to print debug message.
  * \author Sebastien Vincent
- * \date 2006-2011
+ * \date 2006-2013
  */
 
 #ifdef HAVE_CONFIG_H
@@ -60,19 +60,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifdef _MSC_VER
-#include <windows.h>
-/* replacement for stdint.h */
-typedef __int8 int8_t;
-typedef unsigned __int8 uint8_t;
-typedef __int16 int16_t;
-typedef unsigned __int16 uint16_t;
-typedef __int32 int32_t;
-typedef unsigned __int32 uint32_t;
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-#else
 #include <stdint.h>
+
+#ifdef _MSC_VER
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
 #include <sys/time.h>
 #endif
 
@@ -106,19 +99,6 @@ void dbg_print(const char* f, int line, const char* format, ...)
   va_start(args, format);
   vfprintf(stderr, format, args);
   va_end(args);
-
-  /*
-  fprintf(stderr, "%02d:%02d:%02d.%06u [%s:%d] %s", tlt->tm_hour,
-    tlt->tm_min, tlt->tm_sec, (uint32_t)lt.tv_usec, file, line, msg);
-  */
-}
-
-void dbg_print_null(const char* f, int line, const char* format, ...)
-{
-  /* to avoid compilation warnings */
-  (void)f;
-  (void)line;
-  (void)format;
 }
 
 void dbg_print_hexa(const char* f, int line, const char* buf, size_t len,

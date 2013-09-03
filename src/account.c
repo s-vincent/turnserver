@@ -96,9 +96,9 @@ struct account_desc* account_list_find(struct list_head* list,
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
-  list_iterate_safe(get, n, list)
+  list_head_iterate_safe(list, get, n)
   {
-    struct account_desc* tmp = list_get(get, struct account_desc, list);
+    struct account_desc* tmp = list_head_get(get, struct account_desc, list);
 
     if(!strncmp(tmp->username, username, sizeof(tmp->username) - 1))
     {
@@ -119,25 +119,22 @@ void account_list_free(struct list_head* list)
   struct list_head* get = NULL;
   struct list_head* n = NULL;
 
-  list_iterate_safe(get, n, list)
+  list_head_iterate_safe(list, get, n)
   {
-    struct account_desc* tmp = list_get(get, struct account_desc, list);
-    LIST_DEL(&tmp->list);
+    struct account_desc* tmp = list_head_get(get, struct account_desc, list);
+    list_head_remove(list, &tmp->list);
     account_desc_free(&tmp);
   }
 }
 
 void account_list_add(struct list_head* list, struct account_desc* desc)
 {
-  LIST_ADD(&desc->list, list);
+  list_head_add(&desc->list, list);
 }
 
 void account_list_remove(struct list_head* list, struct account_desc* desc)
 {
-  /* to avoid compilation warning */
-  (void)list;
-
-  LIST_DEL(&desc->list);
+  list_head_remove(list, &desc->list);
 }
 
 int account_parse_file(struct list_head* list, const char* file)

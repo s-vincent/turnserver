@@ -9,6 +9,8 @@
 # Description:       Enable service provided by turnserver.
 ### END INIT INFO
 
+. /lib/lsb/init-functions
+
 set -e
 
 DAEMON=/usr/local/sbin/turnserver 
@@ -16,8 +18,6 @@ NAME=turnserver
 CONFIG=/usr/local/etc/turnserver.conf
 
 test -x $DAEMON || exit 0
-
-. /lib/lsb/init-functions
 
 case "$1" in
   start)

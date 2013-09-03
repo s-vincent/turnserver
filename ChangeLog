@@ -1,18 +1,18 @@
-2013-xx-xx	Sebastien Vincent <sebastien.vincent@turnserver.org>
+2013-xx-xx  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.8			 - 
+  * Version 0.8      - Move to a new vsutils source files (list, util_sys, ...).
 
-2013-06-14	Sebastien Vincent <sebastien.vincent@turnserver.org>
+2013-06-14  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.7.3		 - Minor fix to be able to compile with recent glibc.
+  * Version 0.7.3    - Minor fix to be able to compile with recent glibc.
 
-2012-11-19	Daniel Pocock <daniel@pocock.com.au>
+2012-11-19  Daniel Pocock <daniel@pocock.com.au>
 
-  * Version 0.7.2		 - Further tweaks to autotools
+  * Version 0.7.2    - Further tweaks to autotools.
 
-2012-10-17	Sebastien Vincent <sebastien.vincent@turnserver.org>
+2012-10-17  Sebastien Vincent <sebastien.vincent@turnserver.org>
 
-	* Version 0.7.1		 - Minor modifications to ease Debian package integration.
+  * Version 0.7.1    - Minor modifications to ease Debian package integration.
 
 2012-10-01  Sebastien Vincent <sebastien.vincent@turnserver.org>
 

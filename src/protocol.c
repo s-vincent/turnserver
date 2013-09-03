@@ -48,6 +48,7 @@
 #include <openssl/hmac.h>
 
 #include "util_sys.h"
+#include "util_net.h"
 #include "util_crypto.h"
 #include "protocol.h"
 
@@ -520,7 +521,7 @@ struct turn_attr_hdr* turn_attr_error_create(uint16_t code, const char* reason,
   ret->turn_attr_type = htons(STUN_ATTR_ERROR_CODE);
   ret->turn_attr_len = htons(4 + real_len);
 
-  if(is_little_endian())
+  if(sys_is_little_endian())
   {
     ret->turn_attr_reserved_class = class << 16;
   }
@@ -945,7 +946,7 @@ struct turn_msg_hdr* turn_error_response_400(int method, const uint8_t* id,
   /* error-code */
   if(!(attr = turn_attr_error_create(400, STUN_ERROR_400, sizeof(STUN_ERROR_400), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -972,7 +973,7 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(401, STUN_ERROR_401,
           sizeof(STUN_ERROR_401), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -981,7 +982,7 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id,
   /* realm */
   if(!(attr = turn_attr_realm_create(realm, strlen(realm), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -990,7 +991,7 @@ struct turn_msg_hdr* turn_error_response_401(int method, const uint8_t* id,
   /* nonce */
   if(!(attr = turn_attr_nonce_create(nonce, nonce_len, &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1017,7 +1018,7 @@ struct turn_msg_hdr* turn_error_response_420(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(420, STUN_ERROR_420,
           sizeof(STUN_ERROR_420), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1052,7 +1053,7 @@ struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(438, STUN_ERROR_438,
           sizeof(STUN_ERROR_438), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1061,7 +1062,7 @@ struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id,
   /* realm */
   if(!(attr = turn_attr_realm_create(realm, strlen(realm), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1070,7 +1071,7 @@ struct turn_msg_hdr* turn_error_response_438(int method, const uint8_t* id,
   /* nonce */
   if(!(attr = turn_attr_nonce_create(nonce, nonce_len, &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1096,7 +1097,7 @@ struct turn_msg_hdr* turn_error_response_500(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(500, STUN_ERROR_500,
           sizeof(STUN_ERROR_500), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1122,7 +1123,7 @@ struct turn_msg_hdr* turn_error_response_403(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(403, TURN_ERROR_403,
           sizeof(TURN_ERROR_403), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1148,7 +1149,7 @@ struct turn_msg_hdr* turn_error_response_437(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(437, TURN_ERROR_437,
           sizeof(TURN_ERROR_437), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1174,7 +1175,7 @@ struct turn_msg_hdr* turn_error_response_440(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(440, TURN_ERROR_440,
           sizeof(TURN_ERROR_440), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1200,7 +1201,7 @@ struct turn_msg_hdr* turn_error_response_441(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(441, TURN_ERROR_441,
           sizeof(TURN_ERROR_441), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1226,7 +1227,7 @@ struct turn_msg_hdr* turn_error_response_442(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(442, TURN_ERROR_442,
           sizeof(TURN_ERROR_442), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1252,7 +1253,7 @@ struct turn_msg_hdr* turn_error_response_443(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(443, TURN_ERROR_443,
           sizeof(TURN_ERROR_443), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1278,7 +1279,7 @@ struct turn_msg_hdr* turn_error_response_446(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(446, TURN_ERROR_446,
           sizeof(TURN_ERROR_446), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1304,7 +1305,7 @@ struct turn_msg_hdr* turn_error_response_447(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(447, TURN_ERROR_447,
           sizeof(TURN_ERROR_447), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1330,7 +1331,7 @@ struct turn_msg_hdr* turn_error_response_486(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(486, TURN_ERROR_486,
           sizeof(TURN_ERROR_486), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1356,7 +1357,7 @@ struct turn_msg_hdr* turn_error_response_508(int method, const uint8_t* id,
   if(!(attr = turn_attr_error_create(508, TURN_ERROR_508,
           sizeof(TURN_ERROR_508), &iov[*idx])))
   {
-    iovec_free_data(iov, *idx);
+    net_iovec_free_data(iov, *idx);
     return NULL;
   }
   error->turn_msg_len += iov[*idx].iov_len;
@@ -1456,7 +1457,7 @@ int turn_send_message(int transport_protocol, int sock, struct tls_peer* speer,
 int turn_generate_transaction_id(uint8_t* id)
 {
   /* 96 bit transaction ID */
-  return random_bytes_generate(id, 12);
+  return crypto_random_bytes_generate(id, 12);
 }
 
 int turn_calculate_authentication_key(const char* username, const char* realm,
@@ -1541,7 +1542,7 @@ int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key,
   t += TURN_DEFAULT_NONCE_LIFETIME;
 
   t = (time_t)htonl((uint32_t)t);
-  hex_convert((unsigned char*)&t, sizeof(time_t), nonce, sizeof(time_t) * 2);
+  sys_convert_to_hex((unsigned char*)&t, sizeof(time_t), nonce, sizeof(time_t) * 2);
 
   if(sizeof(time_t) == 4) /* 32 bit */
   {
@@ -1554,7 +1555,7 @@ int turn_generate_nonce(uint8_t* nonce, size_t len, uint8_t* key,
   MD5_Final(md_buf, &ctx);
 
   /* add MD5 at the end of the nonce */
-  hex_convert(md_buf, MD5_DIGEST_LENGTH, nonce + 16, len - 16);
+  sys_convert_to_hex(md_buf, MD5_DIGEST_LENGTH, nonce + 16, len - 16);
 
   return 0;
 }
@@ -1577,12 +1578,12 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key,
 
   if(sizeof(time_t) == 4) /* 32 bits */
   {
-    uint32_convert(nonce, sizeof(time_t) * 2, &ct);
+    sys_convert_to_uint32(nonce, sizeof(time_t) * 2, &ct);
     memcpy(&t, &ct, 4);
   }
   else
   {
-    uint64_convert(nonce, sizeof(time_t) * 2, &ct64);
+    sys_convert_to_uint64(nonce, sizeof(time_t) * 2, &ct64);
     memcpy(&t, &ct64, 8);
   }
 
@@ -1592,7 +1593,7 @@ int turn_nonce_is_stale(uint8_t* nonce, size_t len, unsigned char* key,
   MD5_Update(&ctx, key, key_len);
   MD5_Final(md_buf, &ctx);
 
-  hex_convert(md_buf, MD5_DIGEST_LENGTH, md_txt, sizeof(md_txt));
+  sys_convert_to_hex(md_buf, MD5_DIGEST_LENGTH, md_txt, sizeof(md_txt));
 
   if(memcmp(md_txt, nonce + 16, (MD5_DIGEST_LENGTH * 2)) != 0)
   {
@@ -1616,7 +1617,7 @@ uint32_t turn_calculate_fingerprint(const struct iovec* iov, size_t iovlen)
 
   for(i = 0 ; i < iovlen ; i++)
   {
-    crc = crc32_generate(iov[i].iov_base, iov[i].iov_len, crc);
+    crc = crypto_crc32_generate(iov[i].iov_base, iov[i].iov_len, crc);
   }
 
   return crc;
