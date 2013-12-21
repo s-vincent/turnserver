@@ -1357,9 +1357,9 @@ static int turnserver_process_channeldata(int transport_protocol,
     }
 #else
     /* avoid compilation warning */
-    optval = 0;
-    optlen = 0;
-    save_val = 0;
+    (void)optval;
+    (void)optlen;
+    (void)save_val;
 #endif
   }
 
@@ -1551,9 +1551,9 @@ static int turnserver_process_send_indication(
       }
 #else
       /* avoid compilation warning */
-      optval = 0;
-      optlen = 0;
-      save_val = 0;
+      (void)optval;
+      (void)optlen;
+      (void)save_val;
 
       if(message->dont_fragment)
       {
@@ -3762,9 +3762,9 @@ static int turnserver_relayed_recv(const char* buf, ssize_t buflen,
       }
     }
 #else
-    optlen = 0;
-    optval = 0;
-    save_val = 0;
+    (void)optlen;
+    (void)optval;
+    (void)save_val;
 #endif
 
     nb = turn_udp_send(desc->tuple_sock,
