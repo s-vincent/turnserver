@@ -491,10 +491,10 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr,
 
   while(!speer->handshake_complete)
   {
-    fd_set fdsr;
+    sfd_set fdsr;
 
-    FD_ZERO(&fdsr);
-    FD_SET(peer->sock, &fdsr);
+    NET_SFD_ZERO(&fdsr);
+    NET_SFD_SET(peer->sock, &fdsr);
 
     /* 5 seconds of timeout */
     tv.tv_sec = 5;
@@ -514,7 +514,7 @@ int tls_peer_do_handshake(struct tls_peer* peer, const struct sockaddr* daddr,
       }
     }
 
-    ret = select(nsock, &fdsr, NULL, NULL, &tv);
+    ret = select(nsock, (fd_set*)(void*)&fdsr, NULL, NULL, &tv);
 
     if(ret > 0)
     {

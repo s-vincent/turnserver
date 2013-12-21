@@ -132,15 +132,15 @@ int main(int argc, char** argv)
 
   while(g_run)
   {
-    fd_set fdsr;
+    sfd_set fdsr;
     int nsock = sock;
 
-    FD_ZERO(&fdsr);
-    FD_SET(sock, &fdsr);
+    NET_SFD_ZERO(&fdsr);
+    NET_SFD_SET(sock, &fdsr);
 
     nsock++;
 
-    if(select(nsock, &fdsr, NULL, NULL, NULL) > 0)
+    if(select(nsock, (fd_set*)(void*)&fdsr, NULL, NULL, NULL) > 0)
     {
       if(FD_ISSET(sock, &fdsr))
       {
