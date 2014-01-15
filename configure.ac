@@ -55,7 +55,7 @@ DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN(turnserver, Doxyfile)
 
-AM_INIT_AUTOMAKE(turnserver, $PACKAGE_VERSION)
+AM_INIT_AUTOMAKE
 
 # Checks for library functions.
 AC_FUNC_FORK
