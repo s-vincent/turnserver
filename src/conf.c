@@ -186,7 +186,6 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
     memset(denied, 0x00, sizeof(struct denied_address));
     denied->mask = mask;
     denied->port = port;
-    list_head_init(&denied->list);
 
     if(inet_pton(AF_INET, addr, denied->addr) != 1)
     {
@@ -219,7 +218,7 @@ int turnserver_cfg_parse(const char* file, struct list_head* denied_address_list
     }
 
     /* add to the list */
-    list_head_add(&denied->list, denied_address_list);
+    list_head_add(denied_address_list, &denied->list);
   }
 
   return 0;

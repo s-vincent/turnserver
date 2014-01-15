@@ -341,7 +341,7 @@ int allocation_desc_add_permission(struct allocation_desc* desc,
   allocation_permission_set_timer(ret, lifetime);
 
   /* add to the list */
-  list_head_add(&ret->list, &desc->peers_permissions);
+  list_head_add(&desc->peers_permissions, &ret->list);
   list_head_init(&ret->list2);
   return 0;
 }
@@ -421,7 +421,7 @@ int allocation_desc_add_channel(struct allocation_desc* desc, uint16_t channel,
   allocation_channel_set_timer(ret, lifetime);
 
   /* add to the list */
-  list_head_add(&ret->list, &desc->peers_channels);
+  list_head_add(&desc->peers_channels, &ret->list);
   list_head_init(&ret->list2);
   return 0;
 }
@@ -481,7 +481,7 @@ void allocation_list_free(struct list_head* list)
 
 void allocation_list_add(struct list_head* list, struct allocation_desc* desc)
 {
-  list_head_add_tail(&desc->list, list);
+  list_head_add_tail(list, &desc->list);
 }
 
 void allocation_list_remove(struct list_head* list,
@@ -642,7 +642,7 @@ int allocation_desc_add_tcp_relay(struct allocation_desc* desc, uint32_t id,
   allocation_tcp_relay_set_timer(ret, timeout);
 
   /* add to the list */
-  list_head_add(&ret->list, &desc->tcp_relays);
+  list_head_add(&desc->tcp_relays, &ret->list);
   list_head_init(&ret->list2);
   return 0;
 }
@@ -806,7 +806,7 @@ void allocation_token_set_timer(struct allocation_token* token,
 void allocation_token_list_add(struct list_head* list,
     struct allocation_token* token)
 {
-  list_head_add(&token->list, list);
+  list_head_add(list, &token->list);
 }
 
 void allocation_token_list_remove(struct list_head* list,

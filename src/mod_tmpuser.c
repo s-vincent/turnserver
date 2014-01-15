@@ -172,7 +172,7 @@ struct list_head* tmpuser_get_tcp_clients(void)
 void tmpuser_add_tcp_client(struct socket_desc* desc)
 {
   struct list_head* l = (struct list_head*)&desc->list;
-  list_head_add(l, &g_tmpuser.client_list);
+  list_head_add(&g_tmpuser.client_list, l);
 }
 
 void tmpuser_remove_tcp_client(struct socket_desc* desc)

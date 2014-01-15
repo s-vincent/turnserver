@@ -265,7 +265,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
     /* add it to the expired list, the next loop will
      * purge it
      */
-    list_head_add(&desc->list2, &g_expired_allocation_list);
+    list_head_add(&g_expired_allocation_list, &desc->list2);
   }
   else if(signo == SIGRT_EXPIRE_PERMISSION)
   {
@@ -278,7 +278,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
     debug(DBG_ATTR, "Permission expires: %p\n", desc);
     /* add it to the expired list */
-    list_head_add(&desc->list2, &g_expired_permission_list);
+    list_head_add(&g_expired_permission_list, &desc->list2);
   }
   else if(signo == SIGRT_EXPIRE_CHANNEL)
   {
@@ -291,7 +291,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
     debug(DBG_ATTR, "Channel expires: %p\n", desc);
     /* add it to the expired list */
-    list_head_add(&desc->list2, &g_expired_channel_list);
+    list_head_add(&g_expired_channel_list, &desc->list2);
   }
   else if(signo == SIGRT_EXPIRE_TOKEN)
   {
@@ -304,7 +304,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
     debug(DBG_ATTR, "Token expires: %p\n", desc);
     /* add it to the expired list */
-    list_head_add(&desc->list2, &g_expired_token_list);
+    list_head_add(&g_expired_token_list, &desc->list2);
   }
   else if(signo == SIGRT_EXPIRE_TCP_RELAY)
   {
@@ -317,7 +317,7 @@ static void realtime_signal_handler(int signo, siginfo_t* info, void* extra)
 
     /* remove relay from list */
     debug(DBG_ATTR, "TCP relay expires: %p\n", desc);
-    list_head_add(&desc->list2, &g_expired_tcp_relay_list);
+    list_head_add(&g_expired_tcp_relay_list, &desc->list2);
   }
 }
 
@@ -4249,7 +4249,7 @@ static void turnserver_handle_tcp_accept(int sock,
         sdesc->sock = rsock;
 
         /* add it to the list */
-        list_head_add(&sdesc->list, tcp_socket_list);
+        list_head_add(tcp_socket_list, &sdesc->list);
       }
     }
   }

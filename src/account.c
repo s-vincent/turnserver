@@ -72,7 +72,6 @@ struct account_desc* account_desc_new(const char* username,
   ret->state = state;
   ret->allocations = 0;
   ret->is_tmp = 0;
-  list_head_init(&ret->list);
 
   turn_calculate_authentication_key(username, realm, password, ret->key,
       sizeof(ret->key));
@@ -130,7 +129,7 @@ void account_list_free(struct list_head* list)
 
 void account_list_add(struct list_head* list, struct account_desc* desc)
 {
-  list_head_add(&desc->list, list);
+  list_head_add(list, &desc->list);
 }
 
 void account_list_remove(struct list_head* list, struct account_desc* desc)
