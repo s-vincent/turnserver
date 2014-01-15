@@ -72,6 +72,7 @@ struct account_desc* account_desc_new(const char* username,
   ret->state = state;
   ret->allocations = 0;
   ret->is_tmp = 0;
+  list_head_init(&ret->list);
 
   turn_calculate_authentication_key(username, realm, password, ret->key,
       sizeof(ret->key));

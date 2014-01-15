@@ -3484,8 +3484,8 @@ static int turnserver_listen_recv(int transport_protocol, int sock,
         debug(DBG_ATTR, "Hash mismatch\n");
 #ifndef NDEBUG
         /* print computed hash and the one from the message */
-        digest_print(hash, 20);
-        digest_print(message.message_integrity->turn_attr_hmac, 20);
+        crypto_digest_print(hash, 20);
+        crypto_digest_print(message.message_integrity->turn_attr_hmac, 20);
 #endif
         turn_generate_nonce(nonce, sizeof(nonce), (unsigned char*)nonce_key,
             strlen(nonce_key));
@@ -5018,6 +5018,12 @@ int main(int argc, char** argv)
   char* listen_addr = NULL;
   struct sigaction sa;
 
+  /* initialize cryptographic seed for systems which do not have /dev/urandom */
+  if(crypto_seed_prng_init() == -1)
+  {
+    debug(DBG_ATTR, "Warning cryptographic seed not strong\n");
+  }
+
   /* initialize lists */
   list_head_init(&allocation_list);
   list_head_init(&account_list);
@@ -5656,6 +5662,8 @@ int main(int argc, char** argv)
 
   /* free the configuration parser */
   turnserver_cfg_free();
+
+  crypto_seed_prng_cleanup();
 
   return EXIT_SUCCESS;
 }
