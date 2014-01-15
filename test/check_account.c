@@ -76,7 +76,7 @@ START_TEST(test_account_list)
   struct account_desc* ret2 = NULL;
   struct account_desc* ret3 = NULL;
 
-  INIT_LIST(account_list);
+  list_head_init(&account_list);
 
   /* create a valid account descriptor */
   ret = account_desc_new("login", "password", "domain.org", AUTHORIZED);

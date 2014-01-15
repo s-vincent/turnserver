@@ -233,7 +233,7 @@ START_TEST(test_attr_create)
    * HMAC-SHA1
    */
   /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, "login:domain.org:password",
+  crypto_md5_generate(md_buf, "login:domain.org:password",
       strlen("login:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf),
       ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
@@ -248,7 +248,7 @@ START_TEST(test_attr_create)
     strncpy(buf, "hello", 40);
     buf[39] = 0x00;
 
-    crc = crc32_generate(buf, strlen("hello"), 0);
+    crc = crypto_crc32_generate(buf, strlen("hello"), 0);
     nb = memcmp(&crc, &crc_hello, sizeof(uint32_t));
     fail_unless(nb == 0, "CRC32 failed!");
   }
@@ -278,7 +278,7 @@ START_TEST(test_attr_create)
     uint16_t len_save = hdr->turn_msg_len; /* store in big endian */
 
     /* verify integrity with valid login/realm/password */
-    md5_generate(md_buf, "login:domain.org:password",
+    crypto_md5_generate(md_buf, "login:domain.org:password",
         strlen("login:domain.org:password"));
 
     /* change length up to message integrity */
@@ -294,7 +294,7 @@ START_TEST(test_attr_create)
 
     /* verify integrity with invalid login/realm/password */
     memset(hashmac, 0x00, 20);
-    md5_generate(md_buf, "login2:domain.org:password",
+    crypto_md5_generate(md_buf, "login2:domain.org:password",
         strlen("login2:domain.org:password"));
     turn_calculate_integrity_hmac_iov(iov, index - 2, md_buf, sizeof(md_buf),
         hashmac);
@@ -314,7 +314,7 @@ START_TEST(test_attr_create)
         "Fingerprint check");
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
   close(sock);
 }
 END_TEST
@@ -450,7 +450,7 @@ START_TEST(test_msg_create)
     fail_unless(nb > 0, "sendmsg failed");
   }
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
   close(sock);
 }
 END_TEST
@@ -639,7 +639,7 @@ START_TEST(test_message_parse)
    * HMAC-SHA1
    */
   /* index -1 because we do not take into account MESSAGE-INTEGRITY attribute */
-  md5_generate(md_buf, "login:domain.org:password",
+  crypto_md5_generate(md_buf, "login:domain.org:password",
       strlen("login:domain.org:password"));
   turn_calculate_integrity_hmac_iov(iov, index - 1, md_buf, sizeof(md_buf),
       ((struct turn_attr_message_integrity*)attr)->turn_attr_hmac);
@@ -685,7 +685,7 @@ START_TEST(test_message_parse)
   fail_unless(message.software != NULL, "software must be present");
   fail_unless(message.error_code != NULL, "error_code must be present");
 
-  iovec_free_data(iov, index);
+  net_iovec_free_data(iov, index);
 }
 END_TEST
 

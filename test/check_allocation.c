@@ -89,7 +89,7 @@ START_TEST(test_allocation_list)
   memcpy(&relayed_addr2, &server_addr, sizeof(server_addr));
   relayed_addr2.sin_port = htons(48005);
 
-  INIT_LIST(allocation_list);
+  list_head_init(&allocation_list);
 
   /* create a valid allocation descriptor */
   ret = allocation_desc_new(id, IPPROTO_UDP, "login", key, realm, nonce,

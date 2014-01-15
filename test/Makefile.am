@@ -8,6 +8,8 @@ check_turn_SOURCES = check_turn.c \
 											$(top_builddir)/src/protocol.h \
 											$(top_builddir)/src/util_sys.h \
 											$(top_builddir)/src/util_sys.c \
+											$(top_builddir)/src/util_net.h \
+											$(top_builddir)/src/util_net.c \
 											$(top_builddir)/src/util_crypto.h \
 											$(top_builddir)/src/util_crypto.c \
 											$(top_builddir)/src/tls_peer.h \
@@ -31,10 +33,13 @@ check_account_SOURCES = check_account.c \
 										 $(top_builddir)/src/protocol.c \
 										 $(top_builddir)/src/util_sys.h \
 										 $(top_builddir)/src/util_sys.c \
+										 $(top_builddir)/src/util_net.h \
+										 $(top_builddir)/src/util_net.c \
 										 $(top_builddir)/src/util_crypto.h \
 										 $(top_builddir)/src/util_crypto.c \
 										 $(top_builddir)/src/tls_peer.h \
 										 $(top_builddir)/src/tls_peer.c
+
 check_account_CFLAGS = @CHECK_CFLAGS@
 check_account_LDADD = @CHECK_LIBS@
 
