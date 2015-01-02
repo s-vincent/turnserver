@@ -957,7 +957,7 @@ static int turnserver_process_connectionbind_request(int transport_protocol,
     struct list_head* n2 = NULL;
 
     if(tmp->relayed_transport_protocol != IPPROTO_TCP ||
-        memcmp(tmp->key, account->key, sizeof(tmp->key) != 0))
+        memcmp(tmp->key, account->key, sizeof(tmp->key)) != 0)
     {
       continue;
     }
